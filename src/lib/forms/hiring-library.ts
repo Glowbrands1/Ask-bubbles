@@ -43,8 +43,8 @@ import type { FormBlock, FormDocument } from "./document";
  *
  * Typos in the source are NOT corrected. Rewriting the business's own words,
  * even obviously accidental ones, is a decision for the business. (The
- * reference platform's consultant interview was removed from this library on
- * 21 Nov 2026, Pau; its key is retired in `config/company/forms/retired.ts`.)
+ * reference platform's consultant interview, removed on 21 Nov 2026, is back as
+ * the Team Member Interview Form: Pau, 23 Nov 2026.)
  */
 
 /* -------------------------------------------------------------- helpers --- */
@@ -211,7 +211,8 @@ export function firstRoundManagementInterviewDocument(): FormDocument {
       { kind: "section", label: "Role Play Scenario" },
       ...question(
         "role_play",
-        "A client approaches the counter upset because the tanning bed they reserved is unavailable due to a mechanical issue. They are raising their voice and demanding a refund, while other clients are in the store. Show how you would handle the client in the moment and explain the steps you would take afterward to address the root cause.",
+        /* Pau, 23 Nov: BCS terms in the forms (QA's final pick): the product the guest came in for is out of stock; it replaces the reference platform's equipment scenario. */
+        "A guest approaches the counter upset because the product they came in for is out of stock. They are raising their voice and demanding a refund, while other guests are in the store. Show how you would handle the guest in the moment and explain the steps you would take afterward to address the root cause.",
       ),
       ...question("why_select_you", "Why should we select you for this position?"),
 
@@ -399,7 +400,7 @@ export function secondRoundManagementInterviewDocument(): FormDocument {
       ),
       ...question(
         "reduce_expenses",
-        "If you were given direction as a Store Director to reduce expenses, what would be the first three areas you would focus on, and why?",
+        "If you were given direction as a General Manager to reduce expenses, what would be the first three areas you would focus on, and why?",
       ),
       ...question(
         "metrics_adjustment",
@@ -413,18 +414,145 @@ export function secondRoundManagementInterviewDocument(): FormDocument {
       ),
       ...question(
         "scenario_two",
-        "Scenario 2: Customer visits have dropped 20% over the past month and lotions and memberships sales are at their lowest in six months. One long-time team member is resistant to promoting add-ons, saying, “Customers don’t want to be pushed.” What are your next steps?",
+        /* Pau, 23 Nov: BCS terms in the forms (QA's final pick): add-on product sales and Buff Rewards sign-ups (KB "Buff Rewards – Talk Track and FAQ"), guests, related products. */
+        "Scenario 2: Guest visits have dropped 20% over the past month and add-on product sales and Buff Rewards sign-ups are at their lowest in six months. One long-time team member is resistant to recommending related products, saying, “Guests don’t want to be pushed.” What are your next steps?",
       ),
 
       { kind: "section", label: "Training & Development" },
       ...question(
         "training_plan",
-        "How would you create a 30–60–90 day training plan for a new Assistant Store Director or Tanning Consultant?",
+        "How would you create a 30–60–90 day training plan for a new Assistant General Manager or Team Member?",
       ),
       ...question(
         "training_follow_up",
         "How do you follow up to ensure training is being applied consistently?",
       ),
+
+      ...closingRecommendation("Hire"),
+    ],
+  };
+}
+
+/* --------------------------------------------------------- team member --- */
+
+/**
+ * THE TEAM MEMBER INTERVIEW (Pau, 23 Nov 2026): the in-store interview for a Team Member, full time, part time or
+ * seasonal, restored from the last published version of the seed removed on 21 Nov 2026 (#990) under its Buff City
+ * Soap title. Its questions were already Buff City Soap's ("guest", "store", and the five core values the JBA Policy
+ * Manual prints, p.7, which Pau approved); only the title named the reference platform's role. The key
+ * ("tanning-consultant-interview") stays, so the template's row and version history keep their name.
+ */
+export function teamMemberInterviewDocument(): FormDocument {
+  return {
+    paper: "letter",
+    blocks: [
+      { kind: "letterhead", brand: BRAND, title: "Team Member Interview Form" },
+      ...applicantInformation(),
+
+      { kind: "section", label: "Qualities to Observe Throughout Interview" },
+      {
+        kind: "checkbox_group",
+        key: "qualities_observed",
+        options: [
+          { key: "outgoing", label: "Outgoing" },
+          { key: "competitive", label: "Competitive" },
+          { key: "likeable", label: "Likeable" },
+          { key: "hard_working", label: "Hard Working" },
+        ],
+        responsibility: "manager",
+        columns: 2,
+      },
+
+      { kind: "section", label: "Interview Questions" },
+      ...question(
+        "about_yourself",
+        "1. Tell me about yourself and why you’re interested in working at Buff City Soap.",
+      ),
+      ...question(
+        "resume",
+        "2. Can you walk me through your resume and highlight your most recent roles?",
+      ),
+      ...question(
+        "availability",
+        "3. Describe your availability and any scheduling restrictions.",
+      ),
+      ...question(
+        "customer_service",
+        "4. Describe a time you delivered excellent guest service and what made it stand out.",
+      ),
+      ...question(
+        "busy_day",
+        "5. Think back to a busy day when you were helping several guests at once. How did you keep things running smoothly and make sure everyone felt taken care of?",
+      ),
+      ...question(
+        "sales_approach",
+        "6. This role includes recommending products and services to guests. How comfortable are you with sales, and what’s your approach?",
+      ),
+      ...question(
+        "accountability",
+        "7. Give me an example of a time you were accountable for your results—what was the situation and outcome?",
+      ),
+      /*
+       * QUESTION 8 IS TRANSCRIBED AS WRITTEN, apostrophes and all. "Id like",
+       * "youve" and the double hyphen are in the source document. They are the
+       * business's own words on a form the business issues, and correcting them
+       * here would put a quiet edit into a hiring record; whoever owns the form
+       * can fix the Word file and this follows.
+       */
+      {
+        kind: "paragraph",
+        text: "8. Our company has five core values. Id like to hear about a time in your past experiences--work, school, or personal where youve shown one of these in action.",
+      },
+      /*
+       * THE HEADING NAMES NO COMPANY (QA, 25 Oct 2026). The source printed the
+       * sibling company's name before "Core Values"; under the Buff City Soap
+       * letterhead that named the wrong company. "Core Values" is the JBA
+       * Policy Manual's own heading for these same five values (p.7), the
+       * manual Ask Bubbles cites, so the values themselves are unchanged.
+       */
+      {
+        kind: "reference",
+        label: "Core Values",
+        body: [
+          "Nothing’s Impossible – We approach challenges with creativity and determination instead of excuses.",
+          "Work Hard, Have Fun – We bring energy, positivity, and joy to doing our best work.",
+          "We Speak Up – We share ideas, concerns, and feedback openly and respectfully.",
+          "Own the Outcome – We take responsibility for results, not just tasks.",
+          "Win Together – We succeed as a team, celebrating collective achievements over individual credit.",
+        ],
+      },
+      { kind: "field", field: field("core_values_notes", "Notes", "manager", "long_text") },
+      ...question(
+        "teammate_disagreement",
+        "9. Give me an example of a time when you and a teammate disagreed on how to get something done. How did you handle it, and what was the outcome?",
+      ),
+      ...question(
+        "manager_unavailable",
+        "10. Give me an example of when you faced a challenge without your manager immediately available. How did you handle it, and what was the outcome?",
+      ),
+      ...question(
+        "skills_for_the_role",
+        "11. What skills or experiences make you confident you’ll succeed in this role?",
+      ),
+      ...question(
+        "essential_functions",
+        "12. This position requires key functions such as standing for extended periods, lifting up to 25 lbs., operating a computer, and overseeing daily store operations. Are you able to perform these essential functions, with or without reasonable accommodation?",
+      ),
+
+      { kind: "section", label: "Closing" },
+      {
+        kind: "checkbox_group",
+        key: "closing_checklist",
+        options: [
+          {
+            key: "reviewed_duties",
+            label: "Reviewed job duties, cleaning requirements, and sales expectations",
+          },
+          { key: "reviewed_pay", label: "Reviewed pay structure and bonus potential" },
+        ],
+        responsibility: "manager",
+        columns: 2,
+      },
 
       ...closingRecommendation("Hire"),
     ],
@@ -534,6 +662,23 @@ export const HIRING_TEMPLATE_SEEDS: TemplateSeed[] = [
     bundledPdfName: "Prescreen Form - Phone Interview.pdf",
   },
   {
+    key: "tanning-consultant-interview",
+    name: "Team Member Interview Form",
+    shortName: "TM Interview",
+    description:
+      "The in-store interview for a Team Member. Twelve questions through service, sales, accountability, the core values and the essential job functions.",
+    category: "hiring",
+    layoutFamily: "interview",
+    requiredPermission: "create_hiring_form",
+    displayOrder: 11,
+    document: teamMemberInterviewDocument(),
+    variants: [],
+    /* 5 (Pau, 23 Nov 2026): restored as Buff City Soap's Team Member Interview Form; the key stays. */
+    revision: 5,
+    revisionNote: "Buff City Soap's Team Member Interview Form, restored from the last published version (v4) with its new title.",
+    bundledPdfName: "Team Member Interview Form.pdf",
+  },
+  {
     key: "management-interview-round-1",
     name: "First Round Management Interview Form",
     shortName: "Mgmt Round 1",
@@ -545,7 +690,8 @@ export const HIRING_TEMPLATE_SEEDS: TemplateSeed[] = [
     displayOrder: 12,
     document: firstRoundManagementInterviewDocument(),
     variants: [],
-    revision: 4,
+    /* 5 (Pau, 23 Nov: BCS terms in the forms): the role play is Buff City Soap's (the product the guest came in for is out of stock). Offered in the chooser again. */
+    revision: 5,
     revisionNote: "Published from the 02. First Round Managment Interview Form source document.",
     bundledPdfName: "First Round Management Interview Form.pdf",
   },
@@ -561,7 +707,8 @@ export const HIRING_TEMPLATE_SEEDS: TemplateSeed[] = [
     displayOrder: 13,
     document: secondRoundManagementInterviewDocument(),
     variants: [],
-    revision: 3,
+    /* 4 (Pau, 23 Nov: BCS terms in the forms): General Manager, Assistant General Manager and Team Member; guest visits, add-on product sales and Buff Rewards sign-ups. Offered in the chooser again. */
+    revision: 4,
     revisionNote: "Published from the 03. Second Round Managment Interview Form source document.",
     bundledPdfName: "Second Round Management Interview Form.pdf",
   },

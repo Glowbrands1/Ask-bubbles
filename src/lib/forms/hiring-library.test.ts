@@ -224,15 +224,17 @@ describe("the Coaching Form matches 01. Coaching Form.docx", () => {
       coaching: 2,
       "policy-review": 2,
       "follow-up-coaching": 2,
-      "asd-sdit-epp": 3,
-      "fttc-epp": 3,
+      // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): Buff City Soap titles and terms re-issue six templates.
+      "asd-sdit-epp": 4,
+      "fttc-epp": 4,
       "dmit-epp-tsd": 3,
       "dmit-epp-dmit": 3,
       "prescreen-phone-interview": 3, // Salon -> Store, then the removal of the uniform question (D14, Phase 2B)
-      // "tanning-consultant-interview" (was 4) is gone: removed from the library, key retired (Pau, 21 Nov 2026).
-      "management-interview-round-1": 4,
-      "management-interview-round-2": 3,
-      "tsd-epp": 5,
+      // Back as the Team Member Interview Form (removed 21 Nov 2026 at 4; restored at 5, Pau, 23 Nov 2026).
+      "tanning-consultant-interview": 5,
+      "management-interview-round-1": 5,
+      "management-interview-round-2": 4,
+      "tsd-epp": 6,
       // 4: Steps to Finish Termination without sibling-company system names (QA, 25 Oct 2026).
       "resignation-exit": 4,
       demotion: 2,
@@ -322,7 +324,8 @@ describe("the First Round Management Interview matches its source", () => {
       "What systems or processes have you used to manage staffing, scheduling, and labor costs?",
       "This role involves hands-on work like cleaning the Makery and equipment and keeping the workspace organized. How do you lead by example in these tasks?",
       "How do you ensure your team is consistently trained to meet both performance expectations and company compliance standards?",
-      "A client approaches the counter upset because the tanning bed they reserved is unavailable due to a mechanical issue. They are raising their voice and demanding a refund, while other clients are in the store. Show how you would handle the client in the moment and explain the steps you would take afterward to address the root cause.",
+      // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms; QA's final pick): Buff City Soap's role play replaces the reference platform's equipment scenario.
+      "A guest approaches the counter upset because the product they came in for is out of stock. They are raising their voice and demanding a refund, while other guests are in the store. Show how you would handle the guest in the moment and explain the steps you would take afterward to address the root cause.",
       "Why should we select you for this position?",
       "1. Job Description and Job Requirements and Duties: Have printed to review.",
       "2. Pay Structure: Explain the pay structure and the earning potential with bonuses. Let the applicant know that bonuses depend on reaching certain levels of sales performance.",
@@ -396,11 +399,12 @@ describe("the Second Round Management Interview matches its source", () => {
       "Describe your approach to setting and communicating performance goals for your team.",
       "How do you identify and develop future leaders within your store team?",
       "How do you ensure all team members follow company policies, procedures, and safety guidelines?",
-      "If you were given direction as a Store Director to reduce expenses, what would be the first three areas you would focus on, and why?",
+      // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): Buff City Soap's roles, guests, add-on products and Buff Rewards (KB "Buff Rewards – Talk Track and FAQ") in the next three.
+      "If you were given direction as a General Manager to reduce expenses, what would be the first three areas you would focus on, and why?",
       "Tell me about a time you used performance results or key metrics to adjust your approach and improve outcomes.",
       "Scenario 1: Let’s pretend that during your walkthrough in the store, a staff member fails to greet a guest promptly. Demonstrate how you would address this in real-time.",
-      "Scenario 2: Customer visits have dropped 20% over the past month and lotions and memberships sales are at their lowest in six months. One long-time team member is resistant to promoting add-ons, saying, “Customers don’t want to be pushed.” What are your next steps?",
-      "How would you create a 30–60–90 day training plan for a new Assistant Store Director or Tanning Consultant?",
+      "Scenario 2: Guest visits have dropped 20% over the past month and add-on product sales and Buff Rewards sign-ups are at their lowest in six months. One long-time team member is resistant to recommending related products, saying, “Guests don’t want to be pushed.” What are your next steps?",
+      "How would you create a 30–60–90 day training plan for a new Assistant General Manager or Team Member?",
       "How do you follow up to ensure training is being applied consistently?",
     ]);
   });
@@ -429,23 +433,35 @@ describe("the Second Round Management Interview matches its source", () => {
   });
 });
 
-/* ====================================================== tanning consultant === */
+/* ========================================================= team member === */
 
 /*
- * REMOVED, 21 Nov 2026 (Pau, via QA): the Tanning Consultant Interview is the
- * sibling company's role, not a Buff City Soap form. Its source-fidelity checks
- * (sections, qualities, twelve questions, core values) went with it; what is
- * asserted now is that it is gone from the code library and its key retired, so
- * an installed row is switched off (never deleted) on the next install
- * (`retired-templates.test.ts`).
+ * THE TEAM MEMBER INTERVIEW FORM (Pau, 23 Nov 2026): the consultant interview removed on 21 Nov 2026 is back under its
+ * old key as Buff City Soap's Team Member Interview Form, restored from its last published version (v4) with the new
+ * title. CHANGED ON PURPOSE: what was asserted gone is asserted present, with no tanning word anywhere.
  */
-describe("the Tanning Consultant Interview is no longer in the library", () => {
-  it("has no builder, no seed, and a retired key", () => {
-    expect(Object.keys(hiringLibrary)).not.toContain("tanningConsultantInterviewDocument");
-    expect(hiringLibrary.HIRING_TEMPLATE_SEEDS.map((seed) => seed.key)).not.toContain("tanning-consultant-interview");
-    expect(TEMPLATE_SEEDS.map((seed) => seed.key)).not.toContain("tanning-consultant-interview");
-    expect(TEMPLATE_SEEDS.map((seed) => seed.name)).not.toContain("Tanning Consultant Interview Form");
-    expect(RETIRED_TEMPLATE_KEYS).toContain("tanning-consultant-interview");
+describe("the Team Member Interview Form", () => {
+  const seed = hiringLibrary.HIRING_TEMPLATE_SEEDS.find((entry) => entry.key === "tanning-consultant-interview")!;
+  const document = hiringLibrary.teamMemberInterviewDocument();
+
+  it("is seeded under the old key, with its Buff City Soap title, and not retired", () => {
+    expect(seed.name).toBe("Team Member Interview Form");
+    expect(seed.shortName).toBe("TM Interview");
+    expect(RETIRED_TEMPLATE_KEYS).not.toContain("tanning-consultant-interview");
+    expect(document.blocks[0]).toMatchObject({ kind: "letterhead", title: "Team Member Interview Form" });
+  });
+
+  it("asks the twelve questions and keeps the five core values", () => {
+    const printed = JSON.stringify(document);
+    for (let number = 1; number <= 12; number += 1) expect(printed, String(number)).toContain(`${number}. `);
+    for (const value of ["Nothing’s Impossible", "Work Hard, Have Fun", "We Speak Up", "Own the Outcome", "Win Together"]) {
+      expect(printed, value).toContain(value);
+    }
+  });
+
+  it("carries no tanning or consultant word", () => {
+    // The stored key ("tanning-consultant-interview") is kept on purpose (Pau, 23 Nov 2026); nothing printed carries it.
+    expect(JSON.stringify(seed, (name, value) => (name === "key" && value === seed.key ? undefined : value))).not.toMatch(/tanning|consultant|sun tan/i);
   });
 });
 
@@ -506,10 +522,11 @@ describe("the Prescreen / Phone Interview matches its source", () => {
 describe("the Hiring & Interview category", () => {
   const hiring = TEMPLATE_SEEDS.filter((seed) => seed.category === "hiring");
 
-  // Three, not four: the Tanning Consultant Interview Form was removed (Pau, 21 Nov 2026).
-  it("contains exactly the three remaining supplied forms, and nothing invented", () => {
+  // Four again (Pau, 23 Nov 2026): the Team Member Interview Form is back.
+  it("contains exactly the four supplied forms, and nothing invented", () => {
     expect(hiring.map((seed) => seed.name)).toEqual([
       "Prescreen / Phone Interview Form",
+      "Team Member Interview Form",
       "First Round Management Interview Form",
       "Second Round Management Interview Form",
     ]);
@@ -529,7 +546,7 @@ describe("the Hiring & Interview category", () => {
     expect(grouped[0].templates).toHaveLength(10);
     expect(grouped[1].templates).toHaveLength(1);
     expect(grouped[2].templates).toHaveLength(2);
-    expect(grouped[3].templates).toHaveLength(3); // was 4: the Tanning Consultant Interview was removed (Pau, 21 Nov 2026)
+    expect(grouped[3].templates).toHaveLength(4); // 4 again: the Team Member Interview Form is back (Pau, 23 Nov 2026)
   });
 
   it("leaves Coaching where it was", () => {

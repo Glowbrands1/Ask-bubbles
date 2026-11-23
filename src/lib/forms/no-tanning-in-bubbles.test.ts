@@ -17,6 +17,12 @@ import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
  * switched off on the next install, never deleted), and the full-time
  * consultant title left the job titles. This is QA's requested test.
  *
+ * 23 Nov 2026 (Pau, via QA: "ok all ur picks"): that interview is back as Buff City Soap's Team Member Interview Form,
+ * under its old key ("tanning-consultant-interview", kept so its row and history keep their name). Its name, short
+ * name, description and every question are checked below like any visible form's; the key is never shown to anyone.
+ * The management interviews are unhidden with Buff City Soap's role play and training question, so they are checked
+ * too. CHANGED ON PURPOSE.
+ *
  * Every string checked is the real exported value or a builder's real output,
  * not a grep of the source.
  *
@@ -60,9 +66,12 @@ const TCI = "tanning-consultant-interview";
 const VISIBLE_SEEDS = TEMPLATE_SEEDS.filter((seed) => !HIDDEN_TEMPLATE_KEYS.includes(seed.key));
 
 describe("no Bubbles form, title, chooser option or prompt text contains 'tanning'", () => {
-  it("the Tanning Consultant Interview is retired and no seed carries its key", () => {
-    expect(RETIRED_TEMPLATE_KEYS).toContain(TCI);
-    expect(TEMPLATE_SEEDS.map((seed) => seed.key)).not.toContain(TCI);
+  it("the old consultant interview's key carries the Team Member Interview Form, not retired, and no tanning word", () => {
+    expect(RETIRED_TEMPLATE_KEYS).not.toContain(TCI);
+    const seed = TEMPLATE_SEEDS.find((entry) => entry.key === TCI);
+    expect(seed?.name).toBe("Team Member Interview Form");
+    expect(VISIBLE_SEEDS.map((entry) => entry.key)).toContain(TCI);
+    for (const key of ["management-interview-round-1", "management-interview-round-2"]) expect(VISIBLE_SEEDS.map((entry) => entry.key)).toContain(key);
   });
 
   it("checks a real library, not an empty one", () => {
@@ -106,7 +115,6 @@ describe("no Bubbles form, title, chooser option or prompt text contains 'tannin
       async (role) => {
         const summaries = await listTemplateSummaries();
         expect(summaries.length).toBeGreaterThan(0);
-        expect(summaries.map((summary) => summary.key)).not.toContain(TCI);
         const block = buildFormInventoryBlock(buildFormInventory(summaries, { role, scope: null }));
         expect(block).not.toMatch(TANNING);
       },

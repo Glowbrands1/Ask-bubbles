@@ -367,9 +367,15 @@ describe("7. every seeded template can be asked for by its own name", () => {
   it("keeps the performance plans apart from one another", () => {
     for (const [question, key] of [
       ["create an SDIT EPP", "sdit-epp"],
-      ["create a TSD EPP", "tsd-epp"],
-      ["create an ASD-SDIT performance EPP", "asd-sdit-epp"],
-      ["create an FTTC EPP", "fttc-epp"],
+      // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the three EPPs Buff City Soap uses are asked for by their new names;
+      // the sibling company's TSD / ASD-SDIT / FTTC titles left this app's chat path.
+      ["create a General Manager Performance EPP", "tsd-epp"],
+      ["create a GM EPP", "tsd-epp"],
+      ["create an Assistant General Manager Development EPP", "asd-sdit-epp"],
+      ["create an AGM performance EPP", "asd-sdit-epp"],
+      ["create an AGM EPP", "asd-sdit-epp"],
+      ["create a Team Member Performance EPP", "fttc-epp"],
+      ["create a team member EPP", "fttc-epp"],
       ["DMIT EPP — TSD review please", "dmit-epp-tsd"],
       ["DMIT EPP — DMIT review please", "dmit-epp-dmit"],
     ] as const) {
@@ -413,14 +419,20 @@ describe("8. naming a FAMILY is still ambiguous, and a subject is still a questi
     expect(
       eppTemplateForRole("Jessica is an SDIT at Lincoln South. She's been late several times."),
     ).toBe("sdit-epp");
-    expect(eppTemplateForRole("Marco is a Training Salon Director")).toBe("tsd-epp");
-    expect(eppTemplateForRole("Dana is an FTTC")).toBe("fttc-epp");
+    // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the roles are Buff City Soap's; the longer role wins over the shorter one
+    // inside it ("assistant general manager" holds "general manager").
+    expect(eppTemplateForRole("Marco is a General Manager")).toBe("tsd-epp");
+    expect(eppTemplateForRole("Marco is an Assistant General Manager")).toBe("asd-sdit-epp");
+    expect(eppTemplateForRole("Dana is a Team Member")).toBe("fttc-epp");
+    expect(eppTemplateForRole("Marco is a Training Salon Director")).toBeNull();
+    expect(eppTemplateForRole("Dana is an FTTC")).toBeNull();
 
     // No role stated, an ambiguous one, or two at once: the manager chooses.
     expect(eppTemplateForRole("Jessica has been late several times")).toBeNull();
     expect(eppTemplateForRole("Jessica is an ASD")).toBeNull();
     expect(eppTemplateForRole("Jessica is a DMIT")).toBeNull();
-    expect(eppTemplateForRole("Jessica is an SDIT and Marco is a TSD")).toBeNull();
+    // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): TSD is no longer a role here; the second role is Buff City Soap's GM.
+    expect(eppTemplateForRole("Jessica is an SDIT and Marco is a GM")).toBeNull();
     // A substring is not a role: "sdit" inside another word must not match.
     expect(eppTemplateForRole("the asdit code")).toBeNull();
   });

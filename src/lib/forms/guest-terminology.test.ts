@@ -62,10 +62,11 @@ const PAIRS: [string, string][] = [
 ];
 
 /**
- * The Tanning Consultant Interview's corrections (TI-4, TI-5). The form was removed (Pau, 21 Nov 2026), so neither the
- * old nor the corrected wording ships in any template now; the old wording must not come back with another form.
+ * The consultant interview's corrections (TI-4, TI-5). The form was removed on 21 Nov 2026 and is back as Buff City
+ * Soap's Team Member Interview Form (Pau, 23 Nov 2026), so the corrected wording ships on it again and the old wording
+ * on no template. CHANGED ON PURPOSE.
  */
-const REMOVED_WITH_THE_FORM: [string, string][] = [
+const BACK_WITH_THE_FORM: [string, string][] = [
   ["delivered excellent customer service", "delivered excellent guest service"],
   ["helping several customers at once", "helping several guests at once"],
   ["recommending products and services to clients", "recommending products and services to guests"],
@@ -73,8 +74,7 @@ const REMOVED_WITH_THE_FORM: [string, string][] = [
 
 /** Wording the business has NOT approved changing. It must still be there, byte for byte. */
 const UNCHANGED: [string, string][] = [
-  ["management-interview-round-1", "A client approaches the counter upset because the tanning bed they reserved is unavailable"],
-  ["management-interview-round-2", "Customer visits have dropped 20% over the past month and lotions and memberships sales are at their lowest in six months."],
+  // The two management interviews' held sentences are approved (Pau, 23 Nov 2026): see LATER_APPROVED.
   ["dmit-epp-tsd", "ensuring the highest level of client service throughout the stores"],
   ["dmit-epp-dmit", "ensuring the highest level of client service throughout the stores"],
 ];
@@ -92,6 +92,18 @@ const LATER_APPROVED: { key: string; was: string; now: string; decision: string 
     now: "Follow through with 7G Service with every guest.",
     decision: "D3, Phase 2A (approved 2026-10-19)",
   },
+  {
+    key: "management-interview-round-1",
+    was: "A client approaches the counter upset because the tanning bed they reserved is unavailable",
+    now: "A guest approaches the counter upset because the product they came in for is out of stock",
+    decision: "Buff City Soap's role play (Pau, 23 Nov: BCS terms in the forms; QA's final pick)",
+  },
+  {
+    key: "management-interview-round-2",
+    was: "Customer visits have dropped 20% over the past month and lotions and memberships sales are at their lowest in six months.",
+    now: "Guest visits have dropped 20% over the past month and add-on product sales and Buff Rewards sign-ups are at their lowest in six months.",
+    decision: "Buff City Soap's Scenario 2 (Pau, 23 Nov: BCS terms in the forms; KB \"Buff Rewards – Talk Track and FAQ\")",
+  },
 ];
 
 const seed = (key: string) => TEMPLATE_SEEDS.find((entry) => entry.key === key)!;
@@ -103,13 +115,10 @@ describe("the six approved guest corrections", () => {
     expect(where.length, now).toBeGreaterThan(0);
   });
 
-  it("ships none of the removed Tanning Consultant Interview's wording, old or corrected, in any template", () => {
-    expect(TEMPLATE_SEEDS.map((entry) => entry.key)).not.toContain("tanning-consultant-interview");
+  it("ships TI-4 and TI-5 corrected again, on the Team Member Interview Form (Pau, 23 Nov 2026), the old wording nowhere", () => {
+    for (const [, now] of BACK_WITH_THE_FORM) expect(text("tanning-consultant-interview"), now).toContain(now);
     for (const entry of TEMPLATE_SEEDS) {
-      for (const [old, now] of REMOVED_WITH_THE_FORM) {
-        expect(text(entry.key), `${entry.key}: ${old}`).not.toContain(old);
-        expect(text(entry.key), `${entry.key}: ${now}`).not.toContain(now);
-      }
+      for (const [old] of BACK_WITH_THE_FORM) expect(text(entry.key), `${entry.key}: ${old}`).not.toContain(old);
     }
   });
 
@@ -140,12 +149,13 @@ describe("the six approved guest corrections", () => {
     expect(text("sdit-epp")).toContain('"client_service"');
   });
 
-  it("changes no variant: SDIT and TSD keep their roles, labels and abbreviations", () => {
+  // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the TSD plan is the General Manager Performance EPP, abbreviated GM.
+  it("changes no variant for guest wording: SDIT keeps its role, and the General Manager plan has Buff City Soap's", () => {
     expect(seed("sdit-epp").variants).toEqual([
       { key: expect.any(String), label: "SDIT review", role: "Training Store Director", roleAbbr: "SDIT" },
     ]);
     expect(seed("tsd-epp").variants).toEqual([
-      { key: expect.any(String), label: "TSD review", role: "District Manager", roleAbbr: "TSD" },
+      { key: expect.any(String), label: "GM review", role: "District Manager", roleAbbr: "GM" },
     ]);
   });
 
@@ -154,12 +164,13 @@ describe("the six approved guest corrections", () => {
     expect(revisions).toMatchObject({
       // Counts include the later approved Phase 2A re-issues (see LATER_APPROVED and phase-2a-wording.test.ts).
       "sdit-epp": 6,
-      "tsd-epp": 5,
-      // "tanning-consultant-interview" (was 4) is gone: removed from the library, key retired (Pau, 21 Nov 2026).
-      "management-interview-round-1": 4,
-      "management-interview-round-2": 3,
-      "fttc-epp": 3,
-      "asd-sdit-epp": 3,
+      // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): Buff City Soap titles and terms re-issue these six.
+      "tsd-epp": 6,
+      "tanning-consultant-interview": 5,
+      "management-interview-round-1": 5,
+      "management-interview-round-2": 4,
+      "fttc-epp": 4,
+      "asd-sdit-epp": 4,
       "dmit-epp-tsd": 3,
       "dmit-epp-dmit": 3,
       "prescreen-phone-interview": 3,
@@ -208,7 +219,9 @@ describe("the generated PDFs", () => {
     expect(sdit).not.toContain("excellent client service");
     const tsd = await pdfText("tsd-epp");
     expect(tsd).toContain("personally provide, excellent guest service");
-    // The Tanning Consultant Interview's PDF is no longer printed: the form was removed (Pau, 21 Nov 2026).
+    // The Team Member Interview Form prints its guest wording again (Pau, 23 Nov 2026).
+    const tm = await pdfText("tanning-consultant-interview");
+    expect(tm).toContain("delivered excellent guest service");
     const m1 = await pdfText("management-interview-round-1");
     for (const phrase of ["guest service focus", "Sales & Guest Service", "excellent guest service", "unhappy guest", "Guest service leadership", "Guest service interactions"]) {
       expect(m1, phrase).toContain(phrase);
@@ -219,7 +232,10 @@ describe("the generated PDFs", () => {
   });
 
   it("still print the unapproved wording", async () => {
-    expect(await pdfText("management-interview-round-1")).toContain("A client approaches the counter upset because the tanning bed");
+    // Released (Pau, 23 Nov 2026): Buff City Soap's role play prints, and no tanning word.
+    const round1 = await pdfText("management-interview-round-1");
+    expect(round1).toContain("A guest approaches the counter upset because the product they came in for is out of stock");
+    expect(round1).not.toMatch(/tanning/i);
     expect(await pdfText("sdit-epp")).not.toContain("Client Engagement Strategies");
     expect(await pdfText("sdit-epp")).toContain("Follow through with 7G Service with every guest.");
   });

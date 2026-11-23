@@ -2191,13 +2191,14 @@ describe("a performance plan says what has to happen before it is signed", () =>
     ] as typeof loaded.values;
 
     const notice = reviewConversationNoticeFor(loaded, false)!;
+    // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the notice names the form by its seeded name, now Buff City Soap's.
     expect(notice).toContain(
-      "The TSD EPP draft for Marlowe Co focuses on punctuality while continuing to build on team coaching.",
+      "The General Manager Performance EPP draft for Marlowe Co focuses on punctuality while continuing to build on team coaching.",
     );
     expect(notice).toContain(
       "The plan of action: Coaching and Development: Coach the team on shift-start readiness each week.",
     );
-    expect(notice).toContain("Review the TSD EPP with Marlowe Co");
+    expect(notice).not.toContain("TSD");
     /* The seven rows nobody supported contribute nothing. */
     expect(notice).not.toContain("Bench");
     expect(notice).not.toContain("District Outreach");

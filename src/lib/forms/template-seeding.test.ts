@@ -102,8 +102,9 @@ describe("installing an empty library", () => {
   it("records each template's category, so the page can group them", async () => {
     await ensureTemplateLibrary("system");
     expect(templateRow("coaching").category).toBe("hr_performance");
-    // The Tanning Consultant Interview was here; it was removed from the library and its key retired (Pau, 21 Nov 2026).
+    // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the key is back as the Team Member Interview Form, a hiring interview again.
     for (const key of [
+      "tanning-consultant-interview",
       "prescreen-phone-interview",
       "management-interview-round-1",
       "management-interview-round-2",
@@ -111,7 +112,7 @@ describe("installing an empty library", () => {
       expect(templateRow(key).category, key).toBe("hiring");
       expect(templateRow(key).layout_family, key).toBe("interview");
     }
-    expect(store.form_templates!.some((row) => row.key === "tanning-consultant-interview")).toBe(false);
+    expect(templateRow("tanning-consultant-interview").name).toBe("Team Member Interview Form");
   });
 
   it("installs the Resignation/Exit Form published, active and behind its own permission", async () => {

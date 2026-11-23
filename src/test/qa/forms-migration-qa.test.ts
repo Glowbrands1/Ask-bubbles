@@ -205,17 +205,20 @@ const FORMS: readonly QaForm[] = [
   { key: "dpoa", phrase: "Create a corrective action for Jordan Testperson. She was 20 minutes late today.", creator: "location_manager", edits: ["observation", "action_plan"], edit: "payroll" }, // revision 7: no Other write-in line
   { key: "policy-review", phrase: "Create a policy review for Jordan Testperson about the dress code.", creator: "location_manager", edits: ["topic", "observation"], edit: "editor" },
   { key: "sdit-epp", phrase: "Create an SDIT EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor", hidden: true },
-  { key: "tsd-epp", phrase: "Create a TSD EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor", hidden: true },
-  { key: "asd-sdit-epp", phrase: "Create an ASD-SDIT Performance EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor", hidden: true },
-  { key: "fttc-epp", phrase: "Create an FTTC Performance EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor", hidden: true },
+  // Unhidden and renamed to Buff City Soap titles (Pau, 23 Nov 2026): the expectation changes on purpose.
+  { key: "tsd-epp", phrase: "Create a General Manager Performance EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
+  { key: "asd-sdit-epp", phrase: "Create an Assistant General Manager Development EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
+  { key: "fttc-epp", phrase: "Create a Team Member Performance EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
   { key: "dmit-epp-tsd", phrase: "Create a DMIT EPP TSD review for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor", hidden: true },
   { key: "dmit-epp-dmit", phrase: "Create a DMIT EPP DMIT review for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor", hidden: true },
   { key: "resignation-exit", phrase: "Create an exit form for Jordan Testperson. She gave two weeks notice on 9/1 and her last day was 9/15.", creator: "location_manager", edits: ["details", "details"], edit: "exit" },
   { key: "demotion", phrase: "Create a demotion form for Jordan Testperson, from manager to sales associate effective 10/12.", creator: "location_manager", edits: ["reason", "reason"], edit: "revision" },
   { key: "position-transfer", phrase: "Create a position transfer form for Jordan Testperson, transferring from store 12 to store 18.", creator: "location_manager", edits: ["reason", "reason"], edit: "revision" },
   { key: "prescreen-phone-interview", phrase: "Create a prescreen phone interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor" },
-  { key: "management-interview-round-1", phrase: "Create a first round management interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor", hidden: true },
-  { key: "management-interview-round-2", phrase: "Create a second round management interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor", hidden: true },
+  // Unhidden (Pau, 23 Nov 2026): the management interviews and the Team Member Interview Form are listed and created again.
+  { key: "tanning-consultant-interview", phrase: "Create a team member interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor" },
+  { key: "management-interview-round-1", phrase: "Create a first round management interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor" },
+  { key: "management-interview-round-2", phrase: "Create a second round management interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor" },
 ];
 
 /*
@@ -278,6 +281,68 @@ const neutral = (text: string) =>
     .replace(/no\s+longer\s+employed,\s+verify\s+tanning\s+has\s+been\s+removed\./g, "no longer employed.")
     .replace(/\s+/g, " ")
     .trim();
+
+/*
+ * Pau's Buff City Soap terms (23 Nov 2026): the approved changes' text, from → to, for one template. The PDF step reads
+ * the reference text through them, longest first, each as a whole phrase; the fixture is the one list of what changed.
+ */
+const BCS_TERMS_KEYS = new Set(["tsd-epp", "asd-sdit-epp", "fttc-epp", "tanning-consultant-interview", "management-interview-round-1", "management-interview-round-2"]);
+/** The words a change replaced, the words both sides share before and after them left out (the PDF prints its own quotes and dashes). */
+function changedWords(from: string, to: string): readonly [string, string] {
+  const a = from.split(" ");
+  const b = to.split(" ");
+  let head = 0;
+  while (head < a.length && head < b.length && a[head] === b[head]) head += 1;
+  let tail = 0;
+  while (tail < a.length - head && tail < b.length - head && a[a.length - 1 - tail] === b[b.length - 1 - tail]) tail += 1;
+  return [a.slice(head, a.length - tail).join(" "), b.slice(head, b.length - tail).join(" ")];
+}
+function withApprovedBcsTerms(key: string, text: string): string {
+  if (!BCS_TERMS_KEYS.has(key)) return text;
+  const pairs = (approved.changes as { sourceKey: string; from: unknown; to: unknown }[])
+    .filter((change) => change.sourceKey === key && typeof change.from === "string" && typeof change.to === "string" && change.from !== "")
+    .map((change) => changedWords(neutral(change.from as string), neutral(change.to as string)))
+    .filter(([from, to]) => from !== "" && from !== to)
+    .sort((a, b) => b[0].length - a[0].length);
+  return pairs.reduce((current, [from, to]) => current.replace(new RegExp(`(?<![A-Za-z0-9])${from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![A-Za-z0-9])`, "g"), to), text);
+}
+
+/** The fields whose responsibility an approved change moved off the AI (none today: the General Manager plan's KPI lines stay drafted, 23 Nov 2026). */
+function approvedNotDrafted(key: string, document: unknown): Set<string> {
+  const keys = new Set<string>();
+  for (const change of approved.changes as { sourceKey: string; path: string; from: unknown; to: unknown }[]) {
+    if (change.sourceKey !== key || !change.path.endsWith(".responsibility") || change.from !== "ai") continue;
+    const owner = change.path.replace(/^\.document/, "").replace(/\.responsibility$/, "");
+    const parts = [...owner.matchAll(/\.([A-Za-z_]+)|\[(\d+)\]/g)].map((m) => m[1] ?? Number(m[2]));
+    const field = parts.reduce<unknown>((cur, part) => (cur && typeof cur === "object" ? (cur as Record<string, unknown>)[part as string] : undefined), document) as { key?: string } | undefined;
+    if (field?.key) keys.add(field.key);
+  }
+  return keys;
+}
+
+/**
+ * The fields an approved change added (Pau, 23 Nov: BCS terms in the forms; the KB's "Domo Reporting Overview": Product
+ * Mix %, the sixth KPI on the General Manager plan, a new line at the end of each KPI row). Each comes with the key of
+ * the field it follows, so the reference's printed text can carry it in its place.
+ */
+function approvedAdded(key: string, document: unknown): { key: string; label: string; after: string }[] {
+  const added: { key: string; label: string; after: string }[] = [];
+  for (const change of approved.changes as { sourceKey: string; path: string; from: unknown; to: unknown }[]) {
+    const at = /^\.document\.blocks\[(\d+)\]\.fields\[(\d+)\]$/.exec(change.path);
+    if (change.sourceKey !== key || change.from !== null || !at) continue;
+    const to = change.to as { key: string; label: string };
+    const row = (document as { blocks: { fields?: { key: string }[] }[] }).blocks[Number(at[1])]!;
+    added.push({ key: to.key, label: to.label, after: row.fields![Number(at[2]) - 1]!.key });
+  }
+  return added;
+}
+function withApprovedAddedFields(key: string, document: unknown, text: string): string {
+  const sample = (field: string) => neutral(`Sample ${field.replace(/_/g, " ")}`);
+  return approvedAdded(key, document).reduce(
+    (current, field) => current.replace(sample(field.after), `${sample(field.after)} ${neutral(field.label)} ${sample(field.key)}`),
+    text,
+  );
+}
 
 /**
  * The hiring-form line retained verbatim for the business's review. "Sun Tan City Core Values" was the
@@ -604,6 +669,11 @@ beforeEach(async () => {
  *
  * The six EPP forms joined them on 21 Nov 2026 (Pau, via QA2): plans for roles Buff City Soap does not have, none ever
  * saved here. Their listing and creation steps now check the refusal the same way.
+ *
+ * 23 Nov 2026 (Pau, via QA: "ok all ur picks"): the management interviews, the Team Member Interview Form (the restored
+ * consultant interview) and the Team Member, Assistant General Manager and General Manager Performance EPPs are
+ * unhidden under Buff City Soap titles, so the matrix checks them as created forms again. Only the in-training plans
+ * (SDIT, and the DMIT plan's two readings) stay hidden.
  */
 async function expectHidden(form: QaForm) {
   expect(isHiddenTemplate(form.key)).toBe(true);
@@ -678,10 +748,17 @@ describe.each(FORMS)("$key", (form) => {
   });
 
   it(`${form.key} · 03 all sections and fields are preserved`, () => {
+    // An approved change that moved a field off the AI (Pau, 23 Nov 2026: Goal / Result lines) is the manager's on the reference too.
+    const notDrafted = approvedNotDrafted(form.key, source.document);
     for (const variantKey of variantKeys) {
-      expect(skeleton(referenceDocument(form.key, seed.document), variantKey), String(variantKey)).toEqual(
-        skeleton(source.document, variantKey),
-      );
+      const reference = skeleton(source.document, variantKey);
+      // A field an approved change added (Product Mix %, 23 Nov 2026) is not on the reference: it is left out here.
+      const added = new Set(approvedAdded(form.key, seed.document).map((field) => field.key));
+      const ours = skeleton(referenceDocument(form.key, seed.document), variantKey);
+      expect({ ...ours, fields: ours.fields.filter((entry) => !added.has(entry[0] as string)) }, String(variantKey)).toEqual({
+        ...reference,
+        fields: reference.fields.map((entry) => (notDrafted.has(entry[0] as string) ? [entry[0], entry[1], "manager"] : entry)),
+      });
       if (form.key === "dpoa") {
         const fields = skeleton(seed.document, variantKey).fields;
         expect(fields).toContainEqual(["payroll_deduct_amount", "text", "manager"]);
@@ -693,7 +770,12 @@ describe.each(FORMS)("$key", (form) => {
   it(`${form.key} · 04 AI-fill chips map to the same fields, and the drafting writes them`, async () => {
     for (const variantKey of variantKeys) {
       const ours = draftableFields(parseFormDocument(seed.document), variantKey).map((field) => field.key);
-      expect(ours).toEqual(draftableFields(parseFormDocument(source.document), variantKey).map((field) => field.key));
+      // An approved change that moved a field off the AI (Pau, 23 Nov 2026: Goal / Result lines) leaves the reference's list too.
+      const notDrafted = approvedNotDrafted(form.key, source.document);
+      // A field an approved change added (Product Mix %, 23 Nov 2026) is drafted like the line before it.
+      const added = approvedAdded(form.key, seed.document);
+      const reference = draftableFields(parseFormDocument(source.document), variantKey).map((field) => field.key).filter((key) => !notDrafted.has(key));
+      expect(ours).toEqual(reference.flatMap((key) => [key, ...added.filter((field) => field.after === key).map((field) => field.key)]));
       // Only the AI fields accept a drafted value; everything else is refused.
       const document = parseFormDocument(seed.document);
       const everything = Object.fromEntries(fieldsForVariant(document, variantKey).map((field) => [field.key, "x"]));
@@ -779,7 +861,7 @@ describe.each(FORMS)("$key", (form) => {
       expect(ours.pages, name).toBe(reference[name]!.pages);
       // An approved removal also removes the question, and the sample answer printed under it, from the reference text.
       // An approved option change (Corrective Action revision 7) prints the new labels in place of the old.
-      const referenceText = withApprovedHistoryBoxes(
+      const referenceText = withApprovedAddedFields(form.key, seed.document, withApprovedBcsTerms(form.key, withApprovedHistoryBoxes(
         form.key,
         withApprovedOptionText(
           form.key,
@@ -788,7 +870,7 @@ describe.each(FORMS)("$key", (form) => {
             neutral(reference[name]!.text),
           ).replace(/\s+/g, " ").trim(),
         ),
-      );
+      )));
       expect(neutral(ours.text), name).toBe(referenceText);
       if (form.key === "dpoa") {
         const full = parseFormDocument(seed.document);
@@ -941,17 +1023,17 @@ describe.each(FORMS)("$key", (form) => {
 });
 
 describe("the matrix covers the whole migrated library", () => {
-  // Sixteen, not seventeen: the Tanning Consultant Interview was removed from the library (the sibling company's role;
-  // Pau, via QA, 21 Nov 2026). Its key is retired, so an installed row is switched off, never deleted
-  // (`lib/forms/retired-templates.test.ts`).
-  it("names all sixteen forms, once each", () => {
+  // Seventeen again (changed on purpose, Pau, 23 Nov 2026): the consultant interview removed on 21 Nov is back as Buff
+  // City Soap's Team Member Interview Form, under its old key, and is no longer retired.
+  it("names all seventeen forms, once each", () => {
     expect(FORMS.map((form) => form.key).sort()).toEqual(MIGRATED_TEMPLATE_SEEDS.map((seed) => seed.key).sort());
-    expect(FORMS).toHaveLength(16);
+    expect(FORMS).toHaveLength(17);
   });
 
-  it("no longer ships the Tanning Consultant Interview, and retires its key", () => {
-    expect(MIGRATED_TEMPLATE_SEEDS.map((seed) => seed.key)).not.toContain("tanning-consultant-interview");
-    expect(TEMPLATE_SEEDS.map((seed) => seed.key)).not.toContain("tanning-consultant-interview");
-    expect(RETIRED_TEMPLATE_KEYS).toContain("tanning-consultant-interview");
+  it("ships the Team Member Interview Form under its old key, not retired, with no tanning word", () => {
+    const seed = TEMPLATE_SEEDS.find((entry) => entry.key === "tanning-consultant-interview");
+    expect(seed?.name).toBe("Team Member Interview Form");
+    expect(RETIRED_TEMPLATE_KEYS).not.toContain("tanning-consultant-interview");
+    expect(JSON.stringify({ ...seed, key: undefined })).not.toMatch(/tanning/i);
   });
 });

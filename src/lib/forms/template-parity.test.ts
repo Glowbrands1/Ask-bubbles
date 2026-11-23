@@ -54,7 +54,11 @@ interface ApprovedChange {
  * snapshot and the approved-changes fixture are records of the reference platform and stay whole; the comparisons
  * below set the removed template aside, and a test requires it to be absent from the seeds and retired.
  */
-const REMOVED_FROM_LIBRARY: readonly string[] = ["tanning-consultant-interview"];
+/*
+ * Empty since 23 Nov 2026 (Pau, via QA: "ok all ur picks"): the consultant interview removed on 21 Nov is back as Buff
+ * City Soap's Team Member Interview Form, under its old key. CHANGED ON PURPOSE.
+ */
+const REMOVED_FROM_LIBRARY: readonly string[] = [];
 
 const SNAPSHOT_TEMPLATES = snapshot.templates as unknown as SnapshotTemplate[];
 const ALL_CHANGES = approved.changes as ApprovedChange[];
@@ -124,6 +128,61 @@ const DPOA_REVISION_7 =
 const DPOA_REVISION_8 =
   'Revision 8 (HR via Pau, 19 Nov 2026) replaces the one history line with two required boxes, in HR\'s words: "List date of JBA policy manual signed by employee" (typed by the person creating the form) and "List previous coaching and corrective actions and include date signed by employee in past 90 days" (the same key as before). Neither can be left blank at Finalize.';
 
+/*
+ * BUFF CITY SOAP TITLES AND TERMS (Pau, 23 Nov: BCS terms in the forms; QA's final picks), for the six templates
+ * unhidden that day only: the Team Member and General Manager Performance EPPs, the Assistant General Manager
+ * Development EPP (KB performance framework, section 5), the Team Member Interview Form and the two management
+ * interviews. Each change is accepted only as one of these exact pairs: the names and abbreviations from the Woven
+ * career ladder, the General Manager plan's reference-platform metrics as Buff City Soap's Domo KPIs (KB "Domo
+ * Reporting Overview"; their stored keys unchanged) and SVC as the store reports (Domo), and the interviews' approved
+ * sentences (Buff Rewards from the KB "Buff Rewards – Talk Track and FAQ").
+ */
+const BCS_TERMS_TEMPLATES: ReadonlySet<string> = new Set(["tsd-epp", "asd-sdit-epp", "fttc-epp", "tanning-consultant-interview", "management-interview-round-1", "management-interview-round-2"]);
+const APPROVED_BCS_TERMS: readonly { from: string; to: string }[] = [
+  { from: "TSD EPP", to: "General Manager Performance EPP" },
+  { from: "TSD EPP", to: "GM EPP" },
+  { from: "Employee Performance Plan for a Training Salon Director.", to: "Employee Performance Plan for a General Manager, reviewed with the District Manager." },
+  { from: "The Management Performance Plan the business issues: the nine management expectations marked twice, five metrics for the manager and five for the salon, the manager's own self-assessment, the eight Plan of Action objectives and their re-evaluation, with the company-policy expectation stated against the JB & Associates Employment Policy Manual.", to: "Buff City Soap's General Manager Performance EPP: the nine management expectations marked twice, six KPIs (Net Sales, Comp Sales %, IPT, AOV, Discount Rate %, Product Mix %, Goal / Result each) for the manager and for the store, the manager's own self-assessment, the eight Plan of Action objectives and their re-evaluation." },
+  { from: "Management EPP (TSD).pdf", to: "General Manager Performance EPP.pdf" },
+  { from: "PPTA", to: "Net Sales (Goal / Result)" },
+  { from: "LPSVA", to: "Comp Sales % (Goal / Result)" },
+  { from: "UPTA", to: "IPT (Goal / Result)" },
+  { from: "Club Close", to: "AOV (Goal / Result)" },
+  { from: "Average Club Dollar", to: "Discount Rate % (Goal / Result)" },
+  { from: "Aware of all items on the SVC and able to describe to DM", to: "Aware of all items on the store reports (Domo) and able to describe to DM" },
+  { from: "Salon Standards of Cleanliness and Safety \u2014 Aware of all items on the SVC and able to describe to DM", to: "Store Standards of Cleanliness and Safety \u2014 Aware of all items on the store reports (Domo) and able to describe to DM" },
+  { from: "What do you feel is the most important skill for a Salon Director to possess?", to: "What do you feel is the most important skill for a General Manager to possess?" },
+  { from: "TSD review", to: "GM review" },
+  { from: "TSD", to: "GM" },
+  { from: "ASD-SDIT Performance EPP", to: "Assistant General Manager Development EPP" },
+  { from: "ASD-SDIT", to: "AGM EPP" },
+  { from: "Performance plan covering the ASD to SDIT development track.", to: "Development plan for an Assistant General Manager, reviewed with the General Manager." },
+  { from: "Seeded from the approved reference forms.", to: "Buff City Soap's Assistant General Manager Development EPP (Pau, 23 Nov 2026)." },
+  { from: "ASD-SDIT Performance EPP.pdf", to: "Assistant General Manager Development EPP.pdf" },
+  { from: "Performance EPP - ASD/SDIT", to: "Performance EPP - Assistant General Manager" },
+  { from: "ASD/SDIT review", to: "AGM review" },
+  { from: "Training Salon Director", to: "General Manager" },
+  { from: "ASD", to: "AGM" },
+  { from: "FTTC Performance EPP", to: "Team Member Performance EPP" },
+  { from: "FTTC", to: "TM EPP" },
+  { from: "Performance plan for a full-time Tanning Consultant.", to: "Employee Performance Plan for a Team Member (full time, part time or seasonal), reviewed with the General Manager." },
+  { from: "Seeded from the approved reference forms.", to: "Buff City Soap's Team Member Performance EPP (Pau, 23 Nov 2026)." },
+  { from: "FTTC Performance EPP.pdf", to: "Team Member Performance EPP.pdf" },
+  { from: "Performance EPP - FTTC", to: "Performance EPP - Team Member" },
+  { from: "FTTC review", to: "Team Member review" },
+  { from: "Salon Director", to: "General Manager" },
+  { from: "TC", to: "TM" },
+  { from: "Tanning Consultant Interview Form", to: "Team Member Interview Form" },
+  { from: "TC Interview", to: "TM Interview" },
+  { from: "The in-salon interview for a Tanning Consultant. Twelve questions through service, sales, accountability, the core values and the essential job functions.", to: "The in-store interview for a Team Member. Twelve questions through service, sales, accountability, the core values and the essential job functions." },
+  { from: "Published from the 03. Tanning Consultant Interview Form source document.", to: "Buff City Soap's Team Member Interview Form, restored from the last published version (v4) with its new title." },
+  { from: "Tanning Consultant Interview Form.pdf", to: "Team Member Interview Form.pdf" },
+  { from: "A client approaches the counter upset because the tanning bed they reserved is unavailable due to a mechanical issue. They are raising their voice and demanding a refund, while other clients are in the salon. Show how you would handle the client in the moment and explain the steps you would take afterward to address the root cause.", to: "A guest approaches the counter upset because the product they came in for is out of stock. They are raising their voice and demanding a refund, while other guests are in the store. Show how you would handle the guest in the moment and explain the steps you would take afterward to address the root cause." },
+  { from: "If you were given direction as a Salon Director to reduce expenses, what would be the first three areas you would focus on, and why?", to: "If you were given direction as a General Manager to reduce expenses, what would be the first three areas you would focus on, and why?" },
+  { from: "Scenario 2: Customer visits have dropped 20% over the past month and lotions and memberships sales are at their lowest in six months. One long-time team member is resistant to promoting add-ons, saying, “Customers don’t want to be pushed.” What are your next steps?", to: "Scenario 2: Guest visits have dropped 20% over the past month and add-on product sales and Buff Rewards sign-ups are at their lowest in six months. One long-time team member is resistant to recommending related products, saying, “Guests don’t want to be pushed.” What are your next steps?" },
+  { from: "How would you create a 30–60–90 day training plan for a new Assistant Salon Director or Tanning Consultant?", to: "How would you create a 30–60–90 day training plan for a new Assistant General Manager or Team Member?" },
+];
+
 const APPROVED_CONTENT_CHANGES: { decision: string; from: string; to: string }[] = [
   { decision: "D3 — 7G Service", from: "Follow through with Client Engagement Strategies with every client.", to: "Follow through with 7G Service with every guest." },
   { decision: "D4 — Employee Performance Plan acknowledgement", from: "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.", to: "I confirm that my supervisor and I have discussed this Employee Performance Plan and I will participate in the plan for improvement." },
@@ -150,7 +209,9 @@ const APPROVED_CONTENT_CHANGES: { decision: string; from: string; to: string }[]
    * name instead of the tanning role. See `exit-sibling-wording.test.ts`.
    */
   { decision: "QA-2 — exit step, tanning clause removed (Sunlync kept)", from: "Place comment on employee’s Sunlync account stating they are no longer employed, verify tanning has been removed.", to: "Place comment on employee’s Sunlync account stating they are no longer employed." },
-  { decision: "QA-3 — FTTC EPP description", from: "Performance plan for a full-time Tanning Consultant.", to: "The FTTC Employee Performance Plan." },
+  // QA-3 (the FTTC description) is superseded by Pau's 23 Nov 2026 description, an APPROVED_BCS_TERMS pair.
+  // QA-4 is back with the Team Member Interview Form (restored, Pau, 23 Nov 2026).
+  { decision: "QA-4 — Team Member Interview core-values heading", from: "Sun Tan City Core Values", to: "Core Values" },
   /*
    * QA-4 ("Sun Tan City Core Values" -> "Core Values") was the Tanning Consultant Interview's. That form was removed
    * from the library (Pau, 21 Nov 2026), so the approved pair has nothing left to apply to and is no longer listed.
@@ -205,20 +266,18 @@ describe("the migrated templates are the reference platform's published template
     }
   });
 
-  // 16 of the snapshot's 17: the Tanning Consultant Interview was removed (Pau, 21 Nov 2026). CHANGED ON PURPOSE.
-  it("the library ships the snapshot's 16 remaining templates, once each, and nothing else", () => {
+  // All 17 again (Pau, 23 Nov: BCS terms in the forms): the consultant interview is back as the Team Member Interview Form. CHANGED ON PURPOSE.
+  it("the library ships the snapshot's 17 templates, once each, and nothing else", () => {
     const keys = MIGRATED_TEMPLATE_SEEDS.map((seed) => seed.key).sort();
     expect(keys).toEqual(TEMPLATES.map((template) => RENAMED[template.key] ?? template.key).sort());
-    expect(new Set(keys).size).toBe(16);
+    expect(new Set(keys).size).toBe(17);
     expect(TEMPLATE_SEEDS.map((seed) => seed.key).sort()).toEqual(keys);
   });
 
-  it("the removed Tanning Consultant Interview is in the snapshot, but not in the library, and its key is retired", () => {
-    for (const key of REMOVED_FROM_LIBRARY) {
-      expect(SNAPSHOT_TEMPLATES.map((template) => template.key)).toContain(key);
-      expect(TEMPLATE_SEEDS.map((seed) => seed.key)).not.toContain(key);
-      expect(RETIRED_TEMPLATE_KEYS).toContain(key);
-    }
+  it("the snapshot's consultant interview is the library's Team Member Interview Form, and its key is not retired (Pau, 23 Nov 2026)", () => {
+    expect(REMOVED_FROM_LIBRARY).toEqual([]);
+    expect(TEMPLATE_SEEDS.find((seed) => seed.key === "tanning-consultant-interview")?.name).toBe("Team Member Interview Form");
+    expect(RETIRED_TEMPLATE_KEYS).not.toContain("tanning-consultant-interview");
   });
 
   it("every difference from the published version is on the approved list, and every approved change is present", () => {
@@ -266,8 +325,8 @@ describe("the migrated templates are the reference platform's published template
       APPROVED_CONTENT_CHANGES.some((entry) => entry.from === change.from && entry.to === change.to),
     );
     // D3 x2 (SDIT, both lists), D4 x10 (six EPPs; SDIT, TSD and both DMIT print it twice), D12 x1, D18 x1, DM-1..3 x1 each,
-    // QA-2..3 x1 each (QA, 25 Oct 2026: no sibling-company wording; QA-1 dropped, MyGlow confirmed by Pau). QA-4 went
-    // with the Tanning Consultant Interview (removed, Pau, 21 Nov 2026): 22, was 23.
+    // QA-2 x1 (QA, 25 Oct 2026: no sibling-company wording; QA-1 dropped, MyGlow confirmed by Pau). QA-3 is superseded by
+    // Pau's 23 Nov 2026 FTTC description (an APPROVED_BCS_TERMS pair); QA-4 is back with the Team Member Interview Form.
     // QA-5 x1 (QA, 29 Oct 2026: the Coaching details help names the three sections the prompt asks for).
     // + HR-1 x2 (Ask Sunny's revision 9, 19 Nov 2026: the history box's label and help; the revision note replaces DM-3's pair).
     expect(matching).toHaveLength(22);
@@ -275,7 +334,7 @@ describe("the migrated templates are the reference platform's published template
       expect(matching.some((change) => change.from === entry.from), entry.decision).toBe(true);
     }
     expect(new Set(matching.map((change) => change.sourceKey))).toEqual(
-      new Set(["coaching", "sdit-epp", "tsd-epp", "asd-sdit-epp", "fttc-epp", "dmit-epp-tsd", "dmit-epp-dmit", "demotion", "management-interview-round-1", "dpoa", "stc-exit"]),
+      new Set(["coaching", "sdit-epp", "tsd-epp", "asd-sdit-epp", "fttc-epp", "dmit-epp-tsd", "dmit-epp-dmit", "demotion", "management-interview-round-1", "dpoa", "stc-exit", "tanning-consultant-interview"]),
     );
   });
 
@@ -287,6 +346,14 @@ describe("the migrated templates are the reference platform's published template
       if (change.path === ".document.style.logo") {
         // The source company's logo, removed; nothing replaces it.
         expect(change.to, where).toBeNull();
+        continue;
+      }
+      // Product Mix %, the sixth Domo KPI (Pau, 23 Nov: BCS terms in the forms): one new line at the end of each KPI row of
+      // the General Manager plan, on a new key, drafted from the manager's figures like the five beside it.
+      if (change.sourceKey === "tsd-epp" && change.from === null && /^\.document\.blocks\[\d+\]\.fields\[5\]$/.test(change.path)) {
+        const prefix = (change.to as { key?: string }).key?.split("_")[0];
+        expect(["manager", "salon"], where).toContain(prefix);
+        expect(change.to, where).toEqual({ key: `${prefix}_product_mix`, label: "Product Mix % (Goal / Result)", input: "text", responsibility: "ai" });
         continue;
       }
       if (change.sourceKey === "stc-exit" && change.path === ".key") {
@@ -307,6 +374,8 @@ describe("the migrated templates are the reference platform's published template
       if (APPROVED_REMOVAL_DESCRIPTION_CHANGES.some((entry) => entry.templateKey === change.sourceKey && entry.from === from && entry.to === to)) continue;
       // A Phase 2A change is accepted only as the exact approved pair.
       if (APPROVED_CONTENT_CHANGES.some((entry) => entry.from === from && entry.to === to)) continue;
+      // Pau's Buff City Soap terms (23 Nov 2026): the exact pair, on one of the six templates unhidden that day.
+      if (BCS_TERMS_TEMPLATES.has(change.sourceKey) && APPROVED_BCS_TERMS.some((entry) => entry.from === from && entry.to === to)) continue;
       // Salon -> Store is the other authorized substitution: Buff City Soap's locations are stores.
       const SOURCE_TERM = /\b[Ss]alons?\b|\bSALONS?\b|\b[Cc]lients?\b|\b[Cc]ustomers?\b/;
       // The authorized terminology substitutions: Salon -> Store, and client/customer -> guest.
