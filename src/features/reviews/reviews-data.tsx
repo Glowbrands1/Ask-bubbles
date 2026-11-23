@@ -130,7 +130,7 @@ export function LiveFilters({
       {tab === "leaderboard" ? (
         /*
          * PERIOD: the current month, L3, L6, YTD, then each month before (ported
-         * from Ask Sunny; Pau, 23 Nov 2026: "pls do in bubbles too but pls add the
+         * from the sibling app; Pau, 23 Nov 2026: "pls do in bubbles too but pls add the
          * per month for both like September october november").
          */
         <select

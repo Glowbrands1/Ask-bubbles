@@ -6,7 +6,7 @@ import type { MonthlyProgress } from "./monthly-progress";
  * THE STORE LEADERBOARD'S LONGER PERIODS: L3, L6 AND YTD
  * ============================================================================
  *
- * Ported from Ask Sunny (salon leaderboard, 23 Nov 2026). Pau: "pls do in
+ * Ported from the sibling app (23 Nov 2026). Pau: "pls do in
  * bubbles too but pls add the per month for both like September october
  * november and make sure it syncs in the data below". Bubbles' leaderboard
  * already picks one month at a time; its Period control now also offers:

@@ -435,7 +435,7 @@ function LeaderboardView({
       : "not_configured"
     : status;
   const closed = g?.context.closed === true;
-  // L3 / L6 / YTD (ported from Ask Sunny, 23 Nov 2026): the Month by month table's totals against target × months.
+  // L3 / L6 / YTD (ported from the sibling app, 23 Nov 2026): the Month by month table's totals against target × months.
   const period = g?.context.window ?? null;
   const periodMonths = data?.windowMonths ?? [];
   const periodSpan =
