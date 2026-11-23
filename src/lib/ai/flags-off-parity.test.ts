@@ -207,7 +207,7 @@ const ALLOWED_UI = [
   // three are listed below. No chat or form behaviour changes.
   "src/features/notifications/",
   // HR APPROVAL OF FORMS (owner request, 23 Nov 2026, both apps), behind FORMS_HR_APPROVAL_ENABLED (off): the form card's
-  // "Finalize and send for approval" and HR's approval panel, the Forms Register's Pending HR approval tab and "Your
+  // "Finalize and send to HR for approval" and HR's approval panel, the Forms Register's Pending HR approval tab and "Your
   // forms with HR" list, the Overview card, and the HR review page. Off, none of them renders and Finalize is as before.
   "src/features/forms/hr-approval-lists.tsx",
   "src/features/forms/hr-approval-panel.tsx",
