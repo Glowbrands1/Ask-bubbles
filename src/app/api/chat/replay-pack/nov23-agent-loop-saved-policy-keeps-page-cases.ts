@@ -62,4 +62,17 @@ export const NOV23_AGENT_LOOP_SAVED_POLICY_KEEPS_PAGE_CASES: ReplayCase[] = [
       expect(saved).toBe(card);
     },
   },
+  {
+    id: "nov23-saved-policy-violated-time-records-keeps-page",
+    title: "Pau's ruling (23 Nov 2026, \"add the page everywhere\"): a verbal CA citing Time Records saves the card's \"Standards of Conduct — Time Records, JBA Policy Manual p.36\", superseding f071's line without the page",
+    report: REPORT,
+    status: "fixed",
+    async run(t) {
+      /* Time Records as a manual chunk (printed page 36), the shape the draft-route tests use. */
+      t.manualAlsoHas!([{ chunkIndex: 120, chunkId: "jba-120", locator: "Page 36 — Timekeeping & Payroll", page: 37, section: "Timekeeping & Payroll", printedPage: 36, sections: [{ page: 36, heading: "Timekeeping & Payroll" }, { page: 36, heading: "Time Records" }], content: "Timekeeping & Payroll\nEmployees record their own working time accurately.\nTime Records\nEmployees clock in at the start of their scheduled shift and clock out at its end, no more than a\nshort time after it unless a manager approves the extra time." }]);
+      const { card, saved } = await savedFor(t, "verbal CA for Tegwen Quarrington, she stayed clocked in until 10:40 on 11/21 without approval, time records, no payroll deduct", /^time records/i, "On 11/21/26 Tegwen stayed clocked in until 10:40 without approval.");
+      expect(card).toBe("Standards of Conduct — Time Records, JBA Policy Manual p.36");
+      expect(saved).toBe(card);
+    },
+  },
 ];
