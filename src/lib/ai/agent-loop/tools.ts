@@ -3988,11 +3988,19 @@ export async function proposeForm(
    * back once, to pass the manager's account from the earlier turns. A card never given an account is made as before.
    */
   const hasAccount = typeof input.what_happened === "string" && input.what_happened.trim() !== "";
-  if (!hasAccount && !sameCardOther && !effects.cardAccountAsked && Boolean(context.cardOnScreen?.accountKey) && sameCardOnScreen(context.cardOnScreen, key, employee)) {
+  /*
+   * Coder 2's A1(b) cases (QA's live record): the same person's card is also one whose name this call corrects ("Della
+   * Varnick" on screen, "Della Varnich" now), and a switch between the account forms (a CA made a Coaching card "with the
+   * information given") carries the same account. An exit card's account is its own, so a switch to it is not this.
+   */
+  const cardShown = context.cardOnScreen ?? null;
+  const samePersonCard = Boolean(cardShown && ((employee.id && cardShown.employeeKey === personKey(employee.id)) || cardShown.nameKey === personKey(employee.name) || (nameCorrectedFrom !== null && cardShown.nameKey === personKey(nameCorrectedFrom))));
+  const sameAccountForm = Boolean(cardShown && (cardShown.templateKey === key || (ACCOUNT_FORMS.has(cardShown.templateKey) && ACCOUNT_FORMS.has(key))));
+  if (!hasAccount && !sameCardOther && !effects.cardAccountAsked && Boolean(cardShown?.accountKey) && samePersonCard && sameAccountForm) {
     effects.cardAccountAsked = true;
     return {
       reason_code: "card_account_missing",
-      error: `${employee.name}'s ${template.name} on screen has an account of what happened, and this call gave none, so the card would lose it. Propose the card again now with what_happened: the manager's account from the earlier turns of this chat, in their words, with anything this message adds. Never ask the manager what happened again.`,
+      error: `${employee.name}'s ${cardShown?.templateName ?? template.name} on screen has an account of what happened, and this call gave none, so the card would lose it. Propose the card again now with what_happened: the manager's account from the earlier turns of this chat, in their words, with anything this message adds. Never ask the manager what happened again.`,
     };
   }
   const copiedFromCard = sameCardOther;
