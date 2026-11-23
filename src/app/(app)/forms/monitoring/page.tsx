@@ -25,6 +25,8 @@ import {
 } from "@/lib/forms/instance-scope";
 import { pageFormsAccess } from "@/lib/forms/page-scope";
 import { HrApprovalTabs, HrQueueList, MyFormsWithHr } from "@/features/forms/hr-approval-lists";
+import { ASK_SUNNY_URL } from "@/config/company/app-links";
+import { pageShowsAppSwitcher } from "@/lib/auth/app-switcher";
 import { hrQueueSummary, listHrQueue, listMyFormsWithHr, type HrQueueRow, type MyHrFormRow } from "@/lib/forms/hr-approval";
 import { supabaseSecretKeyConfigured } from "@/lib/config/server-env";
 import { privateAwareLimit, privateCreatorsActive } from "@/lib/forms/private-creators";
@@ -89,6 +91,12 @@ export default async function FormMonitoringPage({
   let hrQueue: HrQueueRow[] = [];
   let hrSummary: { pending: number; overdue: number } | null = null;
   let myWithHr: MyHrFormRow[] = [];
+  /*
+   * "Sunny approvals ↗" (owner, 23 Nov 2026): the sibling app's Pending HR approval view, for people who already get the
+   * app switcher (access to both apps). Only a link: no data crosses between the apps, and the other app checks its own
+   * sign-in. No count.
+   */
+  const sunnyApprovalsHref = (await pageShowsAppSwitcher()) ? `${ASK_SUNNY_URL.replace(/\/+$/, "")}/forms/monitoring?view=hr` : null;
   if (access) {
     try {
       if (isHr) {
@@ -177,7 +185,15 @@ export default async function FormMonitoringPage({
           description="Every form created in Ask Bubbles, the template version it was filled from, and what is still outstanding."
         />
 
-        {hrSummary ? <HrApprovalTabs active={hrView ? "hr" : "all"} pending={hrSummary.pending} overdue={hrSummary.overdue} /> : null}
+        {hrSummary || sunnyApprovalsHref ? (
+          <HrApprovalTabs
+            active={hrView ? "hr" : "all"}
+            pending={hrSummary?.pending ?? 0}
+            overdue={hrSummary?.overdue ?? 0}
+            showPending={hrSummary !== null}
+            sunnyHref={sunnyApprovalsHref}
+          />
+        ) : null}
         {!hrView ? <MyFormsWithHr rows={myWithHr} /> : null}
 
         {hrView ? (

@@ -322,6 +322,13 @@ describe("manager replied to changes", () => {
     expect(await listHrQueue(hr)).toEqual([]);
     const history = (await hrApprovalViewFor(manager, (await loadInstance(instance.id))!.instance))!.history;
     expect(history.at(-1)).toMatchObject({ action: "approved", by: "HR" });
+    // Approved, it is an ordinary finalized form (the register scopes it by store: hr-approval-visibility.test.ts); the
+    // approval and HR's notes stay with the creator, the sender and HR: the store's District Manager reads none of it.
+    const finalForm = (await loadInstance(instance.id))!.instance;
+    expect(await hrApprovalViewFor(theirDm, finalForm)).toBeNull();
+    expect(await hrApprovalViewFor(hr, finalForm)).not.toBeNull();
+    const dmRead = await readHrApprovalsFor(theirDm.id, true);
+    expect(dmRead.kind === "manager" ? dmRead.forms : []).toEqual([]);
     // "Was my CA approved?": the AI's reader gives it as approved, to its creator only.
     const read = await readHrApprovalsFor(CREATOR, true);
     expect(read.kind === "manager" ? read.forms.map((row) => [row.id, row.label]) : []).toEqual([[instance.id, "Approved by HR"]]);

@@ -53,20 +53,60 @@ function hrHref(id: string): string {
   return `/forms/hr-approval/${id}`;
 }
 
-export function HrApprovalTabs({ active, pending, overdue }: { active: "all" | "hr"; pending: number; overdue: number }) {
+/**
+ * The Forms Register's views. The owner (23 Nov 2026): "its so small pending approval, make it red button and animated
+ * shaking if theres a pending". "Pending HR approval (N)" is a real button; with N > 0 it is red and shakes briefly every
+ * few seconds (`hr-pending-shake`, off under prefers-reduced-motion); with N = 0 it is the normal style. Shown to HR only,
+ * as before. "Sunny approvals ↗" (owner, 23 Nov 2026) opens the sibling app's Pending HR approval view: a plain link for
+ * people who already get the app switcher, no data from the other app and no count.
+ */
+export function HrApprovalTabs({
+  active,
+  pending,
+  overdue,
+  showPending = true,
+  sunnyHref = null,
+}: {
+  active: "all" | "hr";
+  pending: number;
+  overdue: number;
+  /** HR approvers only (the page passes false for anybody else). */
+  showPending?: boolean;
+  /** The sibling app's Pending HR approval view, for app-switcher users only; null hides the tab. */
+  sunnyHref?: string | null;
+}) {
   const tab = (selected: boolean) =>
-    `inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs ${
+    `inline-flex min-h-9 items-center gap-1.5 rounded-[var(--radius-md)] border px-4 py-2 text-sm font-medium ${
       selected ? "border-foreground bg-foreground text-background" : "border-border text-muted-foreground hover:text-foreground"
     }`;
+  const waiting = pending > 0;
+  const pendingClass = waiting
+    ? `hr-pending-shake inline-flex min-h-9 items-center gap-1.5 rounded-[var(--radius-md)] border border-status-failed bg-status-failed px-4 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90 ${
+        active === "hr" ? "ring-2 ring-status-failed ring-offset-2" : ""
+      }`
+    : tab(active === "hr");
   return (
-    <nav aria-label="Forms Register views" className="mb-4 flex flex-wrap gap-2">
+    <nav aria-label="Forms Register views" className="mb-4 flex flex-wrap items-center gap-2">
       <Link href="/forms/monitoring" className={tab(active === "all")} aria-current={active === "all" ? "page" : undefined}>
         All forms
       </Link>
-      <Link href="/forms/monitoring?view=hr" className={tab(active === "hr")} aria-current={active === "hr" ? "page" : undefined}>
-        Pending HR approval ({pending})
-        {overdue > 0 ? <span className="font-semibold text-status-attention">· {overdue} overdue</span> : null}
-      </Link>
+      {showPending ? (
+        <Link
+          href="/forms/monitoring?view=hr"
+          className={pendingClass}
+          aria-current={active === "hr" ? "page" : undefined}
+          data-testid="hr-pending-tab"
+          data-waiting={waiting ? "true" : "false"}
+        >
+          Pending HR approval ({pending})
+          {overdue > 0 ? <span className={waiting ? "font-semibold" : "font-semibold text-status-attention"}>· {overdue} overdue</span> : null}
+        </Link>
+      ) : null}
+      {sunnyHref ? (
+        <a href={sunnyHref} target="_blank" rel="noopener noreferrer" className={tab(false)} data-testid="sunny-approvals-tab">
+          Sunny approvals ↗
+        </a>
+      ) : null}
     </nav>
   );
 }

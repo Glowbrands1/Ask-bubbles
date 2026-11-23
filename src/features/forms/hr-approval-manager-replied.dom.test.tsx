@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
@@ -81,3 +82,53 @@ describe("the approval panel", () => {
     expect(screen.getByText("Manager replied to changes")).toBeTruthy();
   });
 });
+
+/*
+ * The owner (23 Nov 2026): "its so small pending approval, make it red button and animated shaking if theres a pending".
+ * And "Sunny approvals ↗" for people with access to both apps: a plain link, no count.
+ */
+describe("the Pending HR approval button", () => {
+  it("with forms waiting: red and shaking", () => {
+    render(<HrApprovalTabs active="all" pending={2} overdue={1} />);
+    const tab = screen.getByTestId("hr-pending-tab");
+    expect(tab.textContent).toContain("Pending HR approval (2)");
+    expect(tab.className).toContain("hr-pending-shake");
+    expect(tab.className).toContain("bg-status-failed");
+    expect(tab.getAttribute("data-waiting")).toBe("true");
+  });
+
+  it("with none waiting: the normal style, no shake", () => {
+    render(<HrApprovalTabs active="all" pending={0} overdue={0} />);
+    const tab = screen.getByTestId("hr-pending-tab");
+    expect(tab.className).not.toContain("hr-pending-shake");
+    expect(tab.className).not.toContain("bg-status-failed");
+  });
+
+  it("the shake repeats with a pause and stops under prefers-reduced-motion", () => {
+    const css = readFileSync("src/app/globals.css", "utf8");
+    expect(css).toMatch(/\.hr-pending-shake\s*\{\s*animation: hr-pending-shake 4s ease-in-out infinite;/);
+    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.hr-pending-shake\s*\{\s*animation: none;/);
+  });
+
+  it("not HR: no pending button", () => {
+    render(<HrApprovalTabs active="all" pending={3} overdue={0} showPending={false} sunnyHref="https://sunny.example/forms/monitoring?view=hr" />);
+    expect(screen.queryByTestId("hr-pending-tab")).toBeNull();
+  });
+});
+
+describe("Sunny approvals ↗", () => {
+  it("a link to the sibling app's Pending HR approval view, in a new tab, with no count", () => {
+    render(<HrApprovalTabs active="all" pending={1} overdue={0} sunnyHref="https://sunny.example/forms/monitoring?view=hr" />);
+    const link = screen.getByTestId("sunny-approvals-tab");
+    expect(link.textContent).toBe("Sunny approvals ↗");
+    expect(link.getAttribute("href")).toBe("https://sunny.example/forms/monitoring?view=hr");
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toContain("noopener");
+  });
+
+  it("without the app switcher: no link", () => {
+    render(<HrApprovalTabs active="all" pending={1} overdue={0} />);
+    expect(screen.queryByTestId("sunny-approvals-tab")).toBeNull();
+  });
+});
+
