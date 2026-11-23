@@ -9,7 +9,7 @@ import { cardLines, historyReply, withoutAppNotes, withoutCardLines } from "./ca
 import "server-only";
 
 import { withFullOffRosterName, withOneInactiveLine } from "./off-roster-line";
-import { cardTurns, personKey, readLoopRecords, replyTurns, type CardRecord, type CardSlot, type ExitOfferSlot, type NameQuestionSlot, type PersonAskedSlot, type TeamConfirmSlot } from "./card-record";
+import { cardTurns, personKey, readLoopRecords, shownTextKey, replyTurns, type CardRecord, type CardSlot, type ExitOfferSlot, type NameQuestionSlot, type PersonAskedSlot, type TeamConfirmSlot } from "./card-record";
 import { CLAUDE_EFFORT, CLAUDE_MAX_TOKENS, CLAUDE_MODEL } from "@/lib/config/models";
 import { MissingConfigurationError, requireEnv } from "@/lib/config/server-env";
 import { mainAnswerTimeoutMs, streamGapTimeoutMs } from "@/lib/config/ai-timeouts";
@@ -567,6 +567,8 @@ function buildAgentLoopTools(config: AppConfig, planSteps = false) {
         exit_method_evidence: evidence("With exit_method: the manager message of this request and its words that say how the person resigned (e.g. \"returned the call and told me she quit\")."),
         exit_reason: { type: "string", description: "Employee Exit Form: why the person is leaving (Reason for Resignation), when the manager said it, in the manager's own words, short (\"Second job\", \"Moving out of state\"; a termination's \"Terminated for job abandonment\"). With exit_reason_evidence. Leave it out when no reason was given." },
         exit_reason_evidence: evidence("With exit_reason: the manager message of this request and its words that give the reason (e.g. \"she is resigning due to second job\")."),
+        job_title: { type: "string", description: "Only when the manager tells you which job title to put on this form (\"no, use Shift Lead\", \"put her title as <title>\"): that title. Never a title they only used to refer to the person (\"my <title> <first name>\"); left out, the card uses " + config.staffSystem + "'s title." },
+        job_title_evidence: evidence("With job_title: the manager message from this request and their words from it that tell you the form's title, holding the title."),
         effective_date: { type: "string", description: "Employee Exit Form termination only: the effective or termination date as the manager typed it (e.g. 11/28)." },
         payroll_deduct: { type: "string", enum: ["yes", "no"], description: "Only when the manager said whether payroll deduct applies." },
         payroll_amount: { type: "string", description: "The deduction amount the manager stated, digits." },
@@ -738,7 +740,11 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
   /* PR 6: the turn's one read of the policy manual starts first, beside the chat's record read (`turnManual`). */
   const turn: TurnReads = {};
   turn.manual = manualFor(input.scopeId, turn);
-  const { cards: records, nameQuestions, personAsked, exitOffers, teamConfirms, whichForms, turns: turnRecords } = await readLoopRecords(input.conversationId, input.actor.subject, input.history.filter((turn) => turn.role === "user" && typeof turn.id === "string").map((turn) => turn.id));
+  const { cards: records, nameQuestions, personAsked, exitOffers, teamConfirms, whichForms, turns: turnRecords } = await readLoopRecords(input.conversationId, input.actor.subject, input.history.filter((turn) => turn.role === "user" && typeof turn.id === "string").map((turn) => turn.id), {
+    /* QA (23 Nov 2026, duplicate tab): only this tab's own records (`card-record.ts`, `ThisTab`). */
+    messageIds: input.history.filter((turn) => turn.role === "user" && typeof turn.id === "string").map((turn) => turn.id!),
+    questionKeys: input.history.filter((turn) => turn.role === "user").map((turn) => personKey(String(turn.content ?? ""))),
+  });
   const cards = cardTurns(input.history, records);
   const lastReplyIndex = input.history.findLastIndex((turn) => turn.role === "assistant" && !turn.error);
   const cardOnScreen = !input.openFormId && lastReplyIndex >= 0 ? (cards.get(lastReplyIndex) ?? null) : null;
@@ -985,6 +991,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
   const [templates, manual] = await Promise.all([templateChoices(input.actor.role), turnManual(context)]);
   const dynamic = agentLoopSystem({
     cardOpen: cardOpenAtStart,
+    cardOpenForm: cardOnScreen?.templateName ?? null,
     managerName: input.actor.displayName,
     role: input.actor.role,
     salons: authorizedSalonIds(input.actor.scope).map((id) => salonLabel(id)!),
@@ -1477,6 +1484,16 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
           if (wovenLine.test(text)) text = text.split("\n").map((line) => line.split(/(?<=[.!?])\s+/).filter((sentence) => !wovenLine.test(sentence)).join(" ")).join("\n").replace(/\n{3,}/g, "\n\n").trim();
         }
         /*
+         * A7 follow-up (QA's option 2, 22 Nov 2026): the latest card's account still names its store, in the phrase the
+         * store reader matched in the manager's own words ("… came into the store at Empire to show …"). It goes back once
+         * so the model proposes the card again without it; if it comes back, the card stays as proposed.
+         */
+        if (stoppedAt === "reply" && effects.proposal && effects.storePhraseLeft) {
+          const phrase = effects.storePhraseLeft;
+          const again = await handBack(`[app check] The card's what_happened still names its ${appConfig().locationWord} ("${phrase}"); the card shows the ${appConfig().locationWord} on its own line. Call propose_form again with what_happened without "${phrase}", everything else the same. Then write your reply to the manager again.`);
+          if (again) text = again;
+        }
+        /*
          * QA's Bubbles re-run (22 Nov 2026, A8): with a card that has no store yet, the reply named stores nobody had named
          * ("which Sioux Falls location …, W 41st St or E 18th St?" from "SFS", ship from store). Read by the app's own store
          * reader: a store the reply names that the manager never named and the card does not hold goes back once; if it
@@ -1599,7 +1616,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
   /* QA's live re-test B8: a former employee is found in Woven, so the reply never also says they are not on the staff list. */
   if (inactiveLines.size === 1 && text) text = withOneInactiveLine(text, [...inactiveLines][0]!, appConfig().staffSystem);
   const cardSlot: CardSlot | null = effects.proposal
-    ? { proposalId: effects.proposal.proposalId, employeeKey: effects.proposalEmployeeId ? personKey(effects.proposalEmployeeId) : null, nameKey: effects.proposal.employeeName ? personKey(effects.proposal.employeeName) : null, templateKey: effects.proposal.templateKey, templateName: effects.proposal.templateName ?? null, ...(effects.proposalAsked?.length ? { asked: effects.proposalAsked } : {}), ...(effects.proposalLevel ? { level: effects.proposalLevel } : {}), ...(effects.proposalPayroll ? { payroll: effects.proposalPayroll } : {}), ...(effects.proposalPayroll === "yes" && effects.proposalPayrollAmount ? { payrollAmount: effects.proposalPayrollAmount } : {}), ...(effects.proposal.policyLine ? { policyLine: effects.proposal.policyLine } : {}), ...(effects.proposalAccountKey ? { accountKey: effects.proposalAccountKey } : {}), ...(effects.proposal.formDate ? { incidentDate: effects.proposal.formDate } : {}), ...(effects.proposal.subject === "team" && effects.proposal.locationId ? { teamStoreId: effects.proposal.locationId } : {}), ...(effects.proposalPriorDates?.length ? { priorDates: effects.proposalPriorDates } : {}), ...(effects.proposal.locationId ? { storeId: effects.proposal.locationId } : {}) }
+    ? { proposalId: effects.proposal.proposalId, employeeKey: effects.proposalEmployeeId ? personKey(effects.proposalEmployeeId) : null, nameKey: effects.proposal.employeeName ? personKey(effects.proposal.employeeName) : null, templateKey: effects.proposal.templateKey, templateName: effects.proposal.templateName ?? null, ...(effects.proposalAsked?.length ? { asked: effects.proposalAsked } : {}), ...(effects.proposalLevel ? { level: effects.proposalLevel } : {}), ...(effects.proposalPayroll ? { payroll: effects.proposalPayroll } : {}), ...(effects.proposalPayroll === "yes" && effects.proposalPayrollAmount ? { payrollAmount: effects.proposalPayrollAmount } : {}), ...(effects.proposal.policyLine ? { policyLine: effects.proposal.policyLine } : {}), ...(effects.proposalAccountKey ? { accountKey: effects.proposalAccountKey } : {}), ...(effects.proposal.issue ? { issueKey: shownTextKey(effects.proposal.issue) } : {}), ...(effects.proposal.formDate ? { incidentDate: effects.proposal.formDate } : {}), ...(effects.proposal.subject === "team" && effects.proposal.locationId ? { teamStoreId: effects.proposal.locationId } : {}), ...(effects.proposalPriorDates?.length ? { priorDates: effects.proposalPriorDates } : {}), ...(effects.proposal.locationId ? { storeId: effects.proposal.locationId } : {}) }
     : null;
   /* Fix batch items 4 and 3: this turn's "Did you mean", for the next turn's name question record (one-way keys only). */
   const nameQuestionSlot: NameQuestionSlot | null = effects.nameQuestion && stoppedAt === "reply"

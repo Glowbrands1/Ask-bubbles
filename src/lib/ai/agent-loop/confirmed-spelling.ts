@@ -5,6 +5,7 @@ import type { ChatMessage } from "@/types";
 
 import { personKey, replyTurns, type NameQuestionRecord } from "./card-record";
 import { holdsPhrase } from "./evidence";
+import { readSalonMentions, rosterSalonName } from "./places";
 
 /**
  * ============================================================================
@@ -39,7 +40,7 @@ export interface AnsweredNameQuestion {
   readonly latest: boolean;
   /** The person the answer confirmed, and how; null when it confirmed nobody. */
   readonly confirmed: RosterEmployee | null;
-  readonly by: "yes" | "full_name" | "correction" | null;
+  readonly by: "yes" | "full_name" | "correction" | "surname" | "store" | null;
   /** No manager turn has answered it yet (QA, c163): the question is still waiting, and its person is not settled. */
   readonly open?: boolean;
   /** The name the question was about, as the manager typed it (found in their earlier words by the record's key), or null. */
@@ -59,6 +60,23 @@ function confirmsIn(answer: string, record: NameQuestionRecord, offered: readonl
   if (offered.length === 1 && (record.offeredNameKeys?.length ?? 0) === 0 && AFFIRMATIVE.test(answer)) return { confirmed: offered[0]!, by: "yes" };
   const held = offered.filter((person) => fullNames(person).some((name) => holdsPhrase(answer, name)));
   if (held.length === 1) return { confirmed: held[0]!, by: "full_name" };
+  /*
+   * The tester's A9 (two staff share a first name; QA's ruling (b), 23 Nov 2026): with several people offered, the answer
+   * names one of them by what only that person has: their surname ("Pike"), or a store only they are at ("the Bellevue
+   * one", as the store reader reads it). Read from the people the question offered, never a list of phrasings.
+   */
+  if (offered.length > 1) {
+    const surname = offered.filter((person) => person.lastName.trim() !== "" && holdsPhrase(answer, person.lastName) && offered.filter((other) => other.lastName.trim().toLowerCase() === person.lastName.trim().toLowerCase()).length === 1);
+    if (surname.length === 1) return { confirmed: surname[0]!, by: "surname" };
+    /* The store reader's reading, or a part of the person's own store name ("Bellevue" of "Bellevue, NE", "West Dodge Rd" of "Omaha, NE (West Dodge Rd)") as whole words. */
+    const stores = new Set(readSalonMentions(answer).flatMap((mention) => mention.salonIds));
+    const storeParts = (id: string) => {
+      const name = rosterSalonName(id) ?? "";
+      return [name, name.split(",")[0] ?? "", /\(([^)]+)\)/.exec(name)?.[1] ?? ""].map((part) => part.trim()).filter((part) => part.length >= 3);
+    };
+    const atStore = offered.filter((person) => person.locationIds.some((id) => stores.has(id) || storeParts(id).some((part) => holdsPhrase(answer, part))));
+    if (atStore.length === 1) return { confirmed: atStore[0]!, by: "store" };
+  }
   /*
    * QA's live round-2 re-run (22 Nov 2026, U35(a)): "Did you mean **<First> <Mid> <Last>**?" for the typed "<First> <Mid>
    * <Lastx>", answered "fix her last name <last>": the typed name with the answer's word in place of the one word that
