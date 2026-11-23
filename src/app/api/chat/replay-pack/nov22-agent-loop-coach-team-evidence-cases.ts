@@ -56,7 +56,8 @@ export const NOV22_AGENT_LOOP_COACH_TEAM_EVIDENCE_CASES: ReplayCase[] = [
     async run(t) {
       const thread = start(t);
       const model = loopStandIn((view) => (lastResult(view, "coach_team") ? { text: "ok" } : { tool: "coach_team", input: { team_evidence: evidenceFrom(view, "my whole sales team") } }));
-      t.loopModel!(model);
+      /* CHANGED ON PURPOSE (QA's live regression triage, 22 Nov 2026): a control whose condition is the stand-in's input (team_evidence quoting words the manager never wrote); the real model proposes Fenna's own card and never sends it; the stand-in plays in live runs too. */
+      t.loopModel!(model, { scripted: true });
       await thread.say("can you make me a coaching form for fenna prewitt for selling soap");
       const result = lastResult(model.views.at(-1)!, "coach_team") as { reason_code?: string } | null;
       expect(result?.reason_code).toBe("wrong_tool");

@@ -94,8 +94,16 @@ export const NOV22_ROUND3_STORE_SAID_AND_CARD_STORE_CASES: ReplayCase[] = [
       for (const turn of [A1.T1, A1.T2, A1.T3]) await thread.say(turn);
       expect(thread.proposal?.locationId, "the case proves nothing: T3's card is not at West Dodge").toBe("loc-264");
       const fourth = await thread.say(A1.T4);
-      expect(fourth.content, `the true store claim was replaced by the store question:\n${fourth.content}`).not.toMatch(/^Which store is this for\?$/);
-      expect(fourth.content).toMatch(/filed at \*\*Omaha, NE \(West Dodge Rd\)\*\*/);
+      /*
+       * QA (22 Nov 2026): live-robust. Assert what the manager sees, not the scripted reply's wording: the live model says
+       * "Filed at **Omaha, NE (West Dodge Rd)**, as you said", "filed at the Omaha, West Dodge Rd store" or "That's
+       * already the store on the card — Omaha, NE (West Dodge Rd)", all right. So: no store question, the store the reply
+       * names is West Dodge, and the card's store stays West Dodge.
+       */
+      expect(fourth.content, `the true store claim was replaced by the store question:\n${fourth.content}`).not.toMatch(/which store/i);
+      expect(fourth.content, `the reply does not name the card's store:\n${fourth.content}`).toMatch(/west dodge/i);
+      expect(fourth.content, `the reply names another store:\n${fourth.content}`).not.toMatch(/18th|empire|41st/i);
+      expect(thread.proposal?.locationId, "the card's store moved").toBe("loc-264");
     },
   },
   {
@@ -121,8 +129,14 @@ export const NOV22_ROUND3_STORE_SAID_AND_CARD_STORE_CASES: ReplayCase[] = [
       expect((thread.proposal as { subject?: string } | null)?.subject, "the case proves nothing: no team card").toBe("team");
       expect(thread.proposal?.locationId, "the case proves nothing: the team card has no store").toBe("loc-264");
       const second = await thread.say(T2);
-      expect(second.content).toMatch(/filed at \*\*Omaha, NE \(West Dodge Rd\)\*\*/);
-      expect(second.content).not.toMatch(/^Which store is this for\?$/);
+      /*
+       * QA (22 Nov 2026): live-robust. The live model answers "thanks" without naming the store ("You're welcome! The
+       * card above is still open …"), which is right. So: no store question, any store the reply names is West Dodge,
+       * and the team card's store stays West Dodge.
+       */
+      expect(second.content, `the team card's store was asked again:\n${second.content}`).not.toMatch(/which store/i);
+      if (/filed at|store/i.test(second.content)) expect(second.content, `the reply names another store:\n${second.content}`).not.toMatch(/18th|empire|41st/i);
+      expect(thread.proposal?.locationId, "the team card's store moved").toBe("loc-264");
     },
   },
   ...[true, false].map((fixes): ReplayCase => ({

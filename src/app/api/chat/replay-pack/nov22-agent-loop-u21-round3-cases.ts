@@ -127,8 +127,10 @@ NOV22_AGENT_LOOP_U21_ROUND3_CASES.push({
   /*
    * QA (22 Nov 2026): form_date handling is coder 1's (session_01VVEkRTNhKWLH8gwuJq8Jfp), whose PR 2 adds "a prior step's
    * date is never the form date". This branch does not touch the form-date logic, so the case is open until that merges.
+   * Fixed by coder 1's PR 2 (#1056): a prior step's date, from this turn's prior actions or this person's earlier cards
+   * (`CardRecord.priorDates`, `agent-loop/prior-step-dates.ts`), is never the form date, so the open status is lifted.
    */
-  status: { open: "the form date takes a prior step's date; coder 1's PR 2 fixes it" },
+  status: "fixed",
   async run(t) {
     formDateRun(t);
     const thread = t.thread();
