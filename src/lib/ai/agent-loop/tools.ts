@@ -5149,6 +5149,23 @@ export async function proposeForm(
     }
   }
   /*
+   * Board f140, with U26 (QA's batch-2 live run, 22 Nov 2026): a FORMER employee's card (off the active roster) only
+   * offered their Woven store (employee_store) and relied on the model to propose again with it; when it did not, Create
+   * met a card still asking which store. Their one Woven store among the choices is the card's store, as an active
+   * person's is (store_from_woven); several still ask.
+   */
+  if (!typedSalon && !employee.id && offRosterName && proposal.status === "needs_location") {
+    const former = await inactiveMatchRow(context.actor.scope, employee.name);
+    const theirs = (former?.locationIds ?? []).filter((id) => (proposal.authorizedLocationIds ?? []).includes(id));
+    if (theirs.length === 1) {
+      const filed = buildProposal(proposalInput([theirs[0]!]));
+      if (filed.locationId === theirs[0]) {
+        proposal = filed;
+        salonFromWoven = rosterSalonName(theirs[0]!) ?? theirs[0]!;
+      }
+    }
+  }
+  /*
    * THE POLICY NEVER TAKES THE ACCOUNT'S PLACE (QA, 17 Nov 2026; Runner 2's c243, c244 and c075 on main 33863575): after
    * #1092 (coaching always cites a policy), "a coaching form for salon cleanliness" came as policy "Other — Salon
    * cleanliness" and an EMPTY account, so the card was not ready; on train 4 the topic was the account. A coaching topic
