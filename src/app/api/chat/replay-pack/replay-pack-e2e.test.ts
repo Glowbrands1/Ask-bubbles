@@ -1078,10 +1078,6 @@ function context(): ReplayContext {
     },
     calls: () => ({ chat: state.chatModelCalls, draft: state.draftCalls, revision: state.revisionCalls, tool: state.toolCalls, patch: patchScript.calls }),
     forms: () => store.form_instances as never,
-    seedRows: (table, rows) => {
-      const tables = store as unknown as Record<string, unknown[] | undefined>;
-      (tables[table] ??= []).push(...rows);
-    },
     lastFormRecords: () => state.lastFormRecords,
     lastReportData: () => state.lastReportData,
     lastSystem: () => state.lastSystem,
