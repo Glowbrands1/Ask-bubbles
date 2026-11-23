@@ -792,11 +792,11 @@ class Thread {
     return this.instanceId;
   }
 
-  /** Create from the latest card for this person, as pressing Create on that card does (an earlier card still on screen). */
-  async createCard(employeeName: string): Promise<string> {
+  /** Create from the latest card for this person, as pressing Create on that card does (an earlier card still on screen). `store`: the store picked on that card first, as `create` does. */
+  async createCard(employeeName: string, store?: string): Promise<string> {
     const message = [...this.messages].reverse().find((entry) => entry.formProposal?.employeeName === employeeName);
     expect(message?.formProposal, `no card for ${employeeName} to create from`).toBeTruthy();
-    const result = await createInlineForm({ proposal: message!.formProposal!, messages: this.messages, call, onCreated: () => {} });
+    const result = await createInlineForm({ proposal: store ? { ...message!.formProposal!, locationId: store } : message!.formProposal!, messages: this.messages, call, onCreated: () => {} });
     this.instanceId = toUuid(result.reference.instanceId);
     return this.instanceId;
   }

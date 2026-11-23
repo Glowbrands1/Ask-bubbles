@@ -117,9 +117,10 @@ export const NOV10_SAME_REQUEST_FOLLOW_UP_CASES: ReplayCase[] = [
       const { thread } = await both(t, true);
       const rory = thread.conversation!.find((message) => message.formProposal?.employeeName === "Rory Vance")!.formProposal!;
       expect(isProposalSuperseded(thread.conversation!, rory.proposalId), "<A>'s card is superseded by <B>'s").toBe(false);
-      const id = await thread.createCard!("Rory Vance");
+      /* Changed on purpose (QA, 23 Nov 2026): an all-store admin's card asks which store and Create waits for it, so each card's store is picked first, as the browser's picker does. */
+      const id = await thread.createCard!("Rory Vance", "loc-264");
       expect(t.values(id).employee_name, "<A>'s form is not <A>'s").toBe("Rory Vance");
-      const mara = await thread.createCard!("Mara Quell");
+      const mara = await thread.createCard!("Mara Quell", "loc-264");
       expect(t.values(mara).employee_name).toBe("Mara Quell");
     },
   },

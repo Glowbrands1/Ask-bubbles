@@ -94,13 +94,14 @@ export const NOV11_TITLE_BEFORE_NAME_CASES: ReplayCase[] = [
       t.as("admin", EVERY_STORE);
       const plain = t.thread();
       await plain.say(`Corrective action for ${NAME}`);
-      const expected = t.values(await plain.create());
+      /* Changed on purpose (QA, 23 Nov 2026): an all-store admin's card asks which store and Create waits for it, so both creates pick the same store first, as the browser's picker does. */
+      const expected = t.values(await plain.create("loc-264"));
       const thread = t.thread();
       const first = await thread.say(words);
       // Gate-Bubbles R795T (12 Nov 2026): a name off the roster after a title goes the normal off-roster way: it is said
       // back with the "use <name>" offer, and taking the offer puts it on the card.
       if (first.content.includes(`reply **use ${NAME}**`)) await thread.say(`use ${NAME}`);
-      const values = t.values(await thread.create());
+      const values = t.values(await thread.create("loc-264"));
       // QA's ruling (12 Nov 2026): the title the manager typed in full is the draft's Job Title.
       if (/Team Member/.test(words)) expect(values.job_title, JSON.stringify(values)).toBe("Team Member");
       expect(values.employee_name, JSON.stringify(values)).toBe(NAME);
