@@ -391,6 +391,23 @@ describe("an archived form is out of HR's queue", () => {
     expect(bells("hr.wren@example.com")).toEqual([]);
   });
 
+  it("archiving a form waiting for HR clears HR's bell for it; restoring it does not ring again", async () => {
+    const { kept, archived } = await twoPending();
+    const unread = () =>
+      extra.app_notifications!.filter((row) => row.kind === "form_hr_approval_request" && row.recipient_email === "hr.wren@example.com" && !row.read_at);
+    expect(unread().map((row) => row.href), "the bell still points at the archived form").toEqual([`/forms/hr-approval/${kept.id}`]);
+
+    const before = extra.app_notifications!.length;
+    await archiveInstance(archived.id, CREATOR, false);
+    expect(extra.app_notifications!.length, "restoring it rang a bell").toBe(before);
+    expect(unread().map((row) => row.href)).toEqual([`/forms/hr-approval/${kept.id}`]);
+  });
+
+  it("the manager's own list leaves the archived form out too", async () => {
+    const { kept } = await twoPending();
+    expect((await listMyFormsWithHr(manager)).map((row) => row.id)).toEqual([kept.id]);
+  });
+
   it("restored from the archive, it is back in the queue", async () => {
     const { archived } = await twoPending();
     await archiveInstance(archived.id, CREATOR, false);

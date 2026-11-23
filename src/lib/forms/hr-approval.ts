@@ -539,6 +539,7 @@ export async function listMyFormsWithHr(actor: FormsActor): Promise<MyHrFormRow[
     .or(`created_by.eq."${actor.id}",hr_approval_senders.cs.{"${actor.id}"}`)
     .in("hr_approval_state", ["pending", "changes_requested", "rejected"])
     .eq("status", "draft")
+    .is("archived_at", null)
     .order("hr_approval_requested_at", { ascending: false })
     .limit(100);
   if (error) throw new Error(`Could not read your forms with HR: ${error.message}`);
@@ -595,6 +596,7 @@ export async function readHrApprovalsFor(subject: string, verified: boolean, now
     .select("id, template_name, employee_name, location_name, hr_approval_state, hr_approval_requested_at")
     .or(`created_by.eq."${subject}",hr_approval_senders.cs.{"${subject}"}`)
     .eq("hr_approval_state", "approved")
+    .is("archived_at", null)
     .gte("updated_at", since)
     .order("updated_at", { ascending: false })
     .limit(20);
