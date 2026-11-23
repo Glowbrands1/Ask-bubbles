@@ -198,6 +198,12 @@ export function useInlineAsk({ reportContext, onActiveChange, surface }: InlineA
           /* Provenance for a form proposal; names browser-local state only. */
           questionMessageId: userMessage.id,
           /*
+           * THIS THREAD'S CONVERSATION ID, from its first question on (QA, 23 Nov 2026). The band never sent one, so every
+           * turn asked here was traced with no conversation, and the server read this thread's records by message id only.
+           * `id` is the conversation just created or continued above, never another thread's.
+           */
+          conversationId: id,
+          /*
            * So answering a proposal's own question inline continues that
            * proposal rather than starting a knowledge query. A template KEY and
            * nothing else; every fact is re-derived and revalidated server-side.
