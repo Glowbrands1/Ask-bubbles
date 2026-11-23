@@ -1449,6 +1449,19 @@ describe("P4. a finalized form offers the record, not the editor", () => {
     );
   });
 
+  /* The owner (23 Nov 2026): "the manager once sent back, will have option to print and save as PDF". */
+  it("offers Print, which requests the same server PDF", async () => {
+    phase4(finalized());
+    const { container } = mounted();
+
+    await waitFor(() => expect(container.textContent).toContain("Finalized"));
+    fireEvent.click(screen.getByRole("button", { name: /^print$/i }));
+
+    await waitFor(() =>
+      expect(recorded.some((made) => made.url === "/api/forms/instances/inst-42/pdf")).toBe(true),
+    );
+  });
+
   it("never builds a PDF from React state", () => {
     /*
      * The PDF renders the pinned template version and the stored values. A

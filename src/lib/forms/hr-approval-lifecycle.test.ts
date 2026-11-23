@@ -35,7 +35,7 @@ vi.mock("@/lib/supabase/server", () => ({ getSupabaseAdmin: () => fakeSupabase(s
 
 const { ensureTemplateLibrary } = await import("./repository");
 const { createInstance, loadInstance, saveInstanceValues, finalizeInstance, HeldForHrError } = await import("./instances");
-const { sendForHrApproval, decideHrApproval, commentOnHrApproval, hrApprovalViewFor, finalizeGoesToHr, listHrQueue, listMyFormsWithHr, readHrApprovalsFor, recordHrEdit, HrApprovalError } =
+const { sendForHrApproval, decideHrApproval, commentOnHrApproval, hrApprovalViewFor, finalizeGoesToHr, listHrQueue, listMyFormsWithHr, readHrApprovalsFor, recordHrEdit, hrQueueSummary, HrApprovalError } =
   await import("./hr-approval");
 
 const CREATOR = "lm-thistle";
@@ -252,5 +252,99 @@ describe("the round trip", () => {
     for (const email of ["marigold@example.com", "thistle@example.com"]) {
       expect(bells(email).map((bell) => bell.title), email).toContain("HR approved your form");
     }
+  });
+});
+
+/*
+ * ============================================================================
+ * "MANAGER REPLIED TO CHANGES" (owner, 23 Nov 2026)
+ * ============================================================================
+ *
+ * "colene sent to marissa, marissa replied and it shows … 'sent back for changes' still. it should be Manager Replied
+ * to changes. then view then approve." And the tab read "Pending HR approval (0)" while the row was listed.
+ */
+describe("manager replied to changes", () => {
+  async function sentBack() {
+    const instance = await policyReview();
+    await sendForHrApproval(instance.id, manager, null, { acknowledgeUnverifiedPolicy: true });
+    await decideHrApproval(instance.id, hr, "send_back", "Please add the time she arrived.");
+    return instance;
+  }
+
+  it("sent back: not HR's turn; the count leaves it out and HR may not approve yet", async () => {
+    const instance = await sentBack();
+    const [row] = await listHrQueue(hr);
+    expect(row).toMatchObject({ id: instance.id, managerReplied: false });
+    expect(await hrQueueSummary(hr)).toEqual({ pending: 0, overdue: 0 });
+    const view = await hrApprovalViewFor(hr, (await loadInstance(instance.id))!.instance);
+    expect(view).toMatchObject({ stage: "changes_requested", label: "Sent back by HR for changes", canApproveSentBack: false });
+    await expect(decideHrApproval(instance.id, hr, "approve", null)).rejects.toThrow(/sent back for changes. It can be approved or sent back again once the manager replies/);
+  });
+
+  it("the manager's reply: HR's row reads \"Manager replied to changes\" and counts in Pending HR approval", async () => {
+    const instance = await sentBack();
+    await commentOnHrApproval(instance.id, manager, "She arrived at 9:20.");
+    const rows = await listHrQueue(hr);
+    expect(rows.map((row) => [row.id, row.managerReplied])).toEqual([[instance.id, true]]);
+    // The count always equals the rows that need HR's decision.
+    const { needsHrDecision } = await import("./hr-approval-rules");
+    expect((await hrQueueSummary(hr))!.pending).toBe(rows.filter(needsHrDecision).length);
+    expect((await hrQueueSummary(hr))!.pending).toBe(1);
+    const hrView = await hrApprovalViewFor(hr, (await loadInstance(instance.id))!.instance);
+    expect(hrView).toMatchObject({ state: "changes_requested", stage: "manager_replied", label: "Manager replied to changes", canApproveSentBack: true, canDecide: false });
+    // The manager's own list says the same.
+    expect((await listMyFormsWithHr(manager)).map((row) => row.label)).toEqual(["Manager replied to changes"]);
+  });
+
+  it("HR's own note after sending it back is not the manager's reply", async () => {
+    const instance = await sentBack();
+    await commentOnHrApproval(instance.id, hr, "Also the date.");
+    expect((await listHrQueue(hr))[0]).toMatchObject({ id: instance.id, managerReplied: false });
+  });
+
+  it("a reply to an EARLIER send-back does not count once HR sends it back again", async () => {
+    const instance = await sentBack();
+    await commentOnHrApproval(instance.id, manager, "Added it.");
+    await sendForHrApproval(instance.id, manager, null, { acknowledgeUnverifiedPolicy: true });
+    await decideHrApproval(instance.id, hr, "send_back", "Still missing the time.");
+    expect((await listHrQueue(hr))[0]).toMatchObject({ managerReplied: false });
+  });
+
+  it("HR approves the replied form: finalized and approved; the manager's bell says so; the form is no longer in HR's list", async () => {
+    const instance = await sentBack();
+    await commentOnHrApproval(instance.id, manager, "She arrived at 9:20.");
+    // Reject stays for a pending form.
+    await expect(decideHrApproval(instance.id, hr, "reject", "No.")).rejects.toThrow(/not waiting/);
+    await expect(decideHrApproval(instance.id, manager, "approve", null)).rejects.toThrow(/Only HR/);
+    const approved = await decideHrApproval(instance.id, hr, "approve", null);
+    expect(approved.status).toBe("finalized");
+    expect(store.form_instances!.find((entry) => entry.id === instance.id)).toMatchObject({ hr_approval_state: "approved", hr_approval_decided_by: HR });
+    expect(bells("thistle@example.com").map((bell) => bell.title)).toContain("HR approved your form");
+    expect(await listHrQueue(hr)).toEqual([]);
+    const history = (await hrApprovalViewFor(manager, (await loadInstance(instance.id))!.instance))!.history;
+    expect(history.at(-1)).toMatchObject({ action: "approved", by: "HR" });
+    // Approved, it is an ordinary finalized form (the register scopes it by store: hr-approval-visibility.test.ts); the
+    // approval and HR's notes stay with the creator, the sender and HR: the store's District Manager reads none of it.
+    const finalForm = (await loadInstance(instance.id))!.instance;
+    expect(await hrApprovalViewFor(theirDm, finalForm)).toBeNull();
+    expect(await hrApprovalViewFor(hr, finalForm)).not.toBeNull();
+    const dmRead = await readHrApprovalsFor(theirDm.id, true);
+    expect(dmRead.kind === "manager" ? dmRead.forms : []).toEqual([]);
+    // "Was my CA approved?": the AI's reader gives it as approved, to its creator only.
+    const read = await readHrApprovalsFor(CREATOR, true);
+    expect(read.kind === "manager" ? read.forms.map((row) => [row.id, row.label]) : []).toEqual([[instance.id, "Approved by HR"]]);
+  });
+
+  it("HR sends the replied form back again (QA, 23 Nov 2026): a note is required; it is the manager's turn again", async () => {
+    const instance = await sentBack();
+    await commentOnHrApproval(instance.id, manager, "She arrived at 9:20.");
+    await expect(decideHrApproval(instance.id, hr, "send_back", " ")).rejects.toThrow(/what needs to change/);
+    const again = await decideHrApproval(instance.id, hr, "send_back", "Also the date.");
+    expect(again.hrApprovalState).toBe("changes_requested");
+    expect((await listHrQueue(hr))[0]).toMatchObject({ id: instance.id, managerReplied: false });
+    expect((await hrQueueSummary(hr))!.pending).toBe(0);
+    expect(bells("thistle@example.com").filter((bell) => bell.title === "HR sent your form back for changes")).toHaveLength(2);
+    // Before the manager replies again, HR may not approve it.
+    await expect(decideHrApproval(instance.id, hr, "approve", null)).rejects.toThrow(/sent back for changes/);
   });
 });
