@@ -1738,9 +1738,19 @@ export function nameAsSaid(person: Pick<RosterEmployee, "firstName" | "lastName"
    * said and the preferred one always won. The name the manager used LAST is the one they settled on (`managerWords` is
    * their turns, oldest first).
    */
+  const asPreferred = `${preferred} ${person.lastName.trim()}`.replace(/\s+/g, " ").trim();
+  /*
+   * Round 2's offline replay (21 Nov 2026, U19): T1 named the person by the preferred FULL name, then T3's account said
+   * "on 11/14 <legal first> worked …", and the card flipped to the legal name unasked. Once the manager has typed either
+   * full name, the full name they typed last is the one they chose; a first name alone in an account never switches it.
+   * With no full name typed, the first name used last, as before.
+   */
+  const last = ` ${person.lastName.trim().toLowerCase().replace(/[^a-z'’-]+/g, " ").trim()} `;
+  const fullLegal = said.lastIndexOf(` ${person.firstName.trim().toLowerCase()}${last}`);
+  const fullPreferred = said.lastIndexOf(` ${preferred.toLowerCase()}${last}`);
+  if (fullLegal >= 0 || fullPreferred >= 0) return fullLegal > fullPreferred ? legal : asPreferred;
   const saidLegal = said.lastIndexOf(` ${person.firstName.trim().toLowerCase()} `);
   const saidPreferred = said.lastIndexOf(` ${preferred.toLowerCase()} `);
-  const asPreferred = `${preferred} ${person.lastName.trim()}`.replace(/\s+/g, " ").trim();
   if (saidLegal > saidPreferred) return legal;
   return asPreferred;
 }

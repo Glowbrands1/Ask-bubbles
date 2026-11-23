@@ -33,3 +33,28 @@ describe("the card's name is the one the manager used last (B6, item 19)", () =>
     expect(nameAsSaid(ISOLDE, "exit form for her, last day nov 23")).toBe("Brisa Quennell");
   });
 });
+
+/*
+ * Round 2's offline replay (21 Nov 2026, U19; a location manager): T1 "make a corrective action for <preferred> <last>
+ * verbal warning payroll not deductable", T3 "observation of offense: on 11/14 <legal first> worked 50 minutes over the
+ * scheduled shift and did not clean up after themself". The card's name flipped from the preferred to the legal name,
+ * unasked: the legal first name was said inside the account. Invented person: legal Ilsabet, preferred Sabeth Corvelle.
+ */
+const ILSABET = { firstName: "Ilsabet", lastName: "Corvelle", preferredFirstName: "Sabeth" };
+const U19 = [
+  "make a corrective action for sabeth corvelle verbal warning payroll not deductable",
+  "here is what happened:",
+  "observation of offense: on 11/14 Ilsabet worked 50 minutes over the scheduled shift and did not clean up after themself",
+];
+
+describe("a first name inside the account never switches the card's name (U19)", () => {
+  it("the preferred full name the manager typed stays when the legal first name is only in the account", () => {
+    expect(nameAsSaid(ILSABET, U19.join("\n"))).toBe("Sabeth Corvelle");
+  });
+  it("the legal FULL name typed later still moves the card to it (B6 holds)", () => {
+    expect(nameAsSaid(ILSABET, [...U19, "it's for Ilsabet Corvelle"].join("\n"))).toBe("Ilsabet Corvelle");
+  });
+  it("no full name typed at all: the first name used last, as before", () => {
+    expect(nameAsSaid(ILSABET, "ca for sabeth, late 11/14\nilsabet was late again")).toBe("Ilsabet Corvelle");
+  });
+});
