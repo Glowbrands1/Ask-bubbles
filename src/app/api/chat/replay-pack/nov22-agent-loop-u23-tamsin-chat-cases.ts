@@ -16,7 +16,8 @@ import { evidenceFrom, lastResult, loopStandIn, type LoopDecision, type LoopView
  */
 
 export const U23_REPORT = "QA's live round-2 re-run (22 Nov 2026, U23, serious): the replies invented names; the Observation used the legal first name";
-export const TAMSIN: DirectoryRow = { id: "e-odessa-brookfield", firstName: "Odessa", lastName: "Brookfield", preferredFirstName: "Tamsin", employmentStatus: "active", locationIds: ["loc-264", "loc-67"], positionName: "Team Member Part Time" };
+export const TAMSIN: DirectoryRow = { id: "e-odessa-brookfield", firstName: "Odessa", lastName: "Brookfield", preferredFirstName: "Tamsin", employmentStatus: "active", locationIds: ["loc-264", "loc-67"], positionName: "Team Member Part Time", primaryLocationId: "loc-264" };
+/* Woven's primary store, as the tester reported (Omaha West Dodge primary + Bellevue); added with board f140, whose Create no longer saves a card that still asks which store. */
 export const U23_TURNS = [
   "i need to create a corrective action for Tamsin Brookfield",
   "She has unprofessional conversations with guests and staff. I have already had a conversation with her about this.",

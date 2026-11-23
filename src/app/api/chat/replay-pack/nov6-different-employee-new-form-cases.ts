@@ -165,7 +165,12 @@ for (const wording of WORDINGS) {
             expect(sources(aCard), `${wording.a}'s card changed`).toEqual(aSources);
           }
           t.draftWrites({ observation: `Observed:\n${wording.b} was late on 10/20/2026.` });
-          const second = await thread.create();
+          /*
+           * Board f140 (22 Nov 2026): "at Kearney" is outside this West Dodge manager's assignment, so B's card asks which
+           * store, and Create on a card that still asks saves nothing. The manager picks their own store on the card, as the
+           * browser's picker does; the person and the account checked here are unchanged.
+           */
+          const second = await thread.create(reply.formProposal?.locationId ? undefined : STORE);
           if (first) expect(second, `${wording.b}'s card reopened ${wording.a}'s form`).not.toBe(first);
           expect(t.values(second).employee_name ?? "", `${wording.b}'s form names the wrong person`).toBe(wording.b);
           const described = lastDescribed(t);
