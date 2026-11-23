@@ -57,7 +57,7 @@ const priorOf = (model: { views: LoopView[] }) => (model.views.flatMap((view) =>
 export const NOV22_AGENT_LOOP_ADDING_PRIOR_STEP_KEEPS_ON_FILE_CASES: ReplayCase[] = [
   {
     id: "nov22-a13-adding-prior-step-keeps-on-file-line",
-    title: "A13 (item 9): T4 \"in the previously recieved coaching include that <P> signed the jba policy manual on 10-15-26\", with the model listing only the new step: the card's Prior actions keep the CA on file (10/20/2026) beside the signing (10/15/2026), and Create saves both",
+    title: "A13 (item 9), under Pau's 23 Nov ruling: the CA on file (10/20/2026) is offered, never added unasked; T4 \"in the previously recieved coaching include that <P> signed the jba policy manual on 10-15-26\" adds the signing (10/15/2026), and Create saves it",
     report: REPORT,
     status: "fixed",
     async run(t) {
@@ -66,15 +66,22 @@ export const NOV22_AGENT_LOOP_ADDING_PRIOR_STEP_KEEPS_ON_FILE_CASES: ReplayCase[
       t.loopModel!(model);
       const thread = t.thread();
       for (const said of T.slice(0, 3)) await thread.say(said);
-      expect(priorOf(model), "T3's card does not list the CA on file (the case proves nothing)").toMatch(/10\/20\/2026/);
+      /*
+       * Changed on purpose (Pau's ruling, 23 Nov 2026, reversing the old f029 behaviour): the AI never puts a form on file
+       * on the card's Prior actions by itself. T3's card offers the CA on file (10/20/2026) instead, and the manager here
+       * never says yes, so T4 adds the signing only. What this case still guards: the step the manager adds lands, and
+       * nothing the manager did not state or accept is added.
+       */
+      expect(priorOf(model), "T3's card lists the CA on file the manager never accepted").not.toMatch(/10\/20\/2026/);
+      const offered = model.views.flatMap((view) => view.results.filter((result) => result.tool === "propose_form")).map((result) => JSON.stringify(result.output)).join("\n");
+      expect(offered, "the CA on file was never offered").toMatch(/on file from 10\/20\/2026\. Want me to add it to Prior actions\?/);
       const reply = await thread.say(T[3]!);
-      expect(priorOf(model), `the CA on file left the card's Prior actions:\n${reply.content}`).toMatch(/10\/20\/2026/);
       expect(priorOf(model), `the signing was not added:\n${reply.content}`).toMatch(/10\/15\/2026/);
-      expect(reply.content, "the reply does not show both steps").toMatch(/10\/20\/2026[\s\S]*10\/15\/2026|10\/15\/2026[\s\S]*10\/20\/2026/);
+      expect(priorOf(model), `the CA on file was added unasked:\n${reply.content}`).not.toMatch(/10\/20\/2026/);
       const id = await thread.create();
       const saved = JSON.stringify(t.values(id));
-      expect(saved, `the saved form lost the CA on file:\n${saved}`).toMatch(/10\/20\/2026/);
       expect(saved, `the saved form lost the signing:\n${saved}`).toMatch(/10\/15\/2026/);
+      expect(saved, `the saved form holds the CA on file unasked:\n${saved}`).not.toMatch(/10\/20\/2026/);
     },
   },
   {

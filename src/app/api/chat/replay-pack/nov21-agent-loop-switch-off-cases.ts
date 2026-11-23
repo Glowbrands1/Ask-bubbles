@@ -9,8 +9,9 @@ import { loopStandIn } from "./loop-stand-in";
  * THE LOOP'S SWITCH-OFF, AT RUN TIME (the loop port, QA 21 Nov 2026; ported from the sibling app's QA audit of 15 Nov)
  * ============================================================================
  *
- * "Everything stays behind AGENT_LOOP_ENABLED + AGENT_LOOP_USERS." This app's production has the loop on for the owner
- * only (AGENT_LOOP_USERS; QA, 21 Nov 2026 16:19 PHT), so the switch-off is what every other manager gets. With AGENT_LOOP_ENABLED off, and with it on but AGENT_LOOP_USERS unset,
+ * "Everything stays behind AGENT_LOOP_ENABLED + AGENT_LOOP_USERS." This app's production has the loop on for every
+ * signed-in manager (AGENT_LOOP_USERS "*"; QA, 23 Nov 2026 ~4:35 PM PHT; owner only from 21 Nov 16:19 PHT), so the
+ * switch-off is what production gets back if QA turns either switch off. With AGENT_LOOP_ENABLED off, and with it on but AGENT_LOOP_USERS unset,
  * empty or not listing the signed-in manager, the chat route never enters the loop's run module (`runAgentTurn`,
  * watched through `watchLoopEntries`), the loop's model is never called, and a fixed set of requests gets the same
  * replies as today's path. The control: the manager listed, the loop answers (so the spy and the stand-in work).
