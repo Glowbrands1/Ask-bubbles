@@ -1123,7 +1123,7 @@ export interface ToolEffects {
   proposalPayrollAmount?: string | null;
   /** QA (c163): the one-way key of this card's account as the model gave it (`accountKey`), for the card record. */
   proposalAccountKey?: string | null;
-  /** Port from Ask Sunny (#1294): the exit card's resignation type (an option key), for the card record (`CardRecord.exitType`). */
+  /** Port from the sibling app (#1294): the exit card's resignation type (an option key), for the card record (`CardRecord.exitType`). */
   proposalExitType?: string | null;
   /** Round 3 U21: the card's prior actions' dates (ISO), for its server record (`CardRecord.priorDates`). */
   proposalPriorDates?: string[];
@@ -3352,11 +3352,11 @@ async function personNotNamed(context: ToolContext, template: { key: string; nam
  * none, the card asks how the person left (exit_unset resignation_type), never saying "Filed as" what will not be ticked;
  * and it asks a missing last day worked, as before. Never a date or a reason the manager did not give.
  */
-/** Port from Ask Sunny (#1294): the app's own words in the exit-on-file question, by the form's own name; a reply holding them has asked it (`proposeForm`). */
+/** Port from the sibling app (#1294): the app's own words in the exit-on-file question, by the form's own name; a reply holding them has asked it (`proposeForm`). */
 export const exitOnFileMark = (formName: string): string => `already has a ${formName} on file`;
 
 /**
- * Port from Ask Sunny (#1294; its live duplicate exit form, QA, 23 Nov 2026): the exit forms on file for this person that
+ * Port from the sibling app (#1294; its live duplicate exit form, QA, 23 Nov 2026): the exit forms on file for this person that
  * this manager can see, read as find_past_forms reads forms on file (`chatFormsActor`, `instanceListFilterFor`,
  * `visibleInstances`), only this person's (`samePerson`), never a revised or archived one. Empty when the Forms Register
  * cannot be read for this manager.
@@ -5585,7 +5585,7 @@ export async function proposeForm(
     ? { option: input.exit_how, quote: exitHowQuote.slice(0, 300) }
     : null;
   /*
-   * Port from Ask Sunny (#1294; its live duplicate exit form, QA, 23 Nov 2026): a manager asked to edit <P>'s exit form for
+   * Port from the sibling app (#1294; its live duplicate exit form, QA, 23 Nov 2026): a manager asked to edit <P>'s exit form for
    * HR, was told none was on file, said "make an exit form then", and <P> got a second exit form beside the finalized one,
    * with HR's edits on the new draft. An exit form is filed once per person: before this card is made, the exit forms this
    * manager can see for this person are read (as find_past_forms and the Forms Register read them). With one on file, the
@@ -6021,7 +6021,7 @@ export async function proposeForm(
    */
   let cardTicksRead = await exitCardTicks(template.key === appConfig().formKeys.exit, Boolean(exitTermination), requestWords, today, exitHow?.option ?? null);
   /*
-   * Port from Ask Sunny (#1294; its live duplicate exit form, QA, 23 Nov 2026): "effective immediately" was said, the card
+   * Port from the sibling app (#1294; its live duplicate exit form, QA, 23 Nov 2026): "effective immediately" was said, the card
    * showed "Filed as: Immediate Voluntary Resignation", and the same person's exit card proposed again for the last day
    * worked lost it and asked "How did <P> leave …?" twice. The ticks are read from this request's words only. With none
    * this request, the same person's exit card on screen keeps the type it showed (its record, an option key of the form;

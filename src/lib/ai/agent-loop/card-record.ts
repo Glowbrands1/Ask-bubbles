@@ -51,7 +51,7 @@ export interface CardRecord {
    */
   readonly accountKey?: string | null;
   /**
-   * Port from Ask Sunny (#1294; its live duplicate exit form, QA, 23 Nov 2026): how the person left, as the exit card showed
+   * Port from the sibling app (#1294; its live duplicate exit form, QA, 23 Nov 2026): how the person left, as the exit card showed
    * it (an option key of the form, never the manager's words), so the same person's exit card proposed again keeps it when
    * the new request does not say. Null when none or for an older record.
    */

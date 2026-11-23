@@ -5,7 +5,7 @@ import { evidenceFrom, lastResult, loopStandIn, type LoopDecision, type LoopView
 
 /**
  * ============================================================================
- * PORT FROM ASK SUNNY (#1294): THE LIVE DUPLICATE EXIT FORM (its QA, 23 Nov 2026; Pau's review). In the sibling app an
+ * PORT FROM THE SIBLING APP (#1294): THE LIVE DUPLICATE EXIT FORM (its QA, 23 Nov 2026; Pau's review). In the sibling app an
  * assistant manager asked to edit <P>'s exit form for HR. She was told no exit form was on file, though a FINALIZED one
  * from 11/20 was. She said "make  an exit form then", and <P> got a second exit form with HR's edits on the new draft.
  * Then "How did <P> leave …?" was asked twice after "effective immediately". Bubbles main had the same gaps.
@@ -25,7 +25,7 @@ import { evidenceFrom, lastResult, loopStandIn, type LoopDecision, type LoopView
  *       person's card is proposed again, so "How did <P> leave …?" is not asked again.
  */
 
-const REPORT = "Port from Ask Sunny (#1294): its QA, 23 Nov 2026 (Pau's review of a live chat): the AI said no exit form was on file though a finalized one was, made a duplicate exit form, and asked how the person left twice after \"effective immediately\"";
+const REPORT = "Port from the sibling app (#1294): its QA, 23 Nov 2026 (Pau's review of a live chat): the AI said no exit form was on file though a finalized one was, made a duplicate exit form, and asked how the person left twice after \"effective immediately\"";
 const FLAG = "AGENT_LOOP_ENABLED";
 const MANAGER = "mgr-kara-wexley";
 
@@ -73,7 +73,7 @@ type ProposeOut = { reason_code?: string; ask_exactly?: string; facts?: { exit_t
 export const NOV23_PORT_EXIT_ON_FILE_NEVER_DUPLICATED_CASES: ReplayCase[] = [
   {
     id: "nov23-port-exit-edit-request-finds-the-finalized-exit-form",
-    title: "Port from Ask Sunny (#1294), (a) T1 verbatim (a manager's \"make thes edits on <P> exit …\"): find_past_forms lists the finalized Resignation/Exit Form of 11/20, so the reply never says none is on file",
+    title: "Port from the sibling app (#1294), (a) T1 verbatim (a manager's \"make thes edits on <P> exit …\"): find_past_forms lists the finalized Resignation/Exit Form of 11/20, so the reply never says none is on file",
     report: REPORT,
     status: "fixed",
     fixFlags: [FLAG],
