@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { TooltipProvider } from "@/components/ui/overlays";
 import type { BellData } from "@/lib/notifications/types";
 
 /**
@@ -89,7 +90,12 @@ describe("the notification bell", () => {
   });
 
   it("in a collapsed rail it is an icon with the count and no label", () => {
-    render(<NotificationBell data={data} variant="rail" collapsed />);
+    // The app wraps every page in TooltipProvider (src/app/providers.tsx); the collapsed rail's tooltip needs it.
+    render(
+      <TooltipProvider>
+        <NotificationBell data={data} variant="rail" collapsed />
+      </TooltipProvider>,
+    );
     expect(screen.getByRole("button", { name: "Notifications, 2 unread" }).textContent).toBe("2");
   });
 
