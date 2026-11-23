@@ -3453,14 +3453,17 @@ export function withoutNamedSalon(account: string, salonId: string): string {
    * QA's Bubbles live re-run (23 Nov 2026, A1): "<P>, at Dodge, was 10 minutes late" left "<First>, was 10 minutes late":
    * the phrase and its closing comma went, its opening comma stayed. A phrase with a comma before it is an aside: it
    * leaves with that comma, and the text after it (its closing comma, or the sentence's end) follows the words before
-   * it. With no comma before it, a comma after it closes something earlier (", a makery associate at Dodge, was") and
-   * stays; at the very start, the phrase leaves with its comma ("At Dodge, coaching about …").
+   * it. With no comma right before it, a comma after it stays only when its sentence already has a comma before the
+   * phrase, which that comma closes (", a makery associate at Dodge, was"); otherwise it goes with the phrase, as before
+   * ("late at the Dodge store, and left early" → "late and left early"; the sibling app's port kept its rule). At the
+   * very start, the phrase leaves with its comma ("At Dodge, coaching about …").
    */
   const out = withState.replace(/(^|,\s*|[\s;])(?:at|in)\s+((?:[A-Za-z0-9'’-]+\s+){0,4}[A-Za-z0-9'’-]+)(?=\s*(?:[,.;!?]|$))(,?)/gi, (whole, before: string, phrase: string, comma: string, offset: number) => {
     if (!isThatSalon(phrase)) return whole;
     if (before.startsWith(",")) return "";
     if (offset === 0 && before === "") return "";
-    return before.replace(/\s+$/, "") + comma;
+    const sentenceBefore = withState.slice(0, offset).split(/[.!?](?:\s|$)/).at(-1) ?? "";
+    return before.replace(/\s+$/, "") + (comma && sentenceBefore.includes(",") ? comma : "");
   });
   if (out === account) return account;
   const tidy = out.replace(/\s+([,.;!?])/g, "$1").replace(/[ \t]{2,}/g, " ").replace(/^[\s,.;]+/, "").trim();

@@ -74,6 +74,12 @@ describe("withoutNamedSalon: commas around a store phrase", () => {
     );
   });
 
+  /* Control (QA, 23 Nov 2026: the sibling app's existing "late at the Kearney salon, and left early"): with no comma before the phrase in its sentence, its comma goes with it. */
+  it("a comma after the phrase with no comma before it in the sentence goes with the phrase", () => {
+    expect(withoutNamedSalon("Testy was late at the Dodge store, and left early.", "loc-264")).toBe("Testy was late and left early.");
+    expect(withoutNamedSalon("She did not call. Testy was late at Dodge, and left early.", "loc-264")).toBe("She did not call. Testy was late and left early.");
+  });
+
   it("an aside that ends the sentence keeps the full stop", () => {
     expect(withoutNamedSalon("Della was 10 minutes late to the shift on 10/5, at Dodge. She did not call.", "loc-264")).toBe(
       "Della was 10 minutes late to the shift on 10/5. She did not call.",
