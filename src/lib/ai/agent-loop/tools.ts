@@ -437,6 +437,31 @@ export function quoteNamesForm(text: string, template: { readonly name: string; 
   return [...new Set([...names, ...initials])].some((name) => said.includes(` ${foldName(name).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim()} `));
 }
 
+/**
+ * The form the manager asked for, for the reply (board f099): the quote's own words without a leading article, ending in
+ * "form" ("store manager interview form"); null when the quote is longer than a form's name (eight words), so a whole
+ * message is never echoed.
+ */
+export function formAskedName(quote: string): string | null {
+  const words = quote.replace(/^\s*(?:a|an|the|another|new)\s+/i, "").trim().replace(/[.?!,;:]+$/, "");
+  if (!words || words.split(/\s+/).length > 8) return null;
+  return /\bforms?$/i.test(words) ? words : `${words} form`;
+}
+
+/**
+ * The word the library's titles end with ("Form"), when most of them share one: read from the template names, so a quote
+ * that holds it reads as a form's title (board f099). Null when the titles share no last word.
+ */
+export function titleWordOf(names: readonly string[]): string | null {
+  const counts = new Map<string, number>();
+  for (const name of names) {
+    const last = name.trim().split(/\s+/).at(-1)?.toLowerCase().replace(/[^\p{L}]+/gu, "");
+    if (last) counts.set(last, (counts.get(last) ?? 0) + 1);
+  }
+  const [word, count] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0] ?? [null, 0];
+  return word && count * 2 > names.length ? word : null;
+}
+
 /** The question when no level option was named (Pau's ruling, fix batch item 2). */
 export const LEVEL_QUESTION = "Which is it: Verbal Warning, Written Warning or Termination?";
 
@@ -3822,6 +3847,8 @@ export async function proposeForm(
     level_evidence?: unknown;
     payroll_evidence?: unknown;
     template_key?: unknown;
+    form_asked_evidence?: unknown;
+    instead_of_asked?: unknown;
     employee_id?: unknown;
     employee_name?: unknown;
     person_evidence?: unknown;
@@ -3899,6 +3926,43 @@ export async function proposeForm(
   if (!templates) return { reason_code: "read_failed", error: "The forms library could not be read just now." };
   const template = templates.find((row) => row.key === key);
   if (!template) return { reason_code: "scope", error: "This manager cannot create that form. Use one of these template keys.", templates: templates.map((row) => ({ key: row.key, name: row.name })) };
+  /*
+   * Board f099 on the loop (QA's live check of #1095, 23 Nov 2026): "create a store manager interview form for <P>" made
+   * a Prescreen / Phone Interview Form card, silently. The form the manager asked for (form_asked_evidence, a quote of this
+   * turn) is checked by code against the chosen form's own names (`quoteNamesForm`: name, short name, initials). Another
+   * library form it names is that form; one no form answers to is handed back, unless the model offers this form in its
+   * place and says so (instead_of_asked). Never reads what the words mean.
+   */
+  let insteadOfAsked: string | null = null;
+  {
+    const thisTurn = identifiedTurns(context.history as ChatMessage[], context.question, context.questionMessageId);
+    const asked = verifyEvidence(input.form_asked_evidence, thisTurn, { thisTurnOnly: true }).ok ? (readEvidence(input.form_asked_evidence)?.quote ?? "").trim() : "";
+    /*
+     * QA (23 Nov 2026): most requests name no form's title ("write her up", "coach him on this", "she quit, do the
+     * paperwork"); those are never refused. A quote is checked only when it reads as a form's title: it holds the word every
+     * title in this library ends with (`titleWordOf`, read from the template names themselves, never a list).
+     */
+    const titleWord = titleWordOf(templates.map((row) => row.name));
+    const readsAsTitle = Boolean(titleWord) && new RegExp(`\\b${titleWord}s?\\b`, "i").test(asked);
+    if (asked && readsAsTitle && !quoteNamesForm(asked, template)) {
+      const other = templates.find((row) => row.key !== template.key && quoteNamesForm(asked, row));
+      if (other) {
+        return { reason_code: "form_asked_is_another", template_key: other.key, error: `The manager asked for the ${other.name} ("${asked}"), not the ${template.name}. Propose the ${other.name} (template_key "${other.key}").` };
+      }
+      const named = formAskedName(asked);
+      if (input.instead_of_asked !== true) {
+        const names = templates.map((row) => row.name);
+        return {
+          reason_code: "form_not_in_library",
+          asked,
+          templates: templates.map((row) => ({ key: row.key, name: row.name })),
+          ask_exactly: `${named ? `There's no ${named} in the forms library` : "That form isn't in the forms library"}. The forms you can create are ${names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0]}. Which one do you want?`,
+          error: "No form in the library answers to the form the manager asked for. End the reply with ask_exactly, exactly, and propose no card; never make another form's card in its place. Propose another form with instead_of_asked true only when the manager chooses it.",
+        };
+      }
+      insteadOfAsked = named ?? "that form";
+    }
+  }
   effects.formChosen = true;
 
   /* The person: a roster id from find_staff, or (district / region logins only) the name as typed. */
@@ -5970,9 +6034,28 @@ export async function proposeForm(
    */
   const storeSaidOf = (): string | null =>
     card.locationId ? (readLocationMentions(requestWords).find((mention) => mention.locationIds.length === 1 && mention.locationIds[0] === card.locationId && mention.matched)?.matched ?? null) : null;
+  /*
+   * QA's Bubbles round 2 (U25): "create coaching form for <P>; coaching on under performance" corrected the name, and the
+   * reply said "nothing else changed" while the card's coaching topic was gone. What else differs from the card the name
+   * was corrected on (its server record), field by field, so the reply never says nothing else changed when something
+   * did. A field the record does not hold (an older record) is not compared.
+   */
+  const correctedOn = nameCorrectedFrom !== null ? (context.cardOnScreen ?? context.earlierCard ?? null) : null;
+  const alsoChanged = correctedOn
+    ? [
+        correctedOn.coachingTopic !== undefined && (correctedOn.coachingTopic ?? null) !== (coachingTopic ?? null)
+          ? `coaching topic: ${correctedOn.coachingTopic ?? "none"} → ${coachingTopic ?? "none"}`
+          : null,
+        correctedOn.issueKey && card.issue && shownTextKey(card.issue) !== correctedOn.issueKey ? "the account (Observation)" : null,
+        correctedOn.policyLine && (card.policyLine ?? null) !== correctedOn.policyLine ? `policy: ${correctedOn.policyLine} → ${card.policyLine ?? "none"}` : null,
+        correctedOn.level && (level ?? null) !== correctedOn.level ? `warning level: ${correctedOn.level} → ${level ?? "not set"}` : null,
+        correctedOn.payroll && (payroll ?? null) !== correctedOn.payroll ? `payroll deduct: ${correctedOn.payroll} → ${payroll ?? "not set"}` : null,
+        correctedOn.storeId && card.locationId && card.locationId !== correctedOn.storeId ? `store: ${rosterSalonName(correctedOn.storeId) ?? "the earlier store"} → ${rosterSalonName(card.locationId) ?? "another store"}` : null,
+      ].filter((change): change is string => change !== null)
+    : [];
   const facts = {
     /* fix-name, live s10: the card's name changed from → to, so the reply can say so (the person may be another roster person, by exact match). */
-    ...(nameCorrectedFrom !== null ? { name_corrected: { from: nameCorrectedFrom, to: employee.name } } : {}),
+    ...(nameCorrectedFrom !== null ? { name_corrected: { from: nameCorrectedFrom, to: employee.name, ...(alsoChanged.length > 0 ? { also_changed: alsoChanged } : {}) } } : {}),
     ...(switchedFrom ? { form_changed: { from: switchedFrom.templateName, earlier_created: switchedFrom.created } } : {}),
     ...(earlierKept ? { earlier_card: { kept: true, ...(earlierRow ? { employee: displayName(earlierRow) } : {}), form: earlier!.templateName ?? earlier!.templateKey } } : {}),
     ...(otherNamed.length > 0 ? { account_names_other_person: { named: otherNamed, card_person: employee.name } } : {}),
@@ -6163,6 +6246,8 @@ export async function proposeForm(
     ...(underPerformance ? { under_performance: true } : {}),
     ...(didYouMean ? { confirm_policy: didYouMean } : {}),
     ...(priorActionsRefused ? { prior_actions_not_kept: priorActionsRefused } : {}),
+    /* Board f099 on the loop: the form asked for is not in the library, and this card is offered in its place. */
+    ...(insteadOfAsked ? { instead_of_asked: { asked: insteadOfAsked, say_exactly: `There's no ${insteadOfAsked} in the forms library, so this is the ${template.name} instead.` } } : {}),
     ...(priorStepsLeftOff.length > 0 ? { prior_steps_left_off: priorStepsLeftOff, prior_steps_note: "These earlier steps were left off the card's Prior actions; the others are on it. Say which one and why in one line, and ask the manager for that step's date if it was meant to be an earlier one." } : {}),
     ...((await outsideScopeSalon(context)) ?? (card.namedLocationOutOfScope ? { store_outside_scope: card.namedLocationOutOfScope } : {})),
   };
