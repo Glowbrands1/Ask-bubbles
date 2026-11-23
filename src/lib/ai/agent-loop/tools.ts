@@ -4625,10 +4625,19 @@ export async function proposeForm(
    * card named the heading's page. One rule for both: the card's page is the one Create quotes, read from this card's
    * own account the same way.
    */
+  /*
+   * QA's Bubbles round 2 (U14; board f136): "… for till shortage. she accidentally gave a guest $20 in change …" cited
+   * p.12. The account said what she did and never named the incident; the manager's own words for this request did
+   * ("for till shortage"). The account is read first; when it names no line of its own, the manager's words are, by the
+   * same reader (`withConductLinePage`). Create reads the manager's words too, so the card and the saved form agree.
+   */
   const citedPage = (heading: string): number | null => {
     const section = manual ? findManualSection(manual.chunks, [heading]) : null;
     if (!section || !manual) return null;
-    return withConductLinePage([section], whatHappened || requestWords, manual.chunks)[0]?.page ?? section.page;
+    const lineOf = (text: string) => (text ? withConductLinePage([section], text, manual.chunks)[0] ?? null : null);
+    const fromAccount = lineOf(whatHappened);
+    const line = fromAccount && fromAccount !== section ? fromAccount : lineOf(requestWords);
+    return (line ?? section).page;
   };
   const page = policyHeading ? citedPage(policyHeading) : null;
   /*
