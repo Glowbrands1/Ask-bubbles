@@ -47,7 +47,8 @@ export interface ReplayContext {
    * a duplicated tab); `options.idPrefix`: this tab's message ids (browsers mint distinct ids; default "m").
    */
   thread(options?: { readonly conversationId?: string; readonly idPrefix?: string }): ReplayThread & { readonly conversationId?: string };
-  as(role: string, scope: unknown): void;
+  /** `subject`: who is signed in (default "qa-manager"), for a case with two people (port from the sibling app, HR approval). */
+  as(role: string, scope: unknown, subject?: string): void;
   directory(rows: readonly DirectoryRow[]): void;
   /** Every knowledge search's query this case, in order (POLICY_CARRY_RETRIEVAL, 12 Nov 2026). */
   searches?(): string[];
@@ -130,6 +131,10 @@ export interface ReplayContext {
   templateIds?(key: string): { template_id: string; template_version_id: string };
   /** Production's race: the next message arrives before the drafting model's values are saved. */
   draftNotYetSaved(instanceId: string): void;
+  /** The rows a table holds now (HR approval, 23 Nov 2026: the form a case marks as sent to HR). */
+  rows?(table: string): Record<string, unknown>[];
+  /** Adds rows to a table of the case's database (HR approval, 23 Nov 2026: the approver's `form_hr_approvers` row). */
+  addRows?(table: string, rows: readonly Record<string, unknown>[]): void;
   /*
    * THE AGENT LOOP (AGENT_LOOP_ENABLED; ported from the sibling app's pack, QA 21 Nov 2026). Off in this app's production,
    * so a case that never calls `loopModel` runs exactly as before.

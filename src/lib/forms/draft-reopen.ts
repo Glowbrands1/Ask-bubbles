@@ -9,6 +9,7 @@ import { sameIncident as sameIncidentKey } from "./incident-key";
 import type { FormsActor } from "./access";
 import { visibleInstances } from "./instance-scope";
 import { DUPLICATE_DRAFT_WINDOW_HOURS, loadInstance, type InstanceRow } from "./instances";
+import { withoutAwaitingHr, withoutHeldForHr } from "./hr-approval-rules";
 
 /**
  * A resent create for the same incident.
@@ -60,11 +61,14 @@ export async function findCrossChatOpenDraft(input: {
       .eq("key", input.templateKey)
       .maybeSingle();
     if (templateError || !template) return null;
-    const { data, error } = await supabase
+    // HR APPROVAL: not limited to the reader's own forms, so every form HR has not approved is left out.
+    const { data, error } = await withoutAwaitingHr(
+      supabase
       .from("form_instances")
       .select("id, employee_name, created_at, form_date, status, created_by")
       .eq("template_id", template.id)
       .eq("status", "draft")
+      )
       .eq("form_date", input.formDate)
       .order("created_at", { ascending: false })
       .limit(25);
@@ -243,13 +247,16 @@ export async function findAccountResentDraft(input: {
       .maybeSingle();
     if (templateError || !template) return null;
     const since = new Date((input.now ?? new Date()).getTime() - DUPLICATE_DRAFT_WINDOW_HOURS * 3_600_000);
-    const { data, error } = await supabase
+    // HR APPROVAL: a form waiting for HR is not a draft the chat may pick up again.
+    const { data, error } = await withoutHeldForHr(
+      supabase
       .from("form_instances")
       .select("id, employee_name, location_id, created_at, form_date")
       .eq("template_id", template.id)
       .eq("created_by", input.createdBy)
       .eq("source", "assistant")
       .eq("status", "draft")
+      )
       .gte("created_at", since.toISOString())
       .order("created_at", { ascending: false })
       .limit(25);
