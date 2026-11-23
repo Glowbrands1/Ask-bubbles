@@ -123,4 +123,25 @@ export const NOV22_AGENT_LOOP_EXIT_READS_BACK_SAVED_CASES: ReplayCase[] = [
       expect(reply.content, "the opening left with the unsaved line").toMatch(/Resignation\/Exit Form for \*\*Odile/);
     },
   },
+  {
+    id: "nov23-u22-card-reply-with-no-opening-gets-the-cards",
+    title: "U22 live (QA, 23 Nov 2026, RUN A): T2's ready exit card came with a reply that named no form (\"**Odile Marchetti** shows as no longer active in Woven; …\"); the reply opens with the card's own \"Here's the Resignation/Exit Form for **Odile**.\"",
+    report: "QA (23 Nov 2026): nov22-u22-exit-unsaved-lines-twice-left-out failed live: the exit reply opened on \"<P> shows as no longer active…\" with no \"Resignation/Exit Form for <P>\" opening; no hand-back in the trace, the model wrote none",
+    status: "fixed",
+    async run(t) {
+      start(t);
+      const thread = t.thread();
+      /* RUN A's T2 reply, word for word (the person invented). */
+      const runA = "**Odile Marchetti** shows as no longer active in Woven; I've used the name as you typed it.\n\n**How Employee Resigned:** Woven message\n\nLast day worked isn't set; tell me the date (you listed it as TBD).";
+      t.loopModel!(loopStandIn((view): LoopDecision => {
+        if (lastResult(view, "propose_form")) return { text: said(view) === T2 ? runA : "Here's the Resignation/Exit Form for **Odile**." };
+        return { tool: "propose_form", input: { template_key: "resignation-exit", employee_name: "Odile Marchetti", exit_type: "resignation", exit_evidence: { ...evidenceFrom(view, "create exit for Odile Marchetti", said(view) === T1 ? 0 : 1), kind: "asks_for_exit_form" }, what_happened: ACCOUNT, person_evidence: evidenceFrom(view, "Odile Marchetti", said(view) === T1 ? 0 : 1) } };
+      }), { scripted: true });
+      await thread.say(T1);
+      const reply = await thread.say(T2);
+      expect(thread.proposal?.templateKey, "T2 made no exit card (the case proves nothing)").toBe("resignation-exit");
+      expect(reply.content, "the card reply names no form").toMatch(/^Here's the Resignation\/Exit Form for \*\*Odile/);
+      expect(reply.content).toMatch(/How Employee Resigned/);
+    },
+  },
 ];
