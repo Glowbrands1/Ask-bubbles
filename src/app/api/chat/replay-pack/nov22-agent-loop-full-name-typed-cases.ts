@@ -27,10 +27,14 @@ const T1 =
   "create a written corrective action for Team Member, Test Employee. Test was assigned to complete policy acknowledgements in woven by 10-15-26 and failed to meet the deadline. Previous coaching was a Verbal CA 10-1-26. Payroll deduct is not applicable.";
 const T2 = "name is Test Employee";
 
-function start(t: ReplayContext) {
+function start(t: ReplayContext, login: "store" | "global" = "store") {
   vi.setSystemTime(new Date("2026-11-21T18:00:00Z"));
   t.directory([...LOOP_STAFF]);
-  t.as("location_manager", WEST_DODGE);
+  if (login === "global") {
+    /* The tester's round-2 login (board f139): a district manager with global scope and every store's forms ('all'). */
+    t.as("district_manager", { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] });
+    t.formsAllStoreAccess?.("all");
+  } else t.as("location_manager", WEST_DODGE);
 }
 
 const ACCOUNT = "Test was assigned to complete policy acknowledgements in Woven by 10/15/26 and failed to meet the deadline.";
@@ -76,6 +80,22 @@ export const NOV22_AGENT_LOOP_FULL_NAME_TYPED_CASES: ReplayCase[] = [
       await thread.say(T1);
       await thread.say(T2);
       expect(thread.proposal?.employeeName).toBe("Test Employee");
+    },
+  },
+  {
+    id: "nov22-r14-global-district-manager-full-name-gets-card",
+    title: "R14 (board f139), the tester's login: a district manager with global scope; T1–T3 verbatim — never \"use Test\", and the card is for \"Test Employee\"",
+    report: `${REPORT}; board f139: the tester's round-2 run was a global district manager (forms for every store)`,
+    status: "fixed",
+    async run(t) {
+      start(t, "global");
+      const thread = t.thread();
+      t.loopModel!(live());
+      for (const said of [T1, T2, "this is a violation under Standards of Conduct"]) {
+        const reply = await thread.say(said);
+        expect(reply.content, `"use Test" again at "${said}"`).not.toMatch(/use Test\*\*/);
+      }
+      expect(thread.proposal?.employeeName, "no card for the full name the manager typed").toBe("Test Employee");
     },
   },
 ];
