@@ -4803,7 +4803,20 @@ export async function proposeForm(
   const priorActionsRead = priorActionsRefused ? null : keptPriorActions ? priorActionsWithStatedTopics(keptPriorActions, statedSteps) : statedSteps.length === 0 ? onFileLine : null;
   /* U09 (QA's live triage): a step the manager listed with one the card keeps is on the card too (`listedWithKeptSteps`). */
   const listedSteps = keptPriorActions && priorActionsRead ? listedWithKeptSteps(requestWords, priorActionsRead, date, today, whatHappened) : [];
-  const priorActions = priorActionsRead ? [priorActionsRead, ...listedSteps].join(priorActionsRead.includes("\n") ? "\n" : "; ").slice(0, 600) : null;
+  /*
+   * ADDING A STEP NEVER REMOVES ONE (QA's ruling on the live regression set, 22 Nov 2026, A13): with this person's card of
+   * this form on screen (its Prior actions filled from the forms on file), T4 "in the previously recieved coaching include
+   * that <P> signed the jba policy manual on 10-15-26" came back with the new coaching step only: the model listed just
+   * that, and "Corrective Action Form — 10/20/2026 (from the forms on file)" left the card. The forms on file stay beside
+   * the steps this request adds. A form on file whose date a kept step already has is that step, never listed twice.
+   */
+  const thisCardOnScreen = samePersonOnScreen && context.cardOnScreen?.templateKey === template.key;
+  const keptDates = priorActionsRead ? readDates([priorActionsRead, ...listedSteps].join("\n")) : [];
+  const onFileBeside = thisCardOnScreen && keptPriorActions && priorActionsRead
+    ? priorsOnFile.filter((prior) => !readDates(priorsOnFileLine([prior])).some((onFile) => keptDates.some((kept) => sameDate(kept, onFile))))
+    : [];
+  const priorParts = priorActionsRead ? [...(onFileBeside.length > 0 ? [priorsOnFileLine(onFileBeside)] : []), priorActionsRead, ...listedSteps] : [];
+  const priorActions = priorActionsRead ? priorParts.join(priorActionsRead.includes("\n") ? "\n" : "; ").slice(0, 600) : null;
   /*
    * U09 / U21: a prior step on this card's Prior actions is never this incident's account (`accountWithoutPriorSteps`).
    * Only the steps the card keeps: a sentence leaves the Observation only when Prior actions holds it, so nothing is lost.
