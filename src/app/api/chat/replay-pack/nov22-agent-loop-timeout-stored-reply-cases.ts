@@ -31,7 +31,8 @@ export const NOV22_AGENT_LOOP_TIMEOUT_STORED_REPLY_CASES: ReplayCase[] = [
       const before = process.env.AI_MAIN_TIMEOUT_MS;
       process.env.AI_MAIN_TIMEOUT_MS = "5000";
       try {
-        t.loopModel!(loopStandIn(() => ({ stall: true })));
+        /* CHANGED ON PURPOSE (QA's live regression triage, 22 Nov 2026): an app condition (the model stalls until the time limit); the real model answers in time, so the case would test nothing; the stand-in plays in live runs too. */
+        t.loopModel!(loopStandIn(() => ({ stall: true })), { scripted: true });
         const reply = await t.thread().say(T4);
         expect(reply.content, "the timed-out turn has no reply").toMatch(/nothing was changed/i);
         expect(reply.content, "the reply promises it will work next time").not.toMatch(/try again|next time|in a moment/i);

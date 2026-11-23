@@ -93,12 +93,19 @@ export const NOV22_AGENT_LOOP_SAME_CARD_NEW_PERSON_CASES: ReplayCase[] = [
       await thread.say(T9);
       await thread.say(T10);
       expect(thread.proposal?.employeeName, "the card is not B's").toBe("Thaddea Kroll");
-      expect(issueOf(thread.proposal), "B's card dropped the account on screen").toMatch(/Thaddea did not put trash liners/);
+      /*
+       * CHANGED ON PURPOSE (QA's live regression triage, 22 Nov 2026): this asserted the stand-in's own sentence "Thaddea did
+       * not put trash liners". The live card carries the same account in the model's words ("… trash liners were not put
+       * into the trash cans …, and laundry was not done"). What B's card must hold: the account's facts, without A's name.
+       */
+      expect(issueOf(thread.proposal), "B's card dropped the account on screen").toMatch(/trash liners/);
+      expect(issueOf(thread.proposal), "B's card dropped the account on screen").toMatch(/laundry/);
       expect(issueOf(thread.proposal), "A's name stayed in B's account").not.toMatch(/Fenna/);
       const result = model.views.map((view) => lastResult(view, "propose_form")).filter(Boolean).at(-1) as { facts?: Record<string, unknown> } | undefined;
       expect(result?.facts?.copied_from_card, "the reply is not told the account was copied").toBeTruthy();
       const handBacks = model.views.filter((view) => (lastResult(view, "propose_form") as { reason_code?: string } | null)?.reason_code === "same_card_account_missing");
-      expect(handBacks.length, "the card with no account was never handed back").toBeGreaterThan(0);
+      /* The stand-in's path (B's card proposed with no account, on purpose); the live model may pass the account itself. */
+      if (!model.live) expect(handBacks.length, "the card with no account was never handed back").toBeGreaterThan(0);
       expect(levelOf(thread.proposal) ?? null, "\"make this for <B>\" copied a level").toBeNull();
     },
   },
@@ -110,7 +117,12 @@ export const NOV22_AGENT_LOOP_SAME_CARD_NEW_PERSON_CASES: ReplayCase[] = [
     async run(t) {
       start(t);
       const thread = t.thread();
-      t.loopModel!(live(false));
+      /*
+       * CHANGED ON PURPOSE (QA's live regression triage, 22 Nov 2026): a control whose condition is the stand-in's input
+       * (B's card with no same_card_evidence). The real model, given "make this for Thaddea instead of Fenna", quotes that
+       * ask, which is the copy the case above proves; so the stand-in plays in live runs too.
+       */
+      t.loopModel!(live(false), { scripted: true });
       await thread.say(T1);
       await thread.say(T2);
       await thread.say(T3);
@@ -153,7 +165,10 @@ export const NOV22_AGENT_LOOP_SAME_CARD_NEW_PERSON_CASES: ReplayCase[] = [
       expect(levelOf(thread.proposal), "the case proves nothing: A's card is not Verbal").toBe("verbal");
       await thread.say(T8);
       expect(thread.proposal?.employeeName).toBe("Thaddea Kroll");
-      expect(issueOf(thread.proposal)).toMatch(/Thaddea did not put trash liners/);
+      /* CHANGED ON PURPOSE (as in the case above): the account's facts, not the stand-in's sentence. */
+      expect(issueOf(thread.proposal)).toMatch(/trash liners/);
+      expect(issueOf(thread.proposal)).toMatch(/laundry/);
+      expect(issueOf(thread.proposal), "A's name stayed in B's account").not.toMatch(/Fenna/);
       expect(levelOf(thread.proposal), "Verbal was not copied to B's card").toBe("verbal");
       expect((thread.proposal as { payrollDeduct?: string | null } | null)?.payrollDeduct, "payroll No was not copied to B's card").toBe("no");
       const result = model.views.map((view) => lastResult(view, "propose_form")).filter(Boolean).at(-1) as { facts?: { copied_from_card?: { copied?: string } } } | undefined;

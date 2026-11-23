@@ -62,12 +62,19 @@ const scoped = (role: "location_manager" | "admin", fixes: boolean): ReplayCase[
     const first = model.views.map((view) => lastResult(view, "coach_team") as { card?: { store_question?: string } } | null).find(Boolean);
     expect(first?.card?.store_question, "the global team card with no store carries no store question").toBe("Which store is this for?");
     const reply = await thread.say(T2);
-    expect(model.views.some(checkedBack), "the guessed stores were never handed back").toBe(true);
+    /*
+     * CHANGED ON PURPOSE (QA's live regression triage, 22 Nov 2026): the hand-backs and the reply's "shipping-flow details"
+     * are the stand-in's path and wording (it narrows the stores on purpose); the live model asked "Which store is this
+     * for?" with no store named, so nothing went back. What the manager sees is checked either way: no store guessed from
+     * "SFS", and the card's own store question asked (QA's ruling, store_question above).
+     */
+    if (!model.live) expect(model.views.some(checkedBack), "the guessed stores were never handed back").toBe(true);
     expect(reply.content, `the reply narrowed the stores from "SFS":\n${reply.content}`).not.toMatch(/Sioux Falls|41st|18th/);
-    expect(reply.content).toMatch(/shipping-flow details/);
+    if (!model.live) expect(reply.content).toMatch(/shipping-flow details/);
+    expect(reply.content, `the reply does not ask the store question:\n${reply.content}`).toMatch(/Which store is this for\?/);
     const views = model.views.length;
     const third = await thread.say(T3);
-    expect(model.views.slice(views).some(checkedBack), "T3's narrowed question (no tool call) was never handed back").toBe(true);
+    if (!model.live) expect(model.views.slice(views).some(checkedBack), "T3's narrowed question (no tool call) was never handed back").toBe(true);
     expect(third.content, `T3 narrowed the stores again:\n${third.content}`).not.toMatch(/Sioux Falls|41st|18th/);
   };
 
