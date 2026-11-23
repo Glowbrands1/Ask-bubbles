@@ -53,6 +53,9 @@ const store: FakeStore = {
   chat_form_incidents: [],
   // Port from Ask Sunny (board f066, 20 Nov 2026): the deletion record, written by the fake as the BEFORE DELETE trigger writes it.
   form_instance_deletions: [],
+  // Port from Ask Sunny (23 Nov 2026): AI Training -> Assignments, the AI assignment tracker read_ai_assignments reads.
+  ai_assignment_people: [],
+  ai_assignment_marks: [],
 } as unknown as FakeStore;
 
 // Production builds with it (NEXT_PUBLIC_, read once when the role table loads): an Assistant Manager may create forms.
@@ -1062,6 +1065,10 @@ function context(): ReplayContext {
     },
     calls: () => ({ chat: state.chatModelCalls, draft: state.draftCalls, revision: state.revisionCalls, tool: state.toolCalls, patch: patchScript.calls }),
     forms: () => store.form_instances as never,
+    seedRows: (table, rows) => {
+      const tables = store as unknown as Record<string, unknown[] | undefined>;
+      (tables[table] ??= []).push(...rows);
+    },
     lastFormRecords: () => state.lastFormRecords,
     lastReportData: () => state.lastReportData,
     lastSystem: () => state.lastSystem,
