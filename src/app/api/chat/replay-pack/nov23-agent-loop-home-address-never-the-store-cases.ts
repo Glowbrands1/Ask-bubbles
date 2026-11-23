@@ -80,6 +80,17 @@ export const NOV23_AGENT_LOOP_HOME_ADDRESS_NEVER_THE_STORE_CASES: ReplayCase[] =
     },
   },
   {
+    id: "nov23-home-address-city-typed-as-store-live-spelling",
+    title: "QA's live run (23 Nov 2026): the model's third propose_form on T2 set store \"Lee's Summit, MO\", the address's city as the store list spells it; the card is never filed there",
+    report: REPORT,
+    status: "fixed",
+    async run(t) {
+      const { thread, reply } = await chat(t, "Lee's Summit, MO");
+      expect(thread.proposal?.locationId ?? null, `the address picked the store:\n${reply.content}`).not.toBe(LEES_SUMMIT);
+      expect(reply.content).not.toMatch(/Filed at \*\*Lee's Summit/);
+    },
+  },
+  {
     id: "nov23-store-named-outside-address-still-files",
     title: "Control: \"this is for the lees summit, mo store. address: 123 Test St, Kearney, NE 68847\" names the Lee's Summit store outside the address, so the card is filed there (and never at Kearney)",
     report: REPORT,
