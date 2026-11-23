@@ -1,5 +1,6 @@
 import { authorizedLocationIds } from "@/lib/forms/location-scope";
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
+import { withoutAddressLines } from "@/lib/forms/address-spans";
 import { labelledStoreIds } from "@/lib/forms/store-cue";
 import { locationById } from "@/lib/locations";
 import type { StoreIndex } from "@/lib/stores/resolver";
@@ -25,9 +26,13 @@ export interface PlaceMention {
   readonly salonIds: readonly string[];
 }
 
-/** The places a manager's words name. */
+/**
+ * The places a manager's words name. An address given as the employee's ("address: 123 Test St, Lees Summit, MO …") names
+ * no place (QA, 23 Nov 2026): it is the exit form's Permanent Address, never the card's store.
+ */
 export function readSalonMentions(text: string, index?: StoreIndex): PlaceMention[] {
-  return (index ? readLocationMentions(text, index) : readLocationMentions(text)).map((mention) => ({ salonIds: mention.locationIds }));
+  const words = withoutAddressLines(text);
+  return (index ? readLocationMentions(words, index) : readLocationMentions(words)).map((mention) => ({ salonIds: mention.locationIds }));
 }
 
 /** A place's display name, by id. */
@@ -51,7 +56,7 @@ export const PLACE_LEVEL = "location";
 
 /** The place ids a turn labels as the form's place ("at the Midtown store"). */
 export function labelledSalonIds(turn: string): string[] {
-  return labelledStoreIds(turn);
+  return labelledStoreIds(withoutAddressLines(turn));
 }
 
 /** One place named in the manager's own words, or null when it is not exactly one. */

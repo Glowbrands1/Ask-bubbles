@@ -23,6 +23,7 @@ import { answeredNameQuestions, answerNamesSomeoneElse, everKeptOrUsedTyped, isC
 import { employeeFirstName } from "@/lib/forms/employee-reference";
 import { AFFIRMATIVE, displayName, editDistance, matchEmployeeName, nameConfirmationQuestion, readNameConfirmation, rosterSpellingOf, type RosterEmployee } from "@/lib/forms/employee-match";
 import { offRosterTyped } from "@/lib/forms/roster-only-names";
+import { withoutAddressLines } from "@/lib/forms/address-spans";
 import { readLocationMentions } from "@/lib/forms/location-mention";
 import { locationById } from "@/lib/locations";
 import { COMPANY_LOCATION_NICKNAMES } from "@/config/company/locations";
@@ -5357,7 +5358,22 @@ export async function proposeForm(
   }
   const incidentTime = typeof input.incident_time === "string" && input.incident_time.trim() ? input.incident_time.trim().slice(0, 40) : null;
 
-  const typedSalon = typeof input.store === "string" ? input.store.trim() : "";
+  const storeTyped = typeof input.store === "string" ? input.store.trim() : "";
+  /*
+   * QA (23 Nov 2026, the u22 live run on main 1e58cd6): T2 "address: 123 Test St, Lees Summit, MO. 00000" got "Filed at
+   * **Lee's Summit, MO**, as you said.". A store the model passes that the manager named only inside an address given as
+   * the employee's (the exit form's Permanent Address, `typedAddressSpans`) is not the card's store: it is dropped, and
+   * the card's store is read as if none was typed. Named anywhere else in the request, it stands.
+   */
+  const typedOnlyInAddress = ((): boolean => {
+    if (!storeTyped) return false;
+    const typedIds = new Set([...readLocationMentions(storeTyped), ...readLocationMentions(`at ${storeTyped}`)].flatMap((mention) => mention.locationIds));
+    if (typedIds.size === 0) return false;
+    const inAddress = readLocationMentions(requestWords).some((mention) => mention.locationIds.some((id) => typedIds.has(id)));
+    const outside = readLocationMentions(withoutAddressLines(requestWords)).some((mention) => mention.locationIds.some((id) => typedIds.has(id)));
+    return inAddress && !outside;
+  })();
+  const typedSalon = typedOnlyInAddress ? "" : storeTyped;
   /*
    * QA's live re-test (21 Nov 2026, A7): "do verbal for team member <A> at <nickname>, sd" and "store location is
    * <nickname>, sd" were refused as "isn't one of your stores" three times and never got a card that could Create. A
