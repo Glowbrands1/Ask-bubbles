@@ -1099,6 +1099,8 @@ export interface ToolEffects {
   proposalAccountKey?: string | null;
   /** Round 3 U21: the card's prior actions' dates (ISO), for its server record (`CardRecord.priorDates`). */
   proposalPriorDates?: string[];
+  /** Pau's ruling (23 Nov 2026): the forms on file this card's reply offers (their ISO dates), for `CardRecord.onFileOffered`. */
+  proposalOnFileOffered?: string[];
   /**
    * Every source a tool read this turn, numbered from 1 in the order read: the model cites one as [S<n>] (`addSource`).
    * Only the ones the reply cites become source cards (run.ts, QA's live-app item 12), as today's grounded path does.
@@ -3056,6 +3058,25 @@ export function priorsOnFileLine(priors: readonly PriorOnFile[]): string {
 }
 
 /**
+ * Pau's ruling (23 Nov 2026): the one-line offer of forms on file. "<P> has a Verbal CA on file from 10/02/2026. Want me to
+ * add it to Prior actions?" (several: "… a Verbal CA on file from 10/02/2026 and a Coaching Form on file from 09/12/2026.
+ * Want me to add them …"). A Corrective Action is named by its level ("Verbal CA"); any other form by its name.
+ */
+export function priorsOnFileOffer(name: string, priors: readonly PriorOnFile[]): string {
+  const usDay = (iso: string | null) => {
+    const found = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso ?? "");
+    return found ? `${found[2]}/${found[3]}/${found[1]}` : null;
+  };
+  const named = priors.map((prior) => {
+    const label = /corrective action/i.test(prior.form) ? `${prior.level ? `${prior.level.split(",")[0]!.trim().split(/\s+/)[0]} ` : ""}CA` : prior.form;
+    const day = usDay(prior.date);
+    return `${/^[AEIOU]/i.test(label) ? "an" : "a"} ${label} on file${day ? ` from ${day}` : ""}`;
+  });
+  const list = named.length <= 2 ? named.join(" and ") : `${named.slice(0, -1).join(", ")} and ${named.at(-1)}`;
+  return `${name} has ${list}. Want me to add ${priors.length === 1 ? "it" : "them"} to Prior actions?`;
+}
+
+/**
  * THE CHOICES TELL THEMSELVES APART (Pau via QA, item 18, 17 and 20 Nov 2026): several forms of one person could read
  * alike in a which-one list ("Corrective Action Form from 2026-11-10" twice). Each listed form's line, built by code from
  * its record: form, status (draft / finalized), date and salon, and, when another listed form has the same form and
@@ -4251,7 +4272,22 @@ export async function proposeForm(
    * from "For <C>" stops at a turn that also names someone else (the script's "your <title> <D>"), so it is added.
    */
   const aliasTurns = new Set(aliases.flatMap((alias) => turnsFromThisPersonsRequest(asked, alias, { names: extractEmployeeNames, same: samePerson })));
-  const ownTurns = new Set([...turnsFromThisPersonsRequest(asked, employee.name, { names: extractEmployeeNames, same: sameAsThisPerson }), ...aliasTurns]);
+  /*
+   * QA's Bubbles round 2 (U29; board f138): "create a coaching form about accountability", "I want the same form for
+   * multiple employees", "no put the employee as <P>" lost the topic: the name reader took "accountability" (after
+   * "about") as a person, so the walk back from <P>'s turn stopped there as another person's request, and the topic's
+   * evidence (that first turn) fell outside this request. A "name" whose every word is a word of the topic the model
+   * names for this card, and that shares no word with anyone on the staff list, is that topic, never another person.
+   * The model's topic and the roster decide; never a word list.
+   */
+  const statedTopicWords = new Set(typeof input.topic === "string" ? words(input.topic).map((word) => word.toLowerCase()) : []);
+  const rosterWords = new Set(rosterNames.flatMap((name) => words(name).map((word) => word.toLowerCase())));
+  const isStatedTopic = (name: string) => {
+    const nameWords = words(name).map((word) => word.toLowerCase());
+    return nameWords.length > 0 && nameWords.every((word) => statedTopicWords.has(word) && !rosterWords.has(word));
+  };
+  const personNames = (text: string) => extractEmployeeNames(text).filter((name) => !isStatedTopic(name));
+  const ownTurns = new Set([...turnsFromThisPersonsRequest(asked, employee.name, { names: personNames, same: sameAsThisPerson }), ...aliasTurns]);
   /*
    * QA's Bubbles live re-run 2 (22 Nov 2026, U35): T11 "Create a Corrective Action Form from this conversation." names
    * nobody, so the walk back from T12 started this request there, and T3 "verbal warning, no payroll deduct, …" (said
@@ -4638,10 +4674,19 @@ export async function proposeForm(
    * card named the heading's page. One rule for both: the card's page is the one Create quotes, read from this card's
    * own account the same way.
    */
+  /*
+   * QA's Bubbles round 2 (U14; board f136): "… for till shortage. she accidentally gave a guest $20 in change …" cited
+   * p.12. The account said what she did and never named the incident; the manager's own words for this request did
+   * ("for till shortage"). The account is read first; when it names no line of its own, the manager's words are, by the
+   * same reader (`withConductLinePage`). Create reads the manager's words too, so the card and the saved form agree.
+   */
   const citedPage = (heading: string): number | null => {
     const section = manual ? findManualSection(manual.chunks, [heading]) : null;
     if (!section || !manual) return null;
-    return withConductLinePage([section], whatHappened || requestWords, manual.chunks)[0]?.page ?? section.page;
+    const lineOf = (text: string) => (text ? withConductLinePage([section], text, manual.chunks)[0] ?? null : null);
+    const fromAccount = lineOf(whatHappened);
+    const line = fromAccount && fromAccount !== section ? fromAccount : lineOf(requestWords);
+    return (line ?? section).page;
   };
   const page = policyHeading ? citedPage(policyHeading) : null;
   /*
@@ -5021,18 +5066,32 @@ export async function proposeForm(
    * own steps win. A date from a form on file counts as stated (the model may copy the line), never this incident's date.
    */
   const rosterPerson = caOnlyFields && employee.id && read.kind === "read" ? read.roster.find((row) => row.id === employee.id) ?? null : null;
-  const priorsOnFile = rosterPerson ? await finalizedPriorsOnFile(context, rosterPerson, read.kind === "read" ? read.roster : [], today, date ?? (effects.proposal && effects.proposal.employeeName === employee.name ? effects.proposal.formDate ?? null : null) ?? ownCard?.incidentDate ?? null) : [];
+  const onFileBefore = date ?? (effects.proposal && effects.proposal.employeeName === employee.name ? effects.proposal.formDate ?? null : null) ?? ownCard?.incidentDate ?? null;
+  const priorsOnFile = rosterPerson ? await finalizedPriorsOnFile(context, rosterPerson, read.kind === "read" ? read.roster : [], today, onFileBefore) : [];
   const onFileLine = priorsOnFile.length > 0 ? priorsOnFileLine(priorsOnFile) : null;
+  /*
+   * PAU'S RULING (23 Nov 2026, via QA; a manager did not like it): the forms on file are never added to Prior actions on
+   * their own. It reverses the old auto-fill (QA item 22 / f029). The card's reply offers them in one line ("<P> has a
+   * Verbal CA on file from 10/02/2026. Want me to add it to Prior actions?"), recorded on the card (`onFileOffered`), and a
+   * form on file is a stated step only in answer to that offer (this person's card on screen offered its date), or when
+   * the manager names it (their words hold its date, as any step they state).
+   */
+  const offeredCard = [context.cardOnScreen, context.earlierCard].find((record) => Boolean(record?.onFileOffered?.length) && (employee.id ? record!.employeeKey === personKey(employee.id) : !record!.employeeKey && record!.nameKey === personKey(employee.name))) ?? null;
+  const offeredDates = new Set(offeredCard?.onFileOffered ?? []);
+  const onFileDateOf = (prior: PriorOnFile) => (prior.date && /^\d{4}-\d{2}-\d{2}/.test(prior.date) ? prior.date.slice(0, 10) : null);
+  const onFileAnswered = priorsOnFile.filter((prior) => { const iso = onFileDateOf(prior); return iso !== null && offeredDates.has(iso); });
+  const onFileAcceptedLine = onFileAnswered.length > 0 ? priorsOnFileLine(onFileAnswered) : null;
   /*
    * QA's Bubbles round 2 (22 Nov 2026, U09): "JBA Policy Manual 1-1-2026, Verbal CA 11-1-2026. On 11-1-26 <P> violated …"
    * dropped BOTH steps because one carries the incident's date. Each step is checked on its own (`priorActionsSplit`):
    * the good ones are kept, and only a step with a problem is left off, with its reason.
    */
-  const priorSplit = askedPriorActions ? priorActionsSplit(askedPriorActions, onFileLine ? `${requestWords}\n${onFileLine}` : requestWords, date) : null;
+  const priorSplit = askedPriorActions ? priorActionsSplit(askedPriorActions, onFileAcceptedLine ? `${requestWords}\n${onFileAcceptedLine}` : requestWords, date) : null;
   const priorActionsRefused = priorSplit ? (priorSplit.kept === null ? priorSplit.problem : null) : null;
   const priorStepsLeftOff = priorSplit && priorSplit.kept !== null && priorSplit.dropped.length > 0 ? priorSplit.dropped : [];
   const keptPriorActions = priorSplit?.kept ?? null;
-  const priorActionsRead = priorActionsRefused ? null : keptPriorActions ? priorActionsWithStatedTopics(keptPriorActions, statedSteps) : statedSteps.length === 0 ? onFileLine : null;
+  /* Pau's ruling (23 Nov 2026): no forms-on-file fill. With nothing stated, the card has no Prior actions (it offers them). */
+  const priorActionsRead = priorActionsRefused ? null : keptPriorActions ? priorActionsWithStatedTopics(keptPriorActions, statedSteps) : null;
   /* U09 (QA's live triage): a step the manager listed with one the card keeps is on the card too (`listedWithKeptSteps`). */
   const listedSteps = keptPriorActions && priorActionsRead ? listedWithKeptSteps(requestWords, priorActionsRead, date, today, whatHappened) : [];
   /*
@@ -5042,10 +5101,19 @@ export async function proposeForm(
    * that, and "Corrective Action Form — 10/20/2026 (from the forms on file)" left the card. The forms on file stay beside
    * the steps this request adds. A form on file whose date a kept step already has is that step, never listed twice.
    */
+  /*
+   * ADDING A STEP NEVER REMOVES ONE (QA's ruling on the live regression set, 22 Nov 2026, A13): a form on file this card on
+   * screen already holds (the manager said yes to it: its date is in the card's record) stays beside the steps this call
+   * adds. Pau's ruling (23 Nov 2026): only one the card holds, never one it only offered.
+   */
   const thisCardOnScreen = samePersonOnScreen && context.cardOnScreen?.templateKey === template.key;
+  const heldOnScreen = new Set(thisCardOnScreen ? (context.cardOnScreen?.priorDates ?? []) : []);
   const keptDates = priorActionsRead ? readDates([priorActionsRead, ...listedSteps].join("\n")) : [];
   const onFileBeside = thisCardOnScreen && keptPriorActions && priorActionsRead
-    ? priorsOnFile.filter((prior) => !readDates(priorsOnFileLine([prior])).some((onFile) => keptDates.some((kept) => sameDate(kept, onFile))))
+    ? priorsOnFile.filter((prior) => {
+      const iso = onFileDateOf(prior);
+      return iso !== null && heldOnScreen.has(iso) && !readDates(priorsOnFileLine([prior])).some((onFile) => keptDates.some((kept) => sameDate(kept, onFile)));
+    })
     : [];
   const priorParts = priorActionsRead ? [...(onFileBeside.length > 0 ? [priorsOnFileLine(onFileBeside)] : []), priorActionsRead, ...listedSteps] : [];
   const priorActions = priorActionsRead ? priorParts.join(priorActionsRead.includes("\n") ? "\n" : "; ").slice(0, 600) : null;
@@ -5078,7 +5146,25 @@ export async function proposeForm(
    * (`statedSteps`) or, with nothing on file, the model's list from those words; filled from the forms on file they are not
    * `stated`, and "as you said" belongs only to steps stated in this message (stated_this_turn).
    */
-  const priorStated = priorActions !== null && (statedSteps.length > 0 || onFileLine === null);
+  /* Pau's ruling (23 Nov 2026): every Prior action is now the manager's (stated, or a form on file they said yes to). */
+  const priorStated = priorActions !== null;
+  /*
+   * The offer: this person's forms on file before the incident that the card does not hold and its earlier reply did not
+   * offer already (one offer, never asked twice), in one line the reply ends with.
+   */
+  const heldDates = priorActions ? readDates(priorActions) : [];
+  /*
+   * Only once the card has an incident: its date, or an account (undated, the incident is taken as today's). Before either,
+   * "before the incident" is unknown, and a form on file dated after the incident would be offered (U09 T1).
+   */
+  const incidentKnown = onFileBefore !== null || modelAccount !== "" || Boolean(ownCard?.accountKey);
+  const toOffer = !incidentKnown ? [] : priorsOnFile.filter((prior) => {
+    const iso = onFileDateOf(prior);
+    if (iso === null || offeredDates.has(iso)) return false;
+    return !heldDates.some((held) => sameDate(held, { month: Number(iso.slice(5, 7)), day: Number(iso.slice(8, 10)), year: Number(iso.slice(0, 4)) }));
+  });
+  const onFileOffer = toOffer.length > 0 ? priorsOnFileOffer(employee.name, toOffer) : null;
+  effects.proposalOnFileOffered = [...new Set([...offeredDates, ...toOffer.map(onFileDateOf).filter((iso): iso is string => iso !== null)])];
   if (priorStated && (await import("@/lib/forms/prior-actions")).statedPriorActions(context.question, today).length > 0) statedThisTurn.push("prior_actions");
   /*
    * QA's production audit (20 Nov 2026): "I need a verbal CA wrote up for <A>. I need the JBA policy for dress code
@@ -5860,7 +5946,11 @@ export async function proposeForm(
     ...(whatHappened && ACCOUNT_FORMS.has(template.key) && accountSubjectChanged(managerWords, whatHappened, employee.name) ? { account_subject_changed: { employee: employee.name, account_says_it_was: accountSubjectChanged(managerWords, whatHappened, employee.name) } } : {}),
     ...(statedSteps.length > 0 ? { prior_steps_said: statedSteps } : {}),
     /* QA item 22: the finalized forms on file for this person; the card's level is never chosen from them. */
-    ...(priorsOnFile.length > 0 ? { prior_on_file: { forms: priorsOnFile, line: onFileLine, used_on_card: priorActions === onFileLine } } : {}),
+    /*
+     * Pau's ruling (23 Nov 2026): the forms on file are offered, never added. ask_exactly is the one line the reply ends
+     * with; on the manager's yes (or when they name one), propose again with prior_actions holding it.
+     */
+    ...(priorsOnFile.length > 0 ? { prior_on_file: { forms: priorsOnFile, line: onFileLine, on_card: false, ...(onFileOffer ? { ask_exactly: onFileOffer } : {}) } } : {}),
     ...(corrective && payroll === "yes" && !amount && statedAmount ? { payroll_amount_said: `$${statedAmount}` } : {}),
     ...(cleaning && !careAndCleaning ? { cleaning_duty: cleaning } : {}),
     ...(awaiting ? { policy_named_by_manager: policyNamedByManager } : {}),
