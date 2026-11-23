@@ -120,7 +120,7 @@ export function draftNotesAreUsable(notes: DraftNotes): boolean {
 }
 
 /** The labels of the card's own lines (`draftNotesFromCard`). */
-const CARD_LINE = /^(?:Employee|Job title|Location|Date|What happened|Type of warning|Payroll deduct applicable|Payroll deduct amount|Prior actions): /;
+export const CARD_LINE = /^(?:Employee|Job title|Location|Date|What happened|Type of warning|Payroll deduct applicable|Payroll deduct amount|Prior actions): /;
 
 /**
  * The notes without the card's own lines (`draftNotesFromCard`'s "Employee: …", "What happened: …"): the manager's

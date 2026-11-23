@@ -53,6 +53,9 @@ const store: FakeStore = {
   chat_form_incidents: [],
   // Port from Ask Sunny (board f066, 20 Nov 2026): the deletion record, written by the fake as the BEFORE DELETE trigger writes it.
   form_instance_deletions: [],
+  // Port from Ask Sunny (23 Nov 2026): AI Training -> Assignments, the AI assignment tracker read_ai_assignments reads.
+  ai_assignment_people: [],
+  ai_assignment_marks: [],
   // HR approval (23 Nov 2026, migration 20261123002000): the approver list, the approval history, the 6 AM reminder's
   // record, the bell, and the user directory the bell and the queue read names and emails from.
   form_hr_approvers: [],
