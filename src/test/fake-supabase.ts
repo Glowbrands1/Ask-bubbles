@@ -158,6 +158,10 @@ class FakeQuery implements PromiseLike<{ data: unknown; error: null }> {
     this.filters.push((row) => row[column] === value);
     return this;
   }
+  neq(column: string, value: unknown) {
+    this.filters.push((row) => row[column] !== undefined && row[column] !== null && row[column] !== value);
+    return this;
+  }
   is(column: string, value: null) {
     this.filters.push((row) => (row[column] ?? null) === value);
     return this;
@@ -182,15 +186,38 @@ class FakeQuery implements PromiseLike<{ data: unknown; error: null }> {
    * name lookup sends. Anything else fails loudly rather than matching by
    * accident.
    */
+  /**
+   * Alternatives of `col.ilike.*word*` (the employee-name search), and — for HR approval's filters
+   * (`hr-approval-rules.ts`, port from the sibling app) — `col.is.null`, `col.eq.value` and `col.neq.value`, a value optionally
+   * in double quotes.
+   */
   or(expression: string) {
-    const terms = expression.split(",").map((term) => {
-      const match = /^([a-z_]+)\.ilike\.\*([^*,]+)\*$/.exec(term);
-      if (!match) throw new Error(`fake-supabase: or(${term}) unsupported`);
-      return { column: match[1]!, needle: match[2]!.toLowerCase() };
+    const tests = expression.split(",").map((term) => {
+      const ilike = /^([a-z_]+)\.ilike\.\*([^*,]+)\*$/.exec(term);
+      if (ilike) {
+        const column = ilike[1]!;
+        const needle = ilike[2]!.toLowerCase();
+        return (row: Record<string, unknown>) => String(row[column] ?? "").toLowerCase().includes(needle);
+      }
+      // `col.cs.{"value"}`: an array column that contains the value (HR approval's senders).
+      const contains = /^(\w+)\.cs\.\{"?([^"}]*)"?\}$/.exec(term);
+      if (contains) {
+        const [, column, value] = contains;
+        return (row: Record<string, unknown>) => Array.isArray(row[column!]) && (row[column!] as unknown[]).map(String).includes(value!);
+      }
+      const isNull = /^(\w+)\.is\.null$/.exec(term);
+      if (isNull) return (row: Record<string, unknown>) => (row[isNull[1]!] ?? null) === null;
+      const compare = /^(\w+)\.(eq|neq)\.(?:"([^"]*)"|([^",]*))$/.exec(term);
+      if (compare) {
+        const [, column, op, quoted, bare] = compare;
+        const value = quoted ?? bare ?? "";
+        return op === "eq"
+          ? (row: Record<string, unknown>) => row[column!] !== undefined && row[column!] !== null && String(row[column!]) === value
+          : (row: Record<string, unknown>) => row[column!] !== undefined && row[column!] !== null && String(row[column!]) !== value;
+      }
+      throw new Error(`fake-supabase: or(${term}) unsupported`);
     });
-    this.filters.push((row) =>
-      terms.some(({ column, needle }) => String(row[column] ?? "").toLowerCase().includes(needle)),
-    );
+    this.filters.push((row) => tests.some((test) => test(row)));
     return this;
   }
   gte(column: string, value: string | number) {
@@ -353,5 +380,28 @@ function recordDeletion(store: FakeStore, row: Row): void {
 }
 
 export function fakeSupabase(store: FakeStore) {
-  return { from: (table: string) => new FakeQuery(store, table) };
+  return { from: (table: string) => new FakeQuery(store, table), rpc: (name: string, args: Record<string, unknown>) => fakeRpc(store, name, args) };
+}
+
+/**
+ * The database functions a test reaches, modelled on their migrations (port from the sibling app). Only
+ * `form_hr_approval_write_values` (20261123002000): HR's edit of a form waiting for them — refused unless the form is a
+ * draft pending HR, then the rows are upserted on (instance_id, field_key) as `writeValues` upserts them. Anything else
+ * fails loudly.
+ */
+async function fakeRpc(store: FakeStore, name: string, args: Record<string, unknown>): Promise<{ data: null; error: { message: string } | null }> {
+  if (name !== "form_hr_approval_write_values") throw new Error(`fake-supabase: rpc(${name}) unsupported`);
+  const tables = store as unknown as Record<string, Record<string, unknown>[] | undefined>;
+  const instance = (tables.form_instances ?? []).find((row) => row.id === args.p_instance_id);
+  if (!instance || instance.status !== "draft" || instance.hr_approval_state !== "pending") {
+    return { data: null, error: { message: "That form is not waiting for HR approval." } };
+  }
+  const values = (tables.form_instance_values ??= []);
+  for (const incoming of (args.p_rows ?? []) as Record<string, unknown>[]) {
+    const row: Record<string, unknown> = { instance_id: args.p_instance_id, ...incoming, updated_at: new Date().toISOString() };
+    const at = values.findIndex((existing) => existing.instance_id === row.instance_id && existing.field_key === row.field_key);
+    if (at >= 0) values[at] = { ...values[at], ...row };
+    else values.push({ id: `value-${values.length + 1}`, ...row });
+  }
+  return { data: null, error: null };
 }

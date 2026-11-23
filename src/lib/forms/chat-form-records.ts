@@ -17,6 +17,8 @@ import { instanceListFilterFor, visibleInstances } from "./instance-scope";
 import { listInstances, type InstanceRow } from "./instances";
 import { authorizedLocationIds } from "./location-scope";
 import { privateAwareLimit } from "./private-creators";
+import { HR_STATE_LABEL, awaitingHr } from "./hr-approval-rules";
+import { resolveHrApprover } from "./hr-approval-approvers";
 
 /**
  * ============================================================================
@@ -516,6 +518,16 @@ function describeRow(row: InstanceRow, today: string, viewerId?: string | null):
     parts.push(`follow-up: ${FOLLOW_UP_LABEL[state]}`);
   }
   if (row.archivedAt) parts.push("archived");
+  /*
+   * HR APPROVAL. A form HR has not approved reaches this list only for its creator, its sender and HR
+   * (`hiddenWhileAwaitingHr`), so its state is said here. "Approved by HR" is said only to its creator and sender: everybody else reads an
+   * approved form as an ordinary finalized one (owner, 23 Nov 2026).
+   */
+  if (awaitingHr(row.hrApprovalState)) {
+    parts.push(`HR approval: ${HR_STATE_LABEL[row.hrApprovalState!].toLowerCase()} — not on file until HR approves it`);
+  } else if (row.hrApprovalState === "approved" && viewerId && (row.createdBy === viewerId || row.hrApprovalRequestedBy === viewerId || row.hrApprovalSenders.includes(viewerId))) {
+    parts.push("HR approval: approved by HR");
+  }
   parts.push(...createdByPart(row, viewerId));
   return `- ${parts.join("; ")}`;
 }
@@ -709,7 +721,14 @@ export async function chatFormsActor(actor: FormRecordsActor): Promise<FormsActo
    * route: `visibleInstances` needs it to keep the reader's own forms at a
    * store their assignment still covers (`ownFormStillInScope`).
    */
-  return { id: actor.subject, role: actor.role, verified: true, scope: actor.scope, visibility };
+  return {
+    id: actor.subject,
+    role: actor.role,
+    verified: true,
+    scope: actor.scope,
+    visibility,
+    hrApprover: await resolveHrApprover(actor.subject),
+  };
 }
 
 const MATCH_LIMIT = 50;

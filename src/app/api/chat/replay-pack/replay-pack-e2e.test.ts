@@ -53,6 +53,13 @@ const store: FakeStore = {
   chat_form_incidents: [],
   // Port from Ask Sunny (board f066, 20 Nov 2026): the deletion record, written by the fake as the BEFORE DELETE trigger writes it.
   form_instance_deletions: [],
+  // HR approval (23 Nov 2026, migration 20261123002000): the approver list, the approval history, the 6 AM reminder's
+  // record, the bell, and the user directory the bell and the queue read names and emails from.
+  form_hr_approvers: [],
+  form_hr_approval_events: [],
+  form_hr_reminder_sends: [],
+  app_notifications: [],
+  app_users: [],
 } as unknown as FakeStore;
 
 // Production builds with it (NEXT_PUBLIC_, read once when the role table loads): an Assistant Manager may create forms.
@@ -267,7 +274,8 @@ vi.mock("@/lib/auth/server", async () => {
       }
       return {
         identity: {
-          subject: "qa-manager",
+          // `t.as(role, scope, subject)` (port from the sibling app, HR approval): a case with two people; else the QA manager.
+          subject: (state as { subject?: string }).subject ?? "qa-manager",
           email: "qa-manager@example.test",
           displayName: "QA Manager",
           role,
@@ -971,9 +979,13 @@ function setScope(scope: unknown) {
 function setRole(role: string | undefined) {
   (state as { role?: string }).role = role;
 }
+function setSubject(subject: string | undefined) {
+  (state as { subject?: string }).subject = subject;
+}
 afterEach(() => {
   setScope(undefined);
   setRole(undefined);
+  setSubject(undefined);
   // The loop: off again, its switches as they were, its stand-in and seams cleared, its manual cache forgotten.
   loop.standIn = null;
   loop.rosterFails = false;
@@ -1001,9 +1013,10 @@ afterEach(() => {
 function context(): ReplayContext {
   return {
     thread: (options) => new Thread(options),
-    as: (role, scope) => {
+    as: (role, scope, subject) => {
       setRole(role);
       setScope(scope);
+      setSubject(subject);
     },
     directory: (rows) => {
       state.directory = rows as never;
@@ -1139,6 +1152,14 @@ function context(): ReplayContext {
     },
     draftNotYetSaved: (instanceId) => {
       store.form_instance_values = store.form_instance_values.filter((row) => !(row.instance_id === instanceId && row.filled_by === "ai"));
+    },
+    // HR approval (port from the sibling app, 23 Nov 2026): a table's rows as they are now (objects shared, so a case can mark
+    // a form as sent to HR), and rows a case adds (the approver's `form_hr_approvers` row).
+    rows: (table) => [...(((store as unknown as Record<string, unknown[] | undefined>)[table] ?? []) as Record<string, unknown>[])],
+    addRows: (table, rows) => {
+      const tables = store as unknown as Record<string, Record<string, unknown>[] | undefined>;
+      if (!tables[table]) throw new Error(`replay pack: no table "${table}" in the case database`);
+      tables[table]!.push(...rows.map((row) => ({ ...row })));
     },
   };
 }
