@@ -24,12 +24,15 @@ const FORMER_ONE: DirectoryRow = { id: "e-anselm-greer", firstName: "Anselm", la
 const WREN: DirectoryRow = { id: "e-wren-tollefsen", firstName: "Wren", lastName: "Tollefsen", preferredFirstName: null, employmentStatus: "terminated", locationIds: [], positionName: "Team Member Part Time", primaryLocationId: "loc-264" };
 const A2_T1 = "create a written CA for wren tollefsen for not attending the monthly meeting on 10-20-26. previous coaching: jba policy manual 1-1-26, verbal ca 9-1-26. payroll deduct not applicable";
 const ACTIVE_TWO: DirectoryRow = { id: "e-ilsabet-moraine", firstName: "Ilsabet", lastName: "Moraine", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-67", "loc-264"], positionName: "Team Member Part Time" };
+/* QA's live re-run on cad9c15 (23 Nov 2026): two Woven stores with a primary, in both orders (Bellevue primary + West Dodge, and the reverse). The primary is listed second, so the fill reads the primary, not the first store. */
+const PRIMARY_BELLEVUE: DirectoryRow = { id: "e-corvin-hale", firstName: "Corvin", lastName: "Hale", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264", "loc-67"], positionName: "Team Member Part Time", primaryLocationId: "loc-67" };
+const PRIMARY_WEST_DODGE: DirectoryRow = { id: "e-maelis-thorne", firstName: "Maelis", lastName: "Thorne", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-67", "loc-264"], positionName: "Team Member Part Time", primaryLocationId: "loc-264" };
 
 type Out = { card?: { status?: string; store?: string | null; choose_store_from?: unknown }; facts?: Record<string, unknown> } | null;
 
 async function card(t: ReplayContext, name: string, byId?: string, said?: string) {
   vi.setSystemTime(new Date("2026-11-22T18:00:00Z"));
-  t.directory([...LOOP_STAFF, FORMER_NONE, FORMER_ONE, ACTIVE_TWO, WREN]);
+  t.directory([...LOOP_STAFF, FORMER_NONE, FORMER_ONE, ACTIVE_TWO, WREN, PRIMARY_BELLEVUE, PRIMARY_WEST_DODGE]);
   t.as("admin", ADMIN);
   const first = name.split(" ")[0]!;
   const model = loopStandIn((view): LoopDecision => {
@@ -90,4 +93,11 @@ export const NOV23_AGENT_LOOP_A2_ADMIN_NO_STORE_ASKS_CASES: ReplayCase[] = [
     expect(refused).toMatch(/Which store is this about\?/);
     expect(added).toBe(0);
   }),
+  ...([[PRIMARY_BELLEVUE, "Bellevue"], [PRIMARY_WEST_DODGE, "West Dodge"]] as const).map(([row, store]) =>
+    fixed(`nov23-a2-admin-two-stores-primary-${row.primaryLocationId}-filled`, `QA's live re-run: an admin, an active person at two Woven stores with ${store} primary, no store named: the card is filed at the primary and Create saves it there, never location null`, async (t) => {
+      const { proposal, saved, refused } = await card(t, `${row.firstName} ${row.lastName}`);
+      expect(proposal?.locationId, JSON.stringify(proposal)).toBe(row.primaryLocationId);
+      expect(refused).toBeNull();
+      expect(saved, "Create saved another store than the primary").toBe(row.primaryLocationId);
+    })),
 ];
