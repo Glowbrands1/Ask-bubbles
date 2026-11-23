@@ -176,3 +176,32 @@ export const NOV22_AGENT_LOOP_CARD_KEEPS_PRIOR_ACTIONS_CASES: ReplayCase[] = [
     },
   },
 ];
+
+/* QA's control (23 Nov 2026): a new account the manager gives replaces the card's account; the guard never keeps the old one. */
+const NEW_ACCOUNT_TURN = "actually what happened is she was rude to a customer at the register on 11/20";
+export const NOV22_AGENT_LOOP_NEW_ACCOUNT_REPLACES_CASES: ReplayCase[] = [
+  {
+    id: "nov22-r3-new-account-replaces-card-account",
+    title: "Control (QA): with Liesl's card on screen (\"… received a customer complaint\"), a new account from the manager replaces it, never kept beside it",
+    report: REPORT,
+    status: "fixed",
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-22T16:00:00Z"));
+      t.directory([...LOOP_STAFF, LIESL]);
+      t.as("admin", ADMIN);
+      t.loopModel!(loopStandIn((view): LoopDecision => {
+        const result = lastResult(view, "propose_form") as { card?: unknown; reason_code?: string } | null;
+        if (result) return { text: result.card ? "Here's the Corrective Action Form for **Liesl Moreno Vargas**." : `refused: ${result.reason_code}` };
+        const message = said(view);
+        const account = message === NEW_ACCOUNT_TURN ? "Liesl was rude to a customer at the register on 11/20." : ACCOUNT;
+        return { tool: "propose_form", input: { template_key: "dpoa", employee_id: LIESL.id, person_evidence: evidenceFrom(view, "Liesl Moreno Vargas", back(view, U35_TURNS[8])), what_happened: account } };
+      }));
+      const thread = t.thread();
+      await thread.say(U35_TURNS[8]);
+      expect(issueOf(thread.proposal), "the first card has no account (the case proves nothing)").toMatch(/customer complaint/);
+      await thread.say(NEW_ACCOUNT_TURN);
+      expect(issueOf(thread.proposal)).toMatch(/rude to a customer/);
+      expect(issueOf(thread.proposal), "the old account was kept beside the new one").not.toMatch(/customer complaint/);
+    },
+  },
+];
