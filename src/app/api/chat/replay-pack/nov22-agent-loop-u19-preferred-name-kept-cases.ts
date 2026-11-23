@@ -87,4 +87,42 @@ export const NOV22_AGENT_LOOP_U19_PREFERRED_NAME_KEPT_CASES: ReplayCase[] = [
       expect(thread.proposal?.employeeName).toBe("Ilsabet Corvelle");
     },
   },
+  {
+    id: "nov23-u19-legal-first-name-in-account-is-the-card-person",
+    title: "U19 (QA's live re-run on cad9c15): the card is Sabeth Corvelle (Ilsabet in Woven); T3's account \"on 11/14 Ilsabet worked 50 minutes over the scheduled shift and did not clean up after themself\": the card and the saved form name the person, never \"clean up after Sabeth Corvelle\" or \"another individual\"",
+    report: `${REPORT}; QA's live re-run (23 Nov 2026, cad9c15): "did not clean up after Tamsin Brookfield" on the card and saved form, and "the account describes another individual's actions" in the saved Expectation`,
+    status: "fixed",
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-16T18:00:00Z"));
+      t.directory([...LOOP_STAFF, ILSABET]);
+      t.as("location_manager", SCOPE);
+      const account = "On 11/14 Ilsabet worked 50 minutes over the scheduled shift and did not clean up after themself.";
+      t.loopModel!(loopStandIn((view): LoopDecision => {
+        if (lastResult(view, "propose_form")) return { text: "Here's the Corrective Action Form." };
+        const turn = users(view);
+        if (turn === 2) return { text: "What happened?" };
+        return {
+          tool: "propose_form",
+          input: {
+            template_key: "dpoa", employee_id: ILSABET.id, person_evidence: evidenceFrom(view, "sabeth corvelle", turn - 1),
+            warning_level: "verbal", level_evidence: evidenceFrom(view, "verbal warning", turn - 1),
+            payroll_deduct: "no", payroll_evidence: evidenceFrom(view, "payroll not deductable", turn - 1),
+            ...(turn === 3 ? { what_happened: account, incident_date: "2026-11-14" } : {}),
+          },
+        };
+      }));
+      const thread = t.thread();
+      await thread.say(T1);
+      await thread.say(T2);
+      const reply = await thread.say(T3);
+      const issue = String((thread.proposal as { issue?: string | null } | null)?.issue ?? "");
+      expect(issue, reply.content).toMatch(/worked 50 minutes/);
+      expect(issue, `the card makes the person the object of their own action:\n${issue}`).not.toMatch(/after (?:Sabeth|Ilsabet)/i);
+      // She works at two stores; the manager picks hers on the card, as the browser's store picker does.
+      const id = await thread.create("loc-67");
+      const saved = JSON.stringify(t.values(id));
+      expect(saved, saved).not.toMatch(/after (?:Sabeth|Ilsabet)/i);
+      expect(saved, saved).not.toMatch(/another individual/i);
+    },
+  },
 ];
