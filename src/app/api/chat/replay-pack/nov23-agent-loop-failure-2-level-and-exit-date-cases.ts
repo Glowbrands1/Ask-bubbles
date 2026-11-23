@@ -41,6 +41,8 @@ function onFile(t: ReplayContext, withExit = true): void {
   /* Each Corrective Action's own Type of Warning, as on the live forms: HR's "gave verbal notice" names one of them. */
   t.checkOnForm!("ca-perpetua-1111", { warning_type: ["verbal"] });
   t.checkOnForm!("ca-perpetua-1116", { warning_type: ["written"] });
+  /* The finalized exit form as the live record had it: notice dates entered, typed by the manager. */
+  if (withExit) t.typeOnForm("exit-perpetua-1120", { notice_given_date: "2026-11-17", notice_fulfilled_date: "2026-11-17", resignation_method: "Verbal", details: "Perpetua quit." });
 }
 
 function start(t: ReplayContext, withExit = true): void {
@@ -121,6 +123,71 @@ export const NOV23_AGENT_LOOP_FAILURE_2_LEVEL_AND_EXIT_DATE_CASES: ReplayCase[] 
       const reply = await thread.say(LAST_DAY);
       expect(thread.proposal?.templateKey, reply.content).toBe("resignation-exit");
       expect(thread.proposal?.formDate ?? null, `the form date moved to the last day worked:\n${reply.content}`).not.toBe("2026-11-17");
+    },
+  },
+  {
+    id: "nov23-f2-hr-edits-revise-the-finalized-exit-form",
+    title: "Failure 2, item 4: HR's edits pasted (\"Remove dates for notice given and notice fulfilled\", How Employee Resigned and Additional Details restated) edit the finalized exit form through a revision: both notice dates cleared, the two fields as HR wrote them, each named in the result; the finalized original untouched",
+    report: REPORT,
+    status: "fixed",
+    async run(t) {
+      start(t);
+      const edits: Row[] = [];
+      t.loopModel!(loopStandIn((view): LoopDecision => {
+        const edited = lastResult(view, "edit_form") as Row | null;
+        if (edited) {
+          edits.push(edited);
+          return { text: "Done." };
+        }
+        if (!lastResult(view, "find_past_forms")) return { tool: "find_past_forms", input: { employee_name: "Perpetua Lindqvist", form: "exit form", open: true, forms_on_file_evidence: evidenceFrom(view, "make these edits on perpetua lindqvist exit") } };
+        return {
+          tool: "edit_form",
+          input: {
+            instance_id: "exit-perpetua-1120",
+            forms_on_file_evidence: evidenceFrom(view, "make these edits on perpetua lindqvist exit"),
+            values: {
+              notice_given_date: "",
+              notice_fulfilled_date: "",
+              resignation_method: "Perpetua gave verbal notice of her immediate resignation to the Assistant General Manager",
+              details: "Perpetua voluntarily ended her employment effective immediately",
+            },
+            clear_evidence: { notice_given_date: "Remove dates for notice given and notice fulfilled", notice_fulfilled_date: "Remove dates for notice given and notice fulfilled" },
+          },
+        };
+      }), { scripted: true });
+      await t.thread().say(HR_EDITS);
+      const exits = (t.forms() as Row[]).filter((row) => row.template_key === "resignation-exit");
+      const revision = exits.find((row) => row.revises_instance_id === "exit-perpetua-1120");
+      expect(revision, `no revision of the finalized exit form:\n${JSON.stringify(edits.at(-1)).slice(0, 600)}`).toBeTruthy();
+      const now = t.values(String(revision!.id));
+      expect(now.notice_given_date ?? "", `notice given still dated:\n${JSON.stringify(edits.at(-1)).slice(0, 900)}`).toBe("");
+      expect(now.notice_fulfilled_date ?? "", "notice fulfilled still dated").toBe("");
+      expect(now.resignation_method).toMatch(/gave verbal notice of her immediate resignation/);
+      expect(now.details).toMatch(/voluntarily ended her employment effective immediately/);
+      const named = JSON.stringify((edits.at(-1) as { stated_edits?: unknown })?.stated_edits ?? []);
+      for (const label of ["Date that notice was given", "Date that notice was fulfilled", "How Employee Resigned", "Additional Details"]) expect(named, `stated_edits never names ${label}`).toContain(label);
+      expect(t.values("exit-perpetua-1120").notice_given_date, "the finalized original changed").toBe("2026-11-17");
+    },
+  },
+  {
+    id: "nov23-f2-model-only-clear-keeps-typed-field",
+    title: "Item 4, control: the model sends a notice date empty with no words of this message naming it (no clear_evidence): the manager's typed date stays, never cleared by the model alone",
+    report: REPORT,
+    status: "fixed",
+    async run(t) {
+      start(t);
+      const said = "make these edits on perpetua lindqvist exit: Additional Details should read: Perpetua voluntarily ended her employment effective immediately";
+      t.loopModel!(loopStandIn((view): LoopDecision => {
+        if (lastResult(view, "edit_form")) return { text: "Done." };
+        if (!lastResult(view, "find_past_forms")) return { tool: "find_past_forms", input: { employee_name: "Perpetua Lindqvist", form: "exit form", open: true, forms_on_file_evidence: evidenceFrom(view, "make these edits on perpetua lindqvist exit") } };
+        return { tool: "edit_form", input: { instance_id: "exit-perpetua-1120", forms_on_file_evidence: evidenceFrom(view, "make these edits on perpetua lindqvist exit"), values: { notice_given_date: "", details: "Perpetua voluntarily ended her employment effective immediately" } } };
+      }), { scripted: true });
+      await t.thread().say(said);
+      const revision = (t.forms() as Row[]).find((row) => row.revises_instance_id === "exit-perpetua-1120");
+      expect(revision, "no revision").toBeTruthy();
+      const now = t.values(String(revision!.id));
+      expect(now.details).toMatch(/voluntarily ended her employment/);
+      expect(now.notice_given_date, "the model alone cleared a date the manager typed").toBe("2026-11-17");
     },
   },
 ];
