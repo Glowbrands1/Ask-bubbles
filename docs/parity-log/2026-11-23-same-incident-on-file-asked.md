@@ -27,3 +27,11 @@ never reaches it. Port the same names: `sameDayFormsOnFile`, `sameDayOnFileQuest
 `same_incident_on_file`, the input `separate_incident_evidence`, the record `slots.agent_loop.same_incident`
 (`SameIncidentSlot` / `SameIncidentRecord`, `sameIncidentRecords` on the tool context, a request start in
 `requestStarts`), and the rules-book line. Salon ↔ store wording only; the template keys through `appConfig().formKeys`.
+
+**QA's live check of #1123 (24 Nov 2026):** the live model's copy card had no date, so the check had nothing to compare.
+Two more gates, ported with the rest: (2) a card with no date of its own, made in a turn that read this person's form of
+the same kind on file (read_form), is checked against that form's date; (1) Create, the last gate
+(`src/app/api/forms/instances/route.ts`), holds a loop card when this person has that form on file for the date it would
+be saved with (a form filed since the card was made counts) unless the manager said that date is a separate incident
+(the card record's `sameIncidentChecked`), with the same question (409, code `same_incident_on_file`). The shared lookup
+and question are `src/lib/forms/same-incident.ts` (`formsOnFileSameDay`, `sameDayOnFileQuestion`).

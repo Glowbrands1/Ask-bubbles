@@ -116,4 +116,61 @@ export const NOV23_AGENT_LOOP_SAME_INCIDENT_ON_FILE_CASES: ReplayCase[] = [
       expect(reply.content).not.toMatch(/already has|separate incident/);
     },
   },
+  {
+    id: "nov23-same-incident-copy-without-date-is-asked",
+    title: "QA's live check of #1123: \"create a verbal CA for Corliss Abernath with all the same information given\" reads her 11/18 CA and proposes the copy with NO date and its own wording (as the live model did): no card yet; the reply asks about the 11/18 one on file",
+    report: "QA's live check of #1123 (24 Nov 2026): the copy's card had no form_date, so the same-date check had nothing to compare and a second CA went up with no warning",
+    status: "fixed",
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-23T18:00:00Z"));
+      t.directory([...LOOP_STAFF, CORLISS]);
+      t.as("location_manager", WEST_DODGE);
+      onFile(t, "finalized");
+      const ask = "create a verbal CA for Corliss Abernath with all the same information given";
+      t.loopModel!(loopStandIn((view): LoopDecision => {
+        const result = lastResult(view, "propose_form") as Result;
+        if (result?.card) return { text: "Here's the Corrective Action Form for **Corliss**." };
+        if (result) return { text: result.ask_exactly ?? `refused: ${result.reason_code}` };
+        if (!lastResult(view, "read_form")) return { tool: "read_form", input: { instance_id: "ca-corliss-1118", forms_on_file_evidence: evidenceFrom(view, ask) } };
+        return { tool: "propose_form", input: { template_key: "dpoa", employee_id: CORLISS.id, person_evidence: evidenceFrom(view, "Corliss Abernath"), warning_level: "verbal", level_evidence: evidenceFrom(view, "verbal"), what_happened: "Corliss missed her scheduled shift without calling in." } };
+      }), { scripted: true });
+      const thread = t.thread();
+      const reply = await thread.say(ask);
+      expect(thread.proposal ?? null, `a second CA went up with no word of the 11/18 one:\n${reply.content}`).toBeNull();
+      expect(reply.content).toContain("already has a Corrective Action for 11/18 (finalized 11/19). Do you want to open that one, or is this a separate incident?");
+    },
+  },
+  {
+    id: "nov23-same-incident-create-is-held-at-the-last-gate",
+    title: "Create, the last gate: Corliss's CA card for 11/20 was made with nothing on file that day; another manager then files a CA for her 11/20; Create is held with the same question, and no second form is saved",
+    report: "QA's live check of #1123 (24 Nov 2026): the same check at Create, when the form date is known, catches every path",
+    status: "fixed",
+    async run(t) {
+      const { thread } = await chat(t, ON_1120, "2026-11-20");
+      expect(thread.proposal?.templateKey, "no 11/20 card (the case proves nothing)").toBe("dpoa");
+      const ids = t.templateIds!("dpoa");
+      (t.forms() as Record<string, unknown>[]).push({
+        id: "ca-corliss-1120", ...ids, variant_key: null, employee_role: null, location_id: WEST_DODGE.primaryAreaId, location_name: "Omaha, West Dodge Rd",
+        created_by: "another-manager", created_by_role: "location_manager", source: "ask_sunny", status: "draft", follow_up_date: null, archived_at: null,
+        revises_instance_id: null, template_key: "dpoa", template_name: "Corrective Action Form", employee_name: "Corliss Abernath", form_date: "2026-11-20",
+        created_at: "2026-11-23T17:30:00Z", updated_at: "2026-11-23T17:30:00Z",
+      });
+      const before = (t.forms() as Record<string, unknown>[]).length;
+      await expect(thread.create(), "Create saved a second CA for 11/20").rejects.toThrow(/already has a Corrective Action for 11\/20 \(a draft\)\. Do you want to open that one, or is this a separate incident\?/);
+      expect((t.forms() as Record<string, unknown>[]).length, "a form was saved").toBe(before);
+    },
+  },
+  {
+    id: "nov23-same-incident-create-after-separate-answer-saves",
+    title: "Control: after \"this is a separate incident …\" the 11/18 card's Create saves (the loop cleared that date; the last gate never asks again)",
+    report: REPORT,
+    status: "fixed",
+    async run(t) {
+      const { thread } = await chat(t, ON_1118, "2026-11-18");
+      await thread.say(SEPARATE);
+      expect(thread.proposal?.templateKey).toBe("dpoa");
+      const id = await thread.create();
+      expect(id).toBeTruthy();
+    },
+  },
 ];

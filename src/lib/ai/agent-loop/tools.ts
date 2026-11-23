@@ -17,6 +17,7 @@ import { storePhraseLeftInAccount } from "./store-phrase";
 import { shownAccount, unaskedAccountChange } from "./account-kept";
 import { earlierPriorDates, priorDateLine, priorStepDates } from "./prior-step-dates";
 import { candidateNameWords, chatFormsActor, formDateRangeFromInput, formKindFromText, ofKind } from "@/lib/forms/chat-form-records";
+import { formsOnFileSameDay, sameDayOnFileQuestion, type SameDayOnFile } from "@/lib/forms/same-incident";
 import { CURRENT_MESSAGE_ID, holdsPhrase, identifiedTurns, readEvidence, verifyEvidence, withoutMessageIdTags, type IdentifiedTurn } from "./evidence";
 import { personNamedInRequest, requestStart } from "./person-in-request";
 import { answeredNameQuestions, answerNamesSomeoneElse, everKeptOrUsedTyped, isConfirmedSpelling, latestTurnAnswersFor, latestTurnConfirms, latestTurnKeepsOrUsesTyped, latestTurnKeepsTyped, spellingKeysConfirmedFor, spellingKeysConfirmedForName, type NameQuestionView } from "./confirmed-spelling";
@@ -1092,6 +1093,8 @@ export interface ToolEffects {
   personAsked?: { templateKey: string };
   /** Pau's review (23 Nov 2026): propose_form asked whether this person's form on file for this date is meant (no card made). */
   sameIncidentAsked?: { templateKey: string; employeeKey: string; date: string };
+  /** The incident date this turn's card cleared the same-incident check for (`same-incident.ts`), for Create's last check. */
+  proposalSameIncidentChecked?: string | null;
   /** coach_team asked "create all?" for this open Coaching draft this turn, for the record. */
   teamConfirm?: { sourceInstanceId: string };
   /** QA's Bubbles re-run (22 Nov 2026, A11): the forms this turn's find_past_forms listed with which_form_question. */
@@ -1111,7 +1114,7 @@ export interface ToolEffects {
   /** Round 3 U21: this turn already handed the card back once because its incident_date was a prior step's date. */
   priorDateNamed?: boolean;
   /** Round 3 U16: the forms read_form read this turn (person, form date and account), so a copy keeps its date. */
-  formsRead?: { employeeName: string | null; formDate: string | null; account: string }[];
+  formsRead?: { employeeName: string | null; formDate: string | null; account: string; templateKey?: string; instanceId?: string }[];
   /** QA (16 Nov 2026): propose_form ran for a form this turn, so a form is chosen (find_staff may ask the name). */
   formChosen?: boolean;
   /** Batch G (G4), by the rebuild plan's PR 1b: find_past_forms found forms on file to open (open: true) for this person. */
@@ -2419,7 +2422,7 @@ export async function readForm(context: ToolContext, input: { instance_id?: unkn
     const accountField = ["observation", "coaching_details"].find((key) => fieldKeys.has(key)) ?? null;
     if (effects) {
       const account = accountField ? (shownRows.find((row) => row.key === accountField)?.shown ?? "") : "";
-      (effects.formsRead ??= []).push({ employeeName: loaded.instance.employeeName ?? null, formDate: loaded.instance.formDate ?? null, account });
+      (effects.formsRead ??= []).push({ employeeName: loaded.instance.employeeName ?? null, formDate: loaded.instance.formDate ?? null, account, templateKey: loaded.instance.templateKey, instanceId: loaded.instance.id });
     }
     return {
       instance_id: loaded.instance.id,
@@ -3162,48 +3165,18 @@ async function finalizedPriorsOnFile(context: ToolContext, person: RosterEmploye
   }));
 }
 
-/**
- * ============================================================================
- * THE SAME INCIDENT ALREADY ON FILE (Pau's review of the sibling app's chats, 23 Nov 2026, via QA)
- * ============================================================================
- *
- * An employee ended up with two FINALIZED Corrective Actions for one incident date (a no-show on 11/18) and a third
- * draft; the AI never said one already existed. This person's forms of this card's kind (by roster id, as
- * find_past_forms reads them: the forms this manager may open), drafts and finalized, not archived and not revised, dated
- * this card's incident date. The open form being edited is not another one.
- */
-export interface SameDayOnFile {
-  readonly id: string;
-  readonly form: string;
-  readonly status: "draft" | "finalized";
-  readonly formDate: string;
-  readonly finalizedAt: string | null;
-}
-
+/* Pau's review (24 Nov 2026 PHT, via QA): this person's form of this kind on file for one date (`same-incident.ts`), by roster id as find_past_forms reads them. The open form being edited is not another one. */
 async function sameDayFormsOnFile(context: ToolContext, person: RosterEmployee, roster: readonly RosterEmployee[], templateKey: string, formDate: string): Promise<SameDayOnFile[]> {
   const actor = await chatFormsActor(context.actor).catch(() => undefined);
   if (!actor) return [];
   const names = fullNamesOf(person);
-  const nameWords = [...new Set(names.flatMap(candidateNameWords))];
-  return visibleInstances(actor, await listInstances("all", 200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords, formDateFrom: formDate, formDateTo: formDate }).catch(() => []))
-    .filter((row) => row.templateKey === templateKey && row.formDate === formDate && !row.archivedAt && (row.status === "draft" || row.status === "finalized") && row.id !== context.openFormId)
-    .filter((row) => names.some((full) => samePerson(full, row.employeeName)) || sameRosterPerson(row.employeeName, displayName(person), roster))
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-    .map((row) => ({ id: row.id, form: row.templateName, status: row.status as "draft" | "finalized", formDate: row.formDate!, finalizedAt: row.finalizedAt ?? null }));
-}
-
-/** "<P> already has a Corrective Action for 11/18 (finalized 11/19). Do you want to open that one, or is this a separate incident?" */
-export function sameDayOnFileQuestion(name: string, formName: string, onFile: readonly SameDayOnFile[]): string {
-  const md = (iso: string | null) => {
-    const found = /^\d{4}-(\d{2})-(\d{2})/.exec(iso ?? "");
-    return found ? `${found[1]}/${found[2]}` : null;
-  };
-  const kind = formName.replace(/\s+Form$/i, "");
-  const states = onFile.map((form) => (form.status === "finalized" ? (md(form.finalizedAt) ? `finalized ${md(form.finalizedAt)}` : "finalized") : "a draft"));
-  const day = md(onFile[0]!.formDate);
-  const which = onFile.length === 1 ? "that one" : "one of those";
-  const has = onFile.length === 1 ? `a ${kind} for ${day} (${states[0]})` : `${onFile.length} ${kind}s for ${day} (${states.join("; ")})`;
-  return `${name} already has ${has}. Do you want to open ${which}, or is this a separate incident?`;
+  return formsOnFileSameDay(actor, {
+    nameWords: [...new Set(names.flatMap(candidateNameWords))],
+    isPerson: (employeeName) => names.some((full) => samePerson(full, employeeName)) || sameRosterPerson(employeeName, displayName(person), roster),
+    templateKey,
+    formDate,
+    except: [context.openFormId],
+  });
 }
 
 /** The prior actions line for forms on file: "Corrective Action Form, Verbal Warning — 10/20/2026; Coaching Form — 09/12/2026". */
@@ -6009,20 +5982,35 @@ export async function proposeForm(
   const onScreenSameDay = sameCardOnScreen(context.cardOnScreen, template.key, employee) && (context.cardOnScreen?.incidentDate ?? null) === card.formDate;
   const separateStated = answerEvidence(context, input.separate_incident_evidence, "request", evidencePerson, { requestTurnIds }).ok;
   const sameDayPerson = employee.id && read.kind === "read" ? read.roster.find((row) => row.id === employee.id) ?? null : null;
-  if (sameDayKinds.has(template.key) && card.formDate && sameDayPerson && !onScreenSameDay && !separateStated) {
-    const onFile = await sameDayFormsOnFile(context, sameDayPerson, read.kind === "read" ? read.roster : [], template.key, card.formDate);
+  /*
+   * QA's live check of #1123 (24 Nov 2026): "create a verbal CA for <P> with all the same information given" read her
+   * 11/14 Verbal CA (read_form) and proposed the copy with NO date, so there was nothing to compare and a second CA went
+   * up unasked. A card with no date of its own, made in a turn that read this person's form of the same kind on file,
+   * is checked against that form's date: the form it was taken from (form data, never the account's words).
+   */
+  const copiedFrom = !card.formDate
+    ? [...(effects.formsRead ?? [])].reverse().find((form) => form.templateKey === template.key && Boolean(form.formDate && /^\d{4}-\d{2}-\d{2}$/.test(form.formDate)) && Boolean(form.employeeName && samePerson(form.employeeName, employee.name)))
+    : undefined;
+  const sameDayDate = card.formDate ?? copiedFrom?.formDate ?? null;
+  if (sameDayKinds.has(template.key) && sameDayDate && sameDayPerson && !(onScreenSameDay && card.formDate) && !separateStated) {
+    const onFile = await sameDayFormsOnFile(context, sameDayPerson, read.kind === "read" ? read.roster : [], template.key, sameDayDate);
     if (onFile.length > 0) {
       const ask = sameDayOnFileQuestion(replyNameFor(card.employeeName ?? employee.name, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null), card.templateName ?? template.name, onFile);
       effects.replyMustAsk = ask;
-      effects.sameIncidentAsked = { templateKey: template.key, employeeKey: personKey(employee.id!), date: card.formDate };
+      effects.sameIncidentAsked = { templateKey: template.key, employeeKey: personKey(employee.id!), date: sameDayDate };
       return {
         reason_code: "same_incident_on_file",
         same_incident_on_file: onFile.map((form) => ({ instance_id: form.id, form: form.form, status: form.status, form_date: form.formDate, finalized_at: form.finalizedAt })),
-        error: `${employee.name} already has ${onFile.length === 1 ? "this form" : "these forms"} on file for ${card.formDate}. The card was not made and Create is held. Say so and end your reply with ask_exactly, exactly. If the manager then wants that form, open it (open_form with its instance_id); if they say this is a separate incident, propose the card again with separate_incident_evidence (their words).`,
+        error: `${employee.name} already has ${onFile.length === 1 ? "this form" : "these forms"} on file for ${sameDayDate}. The card was not made and Create is held. Say so and end your reply with ask_exactly, exactly. If the manager then wants that form, open it (open_form with its instance_id); if they say this is a separate incident, propose the card again with separate_incident_evidence (their words).`,
         ask_exactly: ask,
       };
     }
   }
+  /*
+   * The date the manager said is a separate incident (this turn's words, or the same card on screen that carried it), for
+   * Create's last check: Create asks again for any other date, as a form may have been filed since this card was made.
+   */
+  effects.proposalSameIncidentChecked = sameDayKinds.has(template.key) && card.formDate && (separateStated || (onScreenSameDay && context.cardOnScreen?.sameIncidentChecked === card.formDate)) ? card.formDate : null;
   const refused = anotherCard(card.employeeName);
   if (refused) {
     const next = (card.employeeName ?? "").split(/\s+/)[0] || "the next person";
