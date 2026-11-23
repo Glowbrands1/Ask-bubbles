@@ -535,7 +535,7 @@
    "sourceKey": "asd-sdit-epp",
    "path": ".document.blocks[0].title",
    "from": "Performance EPP - ASD/SDIT",
-   "to": "Performance EPP - Assistant General Manager"
+   "to": "Development EPP - Assistant General Manager"
   },
   {
    "sourceKey": "asd-sdit-epp",
@@ -975,6 +975,12 @@
   },
   {
    "sourceKey": "tanning-consultant-interview",
+   "path": ".document.blocks[21].text",
+   "from": "8. Our company has five core values. Id like to hear about a time in your past experiences--work, school, or personal where youve shown one of these in action.",
+   "to": "8. Our company has five core values. I’d like to hear about a time in your past experiences--work, school, or personal where you’ve shown one of these in action."
+  },
+  {
+   "sourceKey": "tanning-consultant-interview",
    "path": ".document.blocks[22].label",
    "from": "Sun Tan City Core Values",
    "to": "Core Values"
@@ -1038,6 +1044,12 @@
    "path": ".document.blocks[40].text",
    "from": "A client approaches the counter upset because the tanning bed they reserved is unavailable due to a mechanical issue. They are raising their voice and demanding a refund, while other clients are in the salon. Show how you would handle the client in the moment and explain the steps you would take afterward to address the root cause.",
    "to": "A guest approaches the counter upset because the product they came in for is out of stock. They are raising their voice and demanding a refund, while other guests are in the store. Show how you would handle the guest in the moment and explain the steps you would take afterward to address the root cause."
+  },
+  {
+   "sourceKey": "management-interview-round-1",
+   "path": ".document.blocks[49].text",
+   "from": "4. Core Values Speech: While reviewing the Core Values Speech with the candidate, ask for examples (personally or professionally) that they have demonstrated each of the 4 Core Values.",
+   "to": "4. Core Values Speech: While reviewing the Core Values Speech with the candidate, ask for examples (personally or professionally) that they have demonstrated each of our Core Values."
   },
   {
    "sourceKey": "management-interview-round-1",

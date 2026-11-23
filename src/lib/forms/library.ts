@@ -1836,7 +1836,8 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
     layoutFamily: "epp",
     requiredPermission: "create_epp",
     displayOrder: 6,
-    document: eppDocument("Performance EPP - Assistant General Manager"),
+    /* Its name (QA, 23 Nov 2026: the printed title matches the Development EPP). */
+    document: eppDocument("Development EPP - Assistant General Manager"),
     variants: eppVariant("General Manager", "AGM", "AGM review"),
     revision: 4,
     revisionNote: "Buff City Soap's Assistant General Manager Development EPP (Pau, 23 Nov 2026).",

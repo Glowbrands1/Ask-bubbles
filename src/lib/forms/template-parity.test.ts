@@ -159,7 +159,7 @@ const APPROVED_BCS_TERMS: readonly { from: string; to: string }[] = [
   { from: "Performance plan covering the ASD to SDIT development track.", to: "Development plan for an Assistant General Manager, reviewed with the General Manager." },
   { from: "Seeded from the approved reference forms.", to: "Buff City Soap's Assistant General Manager Development EPP (Pau, 23 Nov 2026)." },
   { from: "ASD-SDIT Performance EPP.pdf", to: "Assistant General Manager Development EPP.pdf" },
-  { from: "Performance EPP - ASD/SDIT", to: "Performance EPP - Assistant General Manager" },
+  { from: "Performance EPP - ASD/SDIT", to: "Development EPP - Assistant General Manager" },
   { from: "ASD/SDIT review", to: "AGM review" },
   { from: "Training Salon Director", to: "General Manager" },
   { from: "ASD", to: "AGM" },
@@ -181,6 +181,9 @@ const APPROVED_BCS_TERMS: readonly { from: string; to: string }[] = [
   { from: "If you were given direction as a Salon Director to reduce expenses, what would be the first three areas you would focus on, and why?", to: "If you were given direction as a General Manager to reduce expenses, what would be the first three areas you would focus on, and why?" },
   { from: "Scenario 2: Customer visits have dropped 20% over the past month and lotions and memberships sales are at their lowest in six months. One long-time team member is resistant to promoting add-ons, saying, “Customers don’t want to be pushed.” What are your next steps?", to: "Scenario 2: Guest visits have dropped 20% over the past month and add-on product sales and Buff Rewards sign-ups are at their lowest in six months. One long-time team member is resistant to recommending related products, saying, “Guests don’t want to be pushed.” What are your next steps?" },
   { from: "How would you create a 30–60–90 day training plan for a new Assistant Salon Director or Tanning Consultant?", to: "How would you create a 30–60–90 day training plan for a new Assistant General Manager or Team Member?" },
+  // QA's printed-form review (23 Nov 2026): no count that disagrees with the five values listed; the Q8 apostrophes.
+  { from: "8. Our company has five core values. Id like to hear about a time in your past experiences--work, school, or personal where youve shown one of these in action.", to: "8. Our company has five core values. I’d like to hear about a time in your past experiences--work, school, or personal where you’ve shown one of these in action." },
+  { from: "4. Core Values Speech: While reviewing the Core Values Speech with the candidate, ask for examples (personally or professionally) that they have demonstrated each of the 4 Core Values.", to: "4. Core Values Speech: While reviewing the Core Values Speech with the candidate, ask for examples (personally or professionally) that they have demonstrated each of our Core Values." },
 ];
 
 const APPROVED_CONTENT_CHANGES: { decision: string; from: string; to: string }[] = [

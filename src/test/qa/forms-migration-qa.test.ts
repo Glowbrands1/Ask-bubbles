@@ -301,7 +301,8 @@ function withApprovedBcsTerms(key: string, text: string): string {
   if (!BCS_TERMS_KEYS.has(key)) return text;
   const pairs = (approved.changes as { sourceKey: string; from: unknown; to: unknown }[])
     .filter((change) => change.sourceKey === key && typeof change.from === "string" && typeof change.to === "string" && change.from !== "")
-    .map((change) => changedWords(neutral(change.from as string), neutral(change.to as string)))
+    // The PDF prints a curly apostrophe as a straight one (QA's printed-form review: Q8's "I’d", "you’ve").
+    .map((change) => changedWords(neutral((change.from as string).replace(/\u2019/g, "'")), neutral((change.to as string).replace(/\u2019/g, "'"))))
     .filter(([from, to]) => from !== "" && from !== to)
     .sort((a, b) => b[0].length - a[0].length);
   return pairs.reduce((current, [from, to]) => current.replace(new RegExp(`(?<![A-Za-z0-9])${from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![A-Za-z0-9])`, "g"), to), text);

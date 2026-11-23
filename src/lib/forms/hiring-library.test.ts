@@ -330,7 +330,8 @@ describe("the First Round Management Interview matches its source", () => {
       "1. Job Description and Job Requirements and Duties: Have printed to review.",
       "2. Pay Structure: Explain the pay structure and the earning potential with bonuses. Let the applicant know that bonuses depend on reaching certain levels of sales performance.",
       "3. Review the Dress Code with the applicant.",
-      "4. Core Values Speech: While reviewing the Core Values Speech with the candidate, ask for examples (personally or professionally) that they have demonstrated each of the 4 Core Values.",
+      // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms; QA's printed-form review): no count that disagrees with the five values.
+      "4. Core Values Speech: While reviewing the Core Values Speech with the candidate, ask for examples (personally or professionally) that they have demonstrated each of our Core Values.",
       "5. Questions: Give the applicant a chance to ask any questions. Ask the applicant if they understand the job requirements, if they can perform the job duties required and if they see themselves able to embody our Core Values.",
       "6. Notification: Notify the applicant that we will contact them if we choose to offer them the position and provide them with a timeline of hiring decisions to be made.",
     ]);

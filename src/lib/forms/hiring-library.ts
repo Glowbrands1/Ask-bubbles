@@ -232,7 +232,7 @@ export function firstRoundManagementInterviewDocument(): FormDocument {
       { kind: "paragraph", text: "3. Review the Dress Code with the applicant." },
       {
         kind: "paragraph",
-        text: "4. Core Values Speech: While reviewing the Core Values Speech with the candidate, ask for examples (personally or professionally) that they have demonstrated each of the 4 Core Values.",
+        text: "4. Core Values Speech: While reviewing the Core Values Speech with the candidate, ask for examples (personally or professionally) that they have demonstrated each of our Core Values.",
       },
       {
         kind: "paragraph",
@@ -493,15 +493,12 @@ export function teamMemberInterviewDocument(): FormDocument {
         "7. Give me an example of a time you were accountable for your results—what was the situation and outcome?",
       ),
       /*
-       * QUESTION 8 IS TRANSCRIBED AS WRITTEN, apostrophes and all. "Id like",
-       * "youve" and the double hyphen are in the source document. They are the
-       * business's own words on a form the business issues, and correcting them
-       * here would put a quiet edit into a hiring record; whoever owns the form
-       * can fix the Word file and this follows.
+       * QUESTION 8 was transcribed as written ("Id like", "youve"). Pau, 23 Nov: BCS terms in the forms, via QA: the
+       * apostrophes are fixed ("I'd", "you've"), a typo fix on the form's own text; the double hyphen stays.
        */
       {
         kind: "paragraph",
-        text: "8. Our company has five core values. Id like to hear about a time in your past experiences--work, school, or personal where youve shown one of these in action.",
+        text: "8. Our company has five core values. I’d like to hear about a time in your past experiences--work, school, or personal where you’ve shown one of these in action.",
       },
       /*
        * THE HEADING NAMES NO COMPANY (QA, 25 Oct 2026). The source printed the
