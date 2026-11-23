@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
+import { DEFAULT_PERMISSION_MATRIX } from "@/lib/permissions";
+
 import { TEMPLATE_SEEDS } from "./library";
 import {
   HR_APPROVAL_FLAG,
@@ -72,6 +74,20 @@ describe("which forms wait for HR — every template in the library, by name", (
     expect(templateRoutesToHr("")).toBe(true);
     expect(templateRoutesToHr("create_something_new")).toBe(true);
   });
+});
+
+describe("HR can open every form that waits for them", () => {
+  /*
+   * HR's approve, edit and send back go through `authorizeInstance(…, "edit")`, which checks the template's own
+   * required permission. The approver's account is a District Manager, so that role must hold the permission of every
+   * template that routes to HR, or HR would be refused (404) on that kind of form.
+   */
+  it.each(TEMPLATE_SEEDS.filter((seed) => templateRoutesToHr(seed.requiredPermission)).map((seed) => [seed.name, seed.requiredPermission] as const))(
+    "a district manager holds %s's permission (%s)",
+    (_name, permission) => {
+      expect(DEFAULT_PERMISSION_MATRIX.district_manager).toContain(permission);
+    },
+  );
 });
 
 describe("who knows a form waiting for HR exists", () => {

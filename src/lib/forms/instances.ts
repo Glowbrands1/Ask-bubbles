@@ -42,7 +42,8 @@ import { caSalesPolicyEnabled, requiredFieldsAtFinalizeEnabled, revisionArchived
 import { blankRequiredFields, requiredFieldsMessage } from "./required-fields";
 import { isIsoCalendarDate } from "./form-date-answer";
 import { getCurrentVersion, getVersion, type TemplateVersionRow } from "./repository";
-import { asHrApprovalState, editableDraft, heldForHr, withoutHeldForHr, type HrApprovalState } from "./hr-approval-rules";
+import { HELD_FOR_HR, asHrApprovalState, editableDraft, heldForHr, withoutHeldForHr, type HrApprovalState } from "./hr-approval-rules";
+import { hrHoldLive, releaseStaleHold } from "./hr-approval-approvers";
 
 /** The form's own Date line — the same day as `form_instances.form_date`. */
 const FORM_DATE_KEY = "form_date";
@@ -816,7 +817,11 @@ export async function saveInstanceValues(
     throw new Error("This form is finalized. Create a revision to change it.");
   }
   const hrEdit = options.asHrApprover === true && heldForHr(loaded.instance.hrApprovalState);
-  if (heldForHr(loaded.instance.hrApprovalState) && !hrEdit) throw new HeldForHrError();
+  if (heldForHr(loaded.instance.hrApprovalState) && !hrEdit) {
+    // Held only while the hold is live; otherwise (flag off, no approver left) the form goes back to a plain draft.
+    if (await hrHoldLive()) throw new HeldForHrError();
+    await releaseStaleHold(instanceId);
+  }
 
   const document = parseFormDocument(loaded.version.document);
   const result = enforcePersonEdit(document, loaded.instance.variantKey, submitted);
@@ -1063,7 +1068,7 @@ export class UnverifiedPolicyError extends Error {
 /** Thrown when a field the version marks `required` is blank at Finalize. See `required-fields.ts`. */
 /** Thrown when somebody but HR writes to a form waiting for HR approval. */
 export class HeldForHrError extends Error {
-  readonly code = "HELD_FOR_HR";
+  readonly code = HELD_FOR_HR;
   constructor() {
     super("This form is waiting for HR approval. You can change it again if HR sends it back.");
     this.name = "HeldForHrError";
@@ -1142,7 +1147,10 @@ export async function finalizeInstance(
   const before = await loadInstance(instanceId);
   if (!before) throw new Error("That form no longer exists.");
   // A form waiting for HR is finalized only by HR's approval.
-  if (heldForHr(before.instance.hrApprovalState) && options.fromHrApproval !== true) throw new HeldForHrError();
+  // While the hold is live (flag on, an approver exists); otherwise the creator's Finalize finalizes it, clearing the state.
+  if (heldForHr(before.instance.hrApprovalState) && options.fromHrApproval !== true && (await hrHoldLive())) {
+    throw new HeldForHrError();
+  }
   const { unverified } = finalizePreflight(before, options);
 
   const supabase = getSupabaseAdmin();
