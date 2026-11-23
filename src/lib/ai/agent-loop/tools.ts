@@ -2851,6 +2851,31 @@ function closeSpellingNotSettled(
 }
 
 /**
+ * Pau's job-title rule (via QA, 23 Nov 2026; the sibling app's #1251): whether the title the quote holds sits right
+ * beside this person's name ("my assistant manager Fenna", "Fenna Prewitt, a general manager"), the way a manager refers
+ * to someone, not an instruction for the form's title. Structural: the title (as given, and the company title list's
+ * own patterns for it) and the name (full or first) with nothing between them but a comma and an article.
+ */
+export function titleBesideName(quote: string, person: string, title: string): boolean {
+  const escape = (text: string) => text.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const first = person.trim().split(/\s+/)[0] ?? "";
+  const names = [person.trim(), first].filter(Boolean).map(escape);
+  const lower = quote.toLowerCase();
+  const said = loopTitleIn(quote);
+  const patterns = [
+    new RegExp(`(?<![\\p{L}'-])${title.trim().split(/\s+/).map(escape).join("[\\s-]+")}(?![\\p{L}'-])`, "giu"),
+    ...appConfig().jobTitleList.filter((entry) => entry.title === said).map((entry) => new RegExp(entry.pattern.source, entry.pattern.flags.includes("g") ? entry.pattern.flags : `${entry.pattern.flags}g`)),
+  ];
+  return patterns.some((pattern) =>
+    [...quote.matchAll(pattern)].some((hit) => {
+      const before = lower.slice(0, hit.index!);
+      const after = lower.slice(hit.index! + hit[0].length);
+      return names.some((name) => new RegExp(`(?<![\\p{L}'-])${name}(?:'s)?\\s*,?\\s*(?:(?:a|an|the|our|my)\\s+)?$`, "u").test(before) || new RegExp(`^\\s*,?\\s*${name}(?![\\p{L}'-])`, "u").test(after));
+    }),
+  );
+}
+
+/**
  * THE MANAGER'S TITLE FOR THIS PERSON (QA, 16 Nov 2026, c219: title_differs read "<title>" from "your <title>
  * Saoirse Lindqvist"). A title is the title of the name it is attached to: in its sentence, the nearest name the name reader finds
  * (or a roster name). Attached to another person, it is never this person's; with no name in its sentence, it is this
@@ -3642,6 +3667,8 @@ export async function proposeForm(
     exit_method_evidence?: unknown;
     exit_reason?: unknown;
     exit_reason_evidence?: unknown;
+    job_title?: unknown;
+    job_title_evidence?: unknown;
     effective_date?: unknown;
     payroll_deduct?: unknown;
     payroll_amount?: unknown;
@@ -5485,6 +5512,34 @@ export async function proposeForm(
   }
   /* A short form on the roster row is written out ("GM" → "General Manager"); any other roster title as Woven has it. */
   if (card.employeeRole) card.employeeRole = loopCardTitle(card.employeeRole) ?? card.employeeRole;
+  /*
+   * PAU'S JOB-TITLE RULE (via QA, 23 Nov 2026; the same as the sibling app's #1251): Woven's title by default; the
+   * manager's explicit instruction for the title ("no, use Shift Lead") overrides it, with job_title_evidence quoting
+   * their words from this request. A title said in passing (beside the person's name, how the manager referred to them:
+   * "my assistant manager Fenna …") is not an instruction and never overrides it. The model decides what an instruction
+   * is (the rules book); code checks the words are the manager's, hold the title, and are not the title beside the name.
+   * Written as the company's title list writes it when it is one of its titles, else as typed (spelled out).
+   */
+  let jobTitleInstructed = false;
+  const askedTitle = typeof input.job_title === "string" ? input.job_title.replace(/\s+/g, " ").trim().slice(0, 80) : "";
+  if (askedTitle && card.employeeName) {
+    const words = await import("@/lib/ai/job-title-from-words");
+    const title = loopCardTitle(askedTitle) ?? words.spelledOutTitle(words.titleCaseIfLower(askedTitle));
+    const titleCheck = answerEvidence(context, input.job_title_evidence, "request", evidencePerson, { requestTurnIds });
+    const quote = typeof (input.job_title_evidence as { quote?: unknown } | null)?.quote === "string" ? String((input.job_title_evidence as { quote: string }).quote) : "";
+    const quotedListTitle = loopTitleIn(quote);
+    const holdsTitle = holdsPhrase(quote, askedTitle) || holdsPhrase(words.spelledOutTitle(quote), title) || holdsPhrase(quote, title) || (quotedListTitle !== null && loopCardTitle(quotedListTitle) === title);
+    const besideName = quote !== "" && titleBesideName(quote, card.employeeName, askedTitle);
+    if (!titleCheck.ok || !holdsTitle) {
+      return { reason_code: "job_title_not_instructed", error: `job_title is kept only with job_title_evidence: the manager's own words from this request that tell you the title for the form, holding "${askedTitle}". Otherwise leave job_title out: the card uses ${staffSystem()}'s title.` };
+    }
+    if (besideName) {
+      return { reason_code: "job_title_not_instructed", error: `"${quote}" is the title said beside ${card.employeeName.split(/\s+/)[0]}'s name, how the manager referred to them, not an instruction for the form's title. Leave job_title out: the card uses ${staffSystem()}'s title.` };
+    }
+    card.employeeRole = title;
+    jobTitleInstructed = true;
+    jobTitleTyped = false;
+  }
   /* The policy Create sends is the card's (`cardPolicyFor`), never read back from the model's reply (code-check #40). */
   card.policyLine = policyLine;
   /*
@@ -5767,7 +5822,7 @@ export async function proposeForm(
     /* QA's live-app item 8: the card uses Woven's title; the manager called them something else ("<title>"). */
     ...(() => {
       const said = titleSaidFor(requestWords, employee.name, read.kind === "read" ? read.roster.map(displayName) : []);
-      return said && card.employeeRole && said.trim().toLowerCase() !== card.employeeRole.trim().toLowerCase() ? { title_differs: { woven: card.employeeRole, manager_said: said } } : {};
+      return !jobTitleInstructed && said && card.employeeRole && said.trim().toLowerCase() !== card.employeeRole.trim().toLowerCase() ? { title_differs: { woven: card.employeeRole, manager_said: said } } : {};
     })(),
     ...(template.key === appConfig().formKeys.exit ? { exit_dates: await exitDateLines(requestWords, today, Boolean(exitTermination)) } : {}),
     /*
@@ -5777,6 +5832,8 @@ export async function proposeForm(
     ...cardTicks,
     ...(exitTermination ? { exit_termination: { form_label: "Immediate involuntary separation", effective: exitTermination.date, ...(exitTermination.dated_today ? { dated_today: true } : {}) } } : {}),
     ...(jobTitleTyped ? { job_title_from_your_words: card.employeeRole } : {}),
+    /* Pau's job-title rule (via QA, 23 Nov 2026): the manager's instructed title; the card and the saved form use it. */
+    ...(jobTitleInstructed ? { job_title_as_you_said: card.employeeRole } : {}),
     ...(whichSalon ? { which_store: true } : {}),
     ...(terminationStated ? { termination_stated: { approval: stated.TERMINATION_APPROVAL_LINE, plan_closing: stated.TERMINATION_PLAN_SENTENCE } } : {}),
     /*
