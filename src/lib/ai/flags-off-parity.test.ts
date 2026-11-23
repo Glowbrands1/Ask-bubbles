@@ -208,6 +208,9 @@ const ALLOWED_UI = [
   // in the rail on desktop (sidebar.tsx), in the top bar on phones (app-shell.tsx), read by the (app) layout; all
   // three are listed below. No chat or form behaviour changes.
   "src/features/notifications/",
+  // ...and its × per row and Clear all (Pau, 23 Nov 2026: "able to delete notification all or clicking x by removing 1"):
+  // the viewer's own notifications only. The DM L10 bell (src/features/l10/, listed above) shows the same panel (Pau:
+  // "for dm meeting make this UI same with bubble"), with its out-of-app Settings link removed.
   // HR APPROVAL OF FORMS (owner request, 23 Nov 2026, both apps), behind FORMS_HR_APPROVAL_ENABLED (off): the form card's
   // "Finalize and send to HR for approval" and HR's approval panel, the Forms Register's Pending HR approval tab and "Your
   // forms with HR" list, the Overview card, and the HR review page. Off, none of them renders and Finalize is as before.
