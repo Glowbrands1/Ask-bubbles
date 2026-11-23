@@ -20,8 +20,14 @@ describe("card lines", () => {
 
   it("shows an earlier card reply to the model as one stand-in line, with no note to copy", () => {
     const shown = historyReply(faked, "Corrective Action Form");
-    expect(shown).not.toMatch(/app note|Observation of Offense|as you said/);
-    expect(shown).toMatch(/\[card shown under this reply: Corrective Action Form, made by propose_form/);
+    /*
+     * Changed on purpose (QA's live round 3, U21 T10–T12): the stand-in line now says what the card held, as data
+     * ('Observation of Offense = "…"'), because without it the model rebuilt the card from one field and lost the rest. It is
+     * still never a card line to imitate: no bold label, no "as you said", no app note.
+     */
+    expect(shown).not.toMatch(/app note|\*\*Observation of Offense|as you said/);
+    expect(cardLines(shown)).toEqual([]);
+    expect(shown).toMatch(/\[card shown under this reply: Corrective Action Form, made by propose_form[^\]]*; it held: [^\]]*Observation of Offense = "/);
   });
 
   it("every card label is one the rules book tells the model to write, or the exit form's own", () => {

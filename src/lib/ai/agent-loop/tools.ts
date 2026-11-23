@@ -237,12 +237,22 @@ async function formsOnFileAskedFor(context: ToolContext, evidence: unknown, pers
    */
   const rosterFirsts = roster.flatMap((row) => [...new Set([row.firstName, row.preferredFirstName].map((first) => foldName(first ?? "").trim().toLowerCase()).filter(Boolean))]);
   const ownFirsts = holders.length === 1 ? [...new Set([holders[0]!.firstName, holders[0]!.preferredFirstName].map((first) => foldName(first ?? "").trim().toLowerCase()).filter(Boolean))] : [];
+  /*
+   * Board f143 (22 Nov 2026): "show me <last name>s forms", a LAST name's possessive with no apostrophe, was refused as
+   * someone else's forms. A last-name word only this person holds on the roster names them too, as a first name does
+   * (whole, or its possessive with or without the apostrophe), and never when the word with the s is itself a roster name.
+   */
+  const lastWords = (row: { lastName?: string | null }) => [...new Set(foldName(row.lastName ?? "").toLowerCase().match(/[\p{L}'-]+/gu) ?? [])];
+  const rosterLasts = roster.flatMap(lastWords);
+  const ownLasts = holders.length === 1 ? lastWords(holders[0]!) : [];
+  const rosterWords = new Set([...rosterFirsts, ...rosterLasts]);
   const firstNamed = (text: string) => {
     const words = foldName(text).toLowerCase().match(/[\p{L}'-]+/gu) ?? [];
-    return ownFirsts.some((first) => {
-      if (rosterFirsts.filter((other) => other === first).length !== 1) return false;
-      return words.some((word) => word === first || word === `${first}'s` || word === `${first}'` || (word === `${first}s` && !first.endsWith("s") && !rosterFirsts.includes(word)));
+    const names = (own: readonly string[], all: readonly string[]) => own.some((name) => {
+      if (all.filter((other) => other === name).length !== 1) return false;
+      return words.some((word) => word === name || word === `${name}'s` || word === `${name}'` || (word === `${name}s` && !name.endsWith("s") && !rosterWords.has(word)));
     });
+    return names(ownFirsts, rosterFirsts) || names(ownLasts, rosterLasts);
   };
   const namedIn = (text: string) =>
     names.some((name) => mentionsPerson(text, name, rosterNames)) ||
@@ -1018,6 +1028,8 @@ export interface ToolEffects {
   cardAccountAsked?: boolean;
   /** Pau's round 3 (U21 T7): propose_form already sent back a call that would drop the card on screen's prior actions. */
   cardPriorAsked?: boolean;
+  /** U24 (QA, 22 Nov 2026): the exit type(s) this turn's exit card ticks, by the form's labels, for the reply's "Filed as" line. */
+  exitTicks?: readonly string[];
   /**
    * QA (16 Nov 2026, the live re-run of #1067): a question code decided that the reply must end with (find_past_forms'
    * card_on_screen offer). run.ts adds it when the model's reply left it out.
@@ -1730,9 +1742,19 @@ export function nameAsSaid(person: Pick<RosterEmployee, "firstName" | "lastName"
    * said and the preferred one always won. The name the manager used LAST is the one they settled on (`managerWords` is
    * their turns, oldest first).
    */
+  const asPreferred = `${preferred} ${person.lastName.trim()}`.replace(/\s+/g, " ").trim();
+  /*
+   * Round 2's offline replay (21 Nov 2026, U19): T1 named the person by the preferred FULL name, then T3's account said
+   * "on 11/14 <legal first> worked …", and the card flipped to the legal name unasked. Once the manager has typed either
+   * full name, the full name they typed last is the one they chose; a first name alone in an account never switches it.
+   * With no full name typed, the first name used last, as before.
+   */
+  const last = ` ${person.lastName.trim().toLowerCase().replace(/[^a-z'’-]+/g, " ").trim()} `;
+  const fullLegal = said.lastIndexOf(` ${person.firstName.trim().toLowerCase()}${last}`);
+  const fullPreferred = said.lastIndexOf(` ${preferred.toLowerCase()}${last}`);
+  if (fullLegal >= 0 || fullPreferred >= 0) return fullLegal > fullPreferred ? legal : asPreferred;
   const saidLegal = said.lastIndexOf(` ${person.firstName.trim().toLowerCase()} `);
   const saidPreferred = said.lastIndexOf(` ${preferred.toLowerCase()} `);
-  const asPreferred = `${preferred} ${person.lastName.trim()}`.replace(/\s+/g, " ").trim();
   if (saidLegal > saidPreferred) return legal;
   return asPreferred;
 }
@@ -2324,11 +2346,24 @@ function headingKey(text: string): string {
   return text.toLowerCase().replace(/\bpolicy\b/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+/*
+ * QA's live round 3 (22 Nov 2026, U21 T7 and T12): the model passed the policy as the card shows it, "Standards of Conduct
+ * — Care and Cleaning of Equipment and Facilities" (or with ", JBA Policy Manual p.21"), and it was not_a_heading; when the
+ * model did not try again, the reply cited a policy the card did not hold ("That change isn't on the card yet: policy").
+ * The card's own policy line is read back as its heading: the asked text as given, else without its trailing
+ * ", <manual> p.<n>", else the heading after its last " — ". Read by the line's shape, never a word list.
+ */
 function headingOf(headings: readonly string[], asked: string): string | null {
   const key = headingKey;
-  const wanted = key(asked);
-  if (wanted === "") return null;
-  return headings.find((heading) => key(heading) === wanted) ?? null;
+  const unpaged = asked.replace(/,\s*[^,]*\bp\.\s*\d+\s*$/i, "").trim();
+  const last = unpaged.split(/\s+—\s+/).at(-1)!.trim();
+  for (const candidate of [asked, unpaged, last]) {
+    const wanted = key(candidate);
+    if (wanted === "") continue;
+    const found = headings.find((heading) => key(heading) === wanted);
+    if (found) return found;
+  }
+  return null;
 }
 
 export async function readPolicy(context: ToolContext, input: { heading?: unknown }, effects?: ToolEffects): Promise<ToolResult> {
@@ -4372,13 +4407,25 @@ export async function proposeForm(
    * (or Other alone) is refused, with those headings as the fit, unless the manager named another policy themselves.
    * c207: "Other — Must See Behaviors" with no MSB said is refused (Pau's ruling, 16 Nov 2026: MSB only when said).
    */
-  if (manual && template.key === appConfig().formKeys.corrective) {
-    const dressFits = dressCodeFit(requestWords, manual.headings);
+  /*
+   * R21 (round 2's offline replay, 21 Nov 2026; QA's ruling (b), 22 Nov): "Create a Coaching Form from this conversation"
+   * after a Corrective Action for "out of dress code" dropped the CA's Standards of Conduct (the 16 Nov ruling: a
+   * Coaching card never copies another form's heading), and a bare "Yes" then made it "Other — Dress Code". The Coaching
+   * card's own account reaches its heading the same way the CA's does: the dress-code fit below. On a Coaching card it
+   * also asks for that heading when the card has no policy at all.
+   */
+  const coachingPolicyCard = template.key === appConfig().formKeys.coaching;
+  /* A Coaching card made "from this conversation" has its account from earlier turns: the fit reads that account too. */
+  const cardDressFits = manual && coachingPolicyCard ? dressCodeFit(whatHappened ? `${requestWords}\n${whatHappened}` : requestWords, manual.headings) : null;
+  if (manual && (template.key === appConfig().formKeys.corrective || coachingPolicyCard)) {
+    const dressFits = coachingPolicyCard ? cardDressFits : dressCodeFit(requestWords, manual.headings);
     const reading = readCaPolicy(requestWords);
     const namedAnother = (reading.source === "stated" && reading.stated !== null && reading.stated !== "dress_code") ||
       namedPolicies(requestWords).some((named) => !dressFits?.some((heading) => namesHeading(named.phrase, heading)));
     const otherOnly = !policyHeading && /^other\b/i.test(askedPolicyWhole) && !saysMustSee(requestWords) && !(appConfig().policyGuards.cleaningDutyIsOther && cleaningUndonePhrase(requestWords, { rulesAreNotDuties: true }));
-    if (dressFits && !namedAnother && ((policyHeading && !cardHeadings.some((heading) => dressFits.includes(heading))) || otherOnly)) {
+    const noPolicy = coachingPolicyCard && !policyHeading && askedPolicyWhole === "";
+    const otherAlone = coachingPolicyCard ? !policyHeading && /^other\b/i.test(askedPolicyWhole) : otherOnly;
+    if (dressFits && !namedAnother && ((policyHeading && !cardHeadings.some((heading) => dressFits.includes(heading))) || otherAlone || noPolicy)) {
       /*
        * Pau's ruling (20 Nov 2026; c091): the heading the model chose may be a second offense the manager also describes
        * ("not in dress code … did not have a goal sheet"): then both are cited, never the dress code alone in its place.
@@ -4387,7 +4434,7 @@ export async function proposeForm(
       return { reason_code: "dress_code_heading", error: `The manager's words describe a dress-code offense (dress code, or clothing worn on shift), which the manual's Dress Code section covers, not "${askedPolicyWhole}". Propose the card again with policy "${dressFits[0]}"${dressFits.length > 1 ? ` (or ${dressFits.slice(1).map((heading) => `"${heading}"`).join(", ")})` : ""}.${beside}`, fits_headings: dressFits };
     }
     const { saidOnlyOther, headings: { conduct: conductRole } } = appConfig().policyGuards;
-    if (saidOnlyOther && citesMustSee(askedPolicyWhole) && !saysMustSee(requestWords)) {
+    if (!coachingPolicyCard && saidOnlyOther && citesMustSee(askedPolicyWhole) && !saysMustSee(requestWords)) {
       const conduct = conductRole ? manual.headings.find((heading) => headingKey(heading) === headingKey(conductRole)) : undefined;
       const performance = /\bunder[- ]?perform(?:ance|ing)\b|\bperform[a-z]*\b|\bnumbers\b|\bgoals?\b|\bsales\b/i.test(requestWords) || new RegExp(accountMetric().source, "i").test(requestWords);
       const fits = topicHeadings(requestWords) ?? (performance && conduct ? [conduct] : null);
@@ -4496,7 +4543,8 @@ export async function proposeForm(
   const copiedFromAnotherForm = policyHeading !== null && (context.cardRecords ?? []).some((record) => record.templateKey !== template.key && typeof record.policyLine === "string" && record.policyLine.toLowerCase().includes(policyHeading!.toLowerCase()));
   /* Pau, 17 Nov: coaching always has policy and page: the forms whose cards always cite a manual heading (or Other). */
   const policyForms = new Set([appConfig().formKeys.corrective, appConfig().formKeys.coaching, appConfig().formKeys.followUpCoaching]);
-  const policyNotForThisCard = template.key !== appConfig().formKeys.corrective && policyHeading !== null && copiedFromAnotherForm && !managerNamed && !(topicFits ?? []).some((heading) => headingKey(heading) === headingKey(policyHeading!));
+  /* R21: a heading this Coaching card's own account fits (the dress-code fit above) is the card's own, never a copy. */
+  const policyNotForThisCard = template.key !== appConfig().formKeys.corrective && policyHeading !== null && copiedFromAnotherForm && !managerNamed && ![...(topicFits ?? []), ...(cardDressFits ?? [])].some((heading) => headingKey(heading) === headingKey(policyHeading!));
   /* The heading is left off; an "Other — <topic>" beside it (after "; ") stays, as #1068's rules decide it. */
   if (policyNotForThisCard) policyLine = policyLine && policyLine.includes("; ") ? policyLine.split("; ").slice(1).join("; ") : null;
   const otherPart = askedOther || (/^other\b/i.test(askedPolicy) ? askedPolicy : "");
@@ -4723,7 +4771,17 @@ export async function proposeForm(
   const sameIncidentAskedAgain = asksNewForm && screenDate !== null && latestDates.some((given) => monthDayToIso(given, today) === screenDate);
   const carriedLevel = caOnlyFields && (!asksNewForm || sameIncidentAskedAgain) ? (carriedRecord?.level ?? null) : null;
   const copiedLevel = !(askedLevel && levelCheck?.ok) && !carriedLevel && sameFormAsked && caOnlyFields ? (sameCardOf?.level ?? null) : null;
-  const level = askedLevel && levelCheck?.ok ? askedLevel : (carriedLevel ?? copiedLevel);
+  /*
+   * QA's live round 3 (22 Nov 2026, U21 T10): T8 copied Verbal and payroll No onto <P>'s card; T9 "no i want this to be a
+   * corrective action for a new person now", T10 "make this for <P> instead of <A>" asked for that card again
+   * (same_card_evidence), and its level and payroll were dropped: T9 had started a new request, so no record of it carried.
+   * The card the manager's words ask for, when it is this person's own (the server's record: form and person keys), is
+   * the same card shown again: it keeps its level and payroll. Another person's card still copies them only with
+   * "the same …" (#1026).
+   */
+  const ownCardAsked = Boolean(sameCardOf && !sameCardOther && caOnlyFields);
+  const ownCardLevel = !(askedLevel && levelCheck?.ok) && !carriedLevel && !copiedLevel && ownCardAsked ? (sameCardOf?.level ?? null) : null;
+  const level = askedLevel && levelCheck?.ok ? askedLevel : (carriedLevel ?? copiedLevel ?? ownCardLevel);
   /*
    * Fix batch item 7 (QA's targeted re-run, c163: a bare "yes" after "Payroll deduct and warning level aren't set" set
    * payroll). The card on screen asked two things in one line (its record's `asked`), and this message is one word, quoted
@@ -4773,6 +4831,11 @@ export async function proposeForm(
   if (payroll === null && !answerUnclear && payrollRecord?.payroll) {
     payroll = payrollRecord.payroll;
     if (payroll === "yes" && !amount && payrollRecord.payrollAmount) amount = payrollRecord.payrollAmount;
+  }
+  /* U21 T10: this person's own card asked for again keeps its payroll answer, as its level (`ownCardAsked`). */
+  if (payroll === null && !answerUnclear && ownCardAsked && payrollFields && sameCardOf?.payroll) {
+    payroll = sameCardOf.payroll;
+    if (payroll === "yes" && !amount && sameCardOf.payrollAmount) amount = sameCardOf.payrollAmount;
   }
   let copiedPayroll: "yes" | "no" | null = null;
   if (payroll === null && !answerUnclear && sameFormAsked && payrollFields && sameCardOf?.payroll) {
@@ -4829,7 +4892,20 @@ export async function proposeForm(
   const priorActionsRead = priorActionsRefused ? null : keptPriorActions ? priorActionsWithStatedTopics(keptPriorActions, statedSteps) : statedSteps.length === 0 ? onFileLine : null;
   /* U09 (QA's live triage): a step the manager listed with one the card keeps is on the card too (`listedWithKeptSteps`). */
   const listedSteps = keptPriorActions && priorActionsRead ? listedWithKeptSteps(requestWords, priorActionsRead, date, today, whatHappened) : [];
-  const priorActions = priorActionsRead ? [priorActionsRead, ...listedSteps].join(priorActionsRead.includes("\n") ? "\n" : "; ").slice(0, 600) : null;
+  /*
+   * ADDING A STEP NEVER REMOVES ONE (QA's ruling on the live regression set, 22 Nov 2026, A13): with this person's card of
+   * this form on screen (its Prior actions filled from the forms on file), T4 "in the previously recieved coaching include
+   * that <P> signed the jba policy manual on 10-15-26" came back with the new coaching step only: the model listed just
+   * that, and "Corrective Action Form — 10/20/2026 (from the forms on file)" left the card. The forms on file stay beside
+   * the steps this request adds. A form on file whose date a kept step already has is that step, never listed twice.
+   */
+  const thisCardOnScreen = samePersonOnScreen && context.cardOnScreen?.templateKey === template.key;
+  const keptDates = priorActionsRead ? readDates([priorActionsRead, ...listedSteps].join("\n")) : [];
+  const onFileBeside = thisCardOnScreen && keptPriorActions && priorActionsRead
+    ? priorsOnFile.filter((prior) => !readDates(priorsOnFileLine([prior])).some((onFile) => keptDates.some((kept) => sameDate(kept, onFile))))
+    : [];
+  const priorParts = priorActionsRead ? [...(onFileBeside.length > 0 ? [priorsOnFileLine(onFileBeside)] : []), priorActionsRead, ...listedSteps] : [];
+  const priorActions = priorActionsRead ? priorParts.join(priorActionsRead.includes("\n") ? "\n" : "; ").slice(0, 600) : null;
   /*
    * THE CARD ON SCREEN KEEPS ITS PRIOR ACTIONS (Pau's round 3, U21 T7; QA, 22 Nov 2026): "add the direct policy from the
    * official manual that goes with this" re-proposed Briony's card with the new policy and no prior_actions, and the card's
@@ -5152,12 +5228,37 @@ export async function proposeForm(
     if (filed.locationId === wovenStores[0]) proposal = filed;
   }
   if (!typedSalon && employee.id && proposal.status === "needs_location") {
+    /*
+     * Board f140 (QA's Bubbles round 2, R01/R19/U05–U07): Woven's primary store alone missed a person the directory
+     * row gives no primary for, and the card asked "Which store?" while Create saved no store. Woven's primary store
+     * among the choices is the card's store, as before; with none, the person's Woven stores as U29 reads them
+     * (`wovenStoresOf`): exactly one among the choices is the card's store; several still ask.
+     */
     const primary = await rosterPrimarySalon(context.actor.scope, employee.id);
-    if (primary && (proposal.authorizedLocationIds ?? []).includes(primary)) {
-      const filed = buildProposal(proposalInput([primary]));
-      if (filed.locationId === primary) {
+    const theirs = primary && (proposal.authorizedLocationIds ?? []).includes(primary) ? [primary] : await wovenStoresOf(context.actor.scope, employee.id, read.kind === "read" ? read.roster : [], proposal.authorizedLocationIds ?? []);
+    const only = theirs.length === 1 ? theirs[0]! : null;
+    if (only) {
+      const filed = buildProposal(proposalInput([only]));
+      if (filed.locationId === only) {
         proposal = filed;
-        salonFromWoven = rosterSalonName(primary) ?? primary;
+        salonFromWoven = rosterSalonName(only) ?? only;
+      }
+    }
+  }
+  /*
+   * Board f140, with U26 (QA's batch-2 live run, 22 Nov 2026): a FORMER employee's card (off the active roster) only
+   * offered their Woven store (employee_store) and relied on the model to propose again with it; when it did not, Create
+   * met a card still asking which store. Their one Woven store among the choices is the card's store, as an active
+   * person's is (store_from_woven); several still ask.
+   */
+  if (!typedSalon && !employee.id && offRosterName && proposal.status === "needs_location") {
+    const former = await inactiveMatchRow(context.actor.scope, employee.name);
+    const theirs = (former?.locationIds ?? []).filter((id) => (proposal.authorizedLocationIds ?? []).includes(id));
+    if (theirs.length === 1) {
+      const filed = buildProposal(proposalInput([theirs[0]!]));
+      if (filed.locationId === theirs[0]) {
+        proposal = filed;
+        salonFromWoven = rosterSalonName(theirs[0]!) ?? theirs[0]!;
       }
     }
   }
@@ -5279,6 +5380,17 @@ export async function proposeForm(
   const globalAsk = await import("./places");
   if (noStoreStated && !card.locationId) {
     Object.assign(card, { locationId: null, locationResolution: "not_applicable", status: card.status === "needs_location" ? "ready" : card.status });
+  } else if (!card.locationId && card.employeeName && employee.id && context.actor.scope?.level === "global" && !globalAsk.globalNonAdminNeedsSalon(context.actor.role, context.actor.scope)) {
+    /*
+     * Board f140: an admin's card for a person Woven lists at ONE store was filed with no store, and Create saved none.
+     * That one Woven store is the card's store (store_from_woven), as U29 does for a global non-admin; with several or
+     * none the card stays as it was (no new question for an admin).
+     */
+    const theirs = await wovenStoresOf(context.actor.scope, employee.id, read.kind === "read" ? read.roster : [], appConfig().locations().map((salon) => salon.id));
+    if (theirs.length === 1) {
+      Object.assign(card, { locationId: theirs[0], locationName: rosterSalonName(theirs[0]!) ?? card.locationName, locationResolution: "resolved", authorizedLocationIds: [theirs[0]], status: card.status === "needs_location" ? "ready" : card.status });
+      salonFromWoven = rosterSalonName(theirs[0]!) ?? theirs[0]!;
+    }
   } else if (globalAsk.globalPlaceAskEnabled() && globalAsk.globalNonAdminNeedsSalon(context.actor.role, context.actor.scope) && !card.locationId && card.employeeName) {
     const named = globalAsk.salonIdNamedIn(requestWords);
     if (named) {
@@ -5401,6 +5513,16 @@ export async function proposeForm(
   if (card.exitReadBack) card.exitReadBack = (await import("./exit-read-back")).exitReadBack({ dateLines: await exitDateLines(requestWords, today, Boolean(exitTermination)), account: card.issue ?? null, termination: Boolean(exitTermination), detailLines: await exitDetailReadLines(requestWords, today, Boolean(exitTermination), card.exitReason) });
   effects.proposal = card;
   effects.proposalEmployeeId = employee.id ?? null;
+  /*
+   * U24 (QA's flaky check on main f712228, 22 Nov 2026): with the type stated ("Immediate Vol Resignation") the card ticked
+   * it, but one live reply read back every reads_back line and never the type (the exit_ticks rule is a separate line the
+   * model can skip). The ticks are the card's own facts: run.ts adds their "Filed as" line when the reply names none of
+   * them. They are NOT put in reads_back: QA's live check (#1061) saw the rehire case lose its reads_back with that, so
+   * the model's input is unchanged. A termination's tick stays with exit_termination's own line, as before. Only after
+   * effects.proposal is set: an await before it lets a parallel propose_form pass the one-card check too.
+   */
+  const cardTicks = await exitCardTicks(template.key === appConfig().formKeys.exit, Boolean(exitTermination), requestWords, today, exitHow?.option ?? null);
+  effects.exitTicks = cardTicks.exit_ticks ?? [];
   const personId = typeof input.employee_id === "string" ? input.employee_id.trim() : "";
   /*
    * THE CARD'S FACTS (Pau, 14 Nov 2026: "code may refuse or inform, never rewrite"; the code-check audit's batch A).
@@ -5637,7 +5759,7 @@ export async function proposeForm(
      * QA item 17 (20 Nov 2026): the exit form's required last day worked, asked on the card when the manager has not said
      * it, as the Corrective Action asks its level (the rules book's exit_unset line). A termination's effective date is it.
      */
-    ...(await exitCardTicks(template.key === appConfig().formKeys.exit, Boolean(exitTermination), requestWords, today, exitHow?.option ?? null)),
+    ...cardTicks,
     ...(exitTermination ? { exit_termination: { form_label: "Immediate involuntary separation", effective: exitTermination.date, ...(exitTermination.dated_today ? { dated_today: true } : {}) } } : {}),
     ...(jobTitleTyped ? { job_title_from_your_words: card.employeeRole } : {}),
     ...(whichSalon ? { which_store: true } : {}),

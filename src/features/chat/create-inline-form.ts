@@ -101,6 +101,9 @@ export const CREATE_ANSWER_MS = 30_000;
 
 export const CREATE_RETRY_MESSAGE = "Something went wrong — press Create again.";
 
+/** Board f140: Create on a card that still asks which store, in one line; nothing is saved. */
+export const STORE_NEEDED_MESSAGE = "Which store is this about? Choose the store on the card, then press Create.";
+
 /** The create POST did not answer within CREATE_ANSWER_MS. */
 export class CreateNoAnswerError extends Error {
   constructor() {
@@ -179,6 +182,15 @@ export async function createInlineForm({
    * docs/chat-phase-3.md. A validated id with no name is honest; a validated id
    * with a demo name beside it is not.
    */
+  /*
+   * Board f140 (QA's Bubbles round 2, U06): a card can be "ready" while its store is still open (locationResolution
+   * "needs_selection", or status "needs_location"), and Create saved the draft with NO store. A card that still asks which
+   * store is never created: the manager gets the card's own question in one line, and nothing is saved. Every Create
+   * goes through here, the agent loop's cards and the regular chat's alike.
+   */
+  if (!proposal.locationId && (proposal.locationResolution === "needs_selection" || proposal.status === "needs_location")) {
+    throw new Error(STORE_NEEDED_MESSAGE);
+  }
   const created = await call<{ instance: { id: string }; reused?: boolean; reusedFrom?: string; followUpNotice?: unknown }>("/api/forms/instances", {
     method: "POST",
     headers: { "content-type": "application/json" },

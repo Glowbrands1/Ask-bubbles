@@ -481,7 +481,8 @@ describe("dates: a prior action's date is never the form's Date; \"today\" is to
 describe("S21: \"change the date\" on a FINALIZED form opens a revision", () => {
   it("opens a new draft of the finalized form, dated 2026-10-20", async () => {
     const earlier = new Thread();
-    await earlier.say("create a corrective action form for Test Employee for opening the store late on 10-17-26. payroll deduct no", EMPLOYEE);
+    // Board f140 (22 Nov 2026): the setup names its store; Create no longer saves a card that still asks which store.
+    await earlier.say("create a corrective action form for Test Employee at Kearney for opening the store late on 10-17-26. payroll deduct no", EMPLOYEE);
     const original = await earlier.create();
     await finalize(original);
 

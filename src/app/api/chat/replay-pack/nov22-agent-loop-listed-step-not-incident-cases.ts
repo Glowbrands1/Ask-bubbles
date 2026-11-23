@@ -35,7 +35,12 @@ export const NOV22_AGENT_LOOP_LISTED_STEP_NOT_INCIDENT_CASES: ReplayCase[] = [
       const thread = t.thread();
       await thread.say(T1);
       const prior = (thread.proposal as { priorActions?: string | null } | null)?.priorActions ?? "";
-      expect(prior, "the Verbal of 10/2 left Prior actions").toMatch(/Verbal CA — 10\/02\/2026/);
+      /*
+       * The step's level and date, in any label (QA's combined live run, 22 Nov 2026: the live model wrote "Verbal —
+       * 10/02/2026"; the stand-in writes "Verbal CA — 10/02/2026"). Which words name the step is the model's; the check is
+       * that the Verbal of 10/2 is on Prior actions.
+       */
+      expect(prior, "the Verbal of 10/2 left Prior actions").toMatch(/\bVerbal\b[^;\n]*\b10\/0?2\/(?:20)?26\b/i);
       expect(prior, "the incident's own clause is a prior step").not.toMatch(/11\/12|late/i);
     },
   },
