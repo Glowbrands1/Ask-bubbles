@@ -637,6 +637,28 @@ function addressIn(turn: string): string | null {
   return null;
 }
 
+/**
+ * QA (23 Nov 2026, the u22 live run): "address: 123 Test St, Lees Summit, MO. 00000" was read as the card's store. Every
+ * address the reader above reads (the exit form's Permanent Address shape), where it sits in the text. Never gated: the
+ * store readers use it only to leave an address out.
+ */
+export function typedAddressSpans(text: string): Array<{ readonly start: number; readonly end: number; readonly address: string }> {
+  const spans: Array<{ start: number; end: number; address: string }> = [];
+  for (const match of (text ?? "").matchAll(ADDRESS_LABEL)) {
+    const start = (match.index ?? 0) + match[0].length;
+    const found = ADDRESS_THROUGH_ZIP.exec(text.slice(start)) ?? ADDRESS_TO_END.exec(text.slice(start));
+    if (found) spans.push({ start, end: start + found[0].length, address: found[0] });
+  }
+  return spans;
+}
+
+/** The text with every typed address blanked (same length), so no store reader reads a store inside one. */
+export function withoutAddressLines(text: string): string {
+  let out = text ?? "";
+  for (const span of typedAddressSpans(out)) out = out.slice(0, span.start) + " ".repeat(span.end - span.start) + out.slice(span.end);
+  return out;
+}
+
 /** The Permanent Address the manager typed, the later turn winning, or null. */
 export function readPermanentAddress(rawText: string): string | null {
   if (!exitIntakeFixEnabled()) return null;

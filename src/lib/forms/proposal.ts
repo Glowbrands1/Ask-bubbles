@@ -5,6 +5,7 @@ import { COMPANY_JOB_TITLES, isJobTitleAbbreviation } from "@/config/company/job
 import { COMPANY_LOCATIONS, locationByCode, locationById, locationNameKey } from "@/lib/locations";
 
 import { extractFormDate } from "./form-date-answer";
+import { withoutAddressLines } from "./exit-details";
 import { foldName } from "./fold-name";
 import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
 import { antiLoopEnabled, exitAnswerNotACorrectionEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
@@ -2014,14 +2015,15 @@ export function extractJobTitle(text: string): string | null {
  * and the form flow's read-back both use.
  */
 export function locationFor(input: ProposalInput, team: boolean): LocationProposal {
+  /* QA (23 Nov 2026, u22 live): an address given as the employee's ("address: 123 Test St, Lees Summit, MO …") names no store. */
   return proposeLocationWithSource(
     input.scope,
-    input.locationText ?? input.context.text,
+    withoutAddressLines(input.locationText ?? input.context.text),
     team ? [] : (input.employeeLocationIds ?? []),
     input.storeIndex,
     {
       reportUnmatched: input.reportUnmatchedStore ?? true,
-      ...(input.locationText === undefined ? { turns: input.context.messages.map((message) => message.content) } : {}),
+      ...(input.locationText === undefined ? { turns: input.context.messages.map((message) => withoutAddressLines(message.content)) } : {}),
       bareReply: input.storeReply?.bareReply ?? false,
       ...(input.storeReply?.answeredTurns ? { answeredTurns: input.storeReply.answeredTurns } : {}),
       ...(input.storeReply?.confirmedCode
