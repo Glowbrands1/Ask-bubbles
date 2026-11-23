@@ -134,7 +134,7 @@ export interface ReplayContext {
    * THE AGENT LOOP (AGENT_LOOP_ENABLED; ported from the sibling app's pack, QA 21 Nov 2026). Off in this app's production,
    * so a case that never calls `loopModel` runs exactly as before.
    */
-  /** Puts rows in a table of the fake database for this case (port from Ask Sunny: AI Training -> Assignments). */
+  /** Puts rows in a table of the fake database for this case (port from the sibling app: AI Training -> Assignments). */
   seedRows?(table: string, rows: readonly Record<string, unknown>[]): void;
   /** Whether AGENT_LOOP_ENABLED is on for this run. */
   loopOn?(): boolean;

@@ -5,7 +5,7 @@ vi.mock("server-only", () => ({}));
 import { DEFAULT_DATA_TOOL_DEPS, dataToolHandlers, readAiAssignments, type DataToolDeps } from "./data-tools";
 
 /*
- * Port from Ask Sunny (Pau, 23 Nov 2026): read_ai_assignments, the AI assignment tracker (AI Training -> Assignments),
+ * Port from the sibling app (Pau, 23 Nov 2026): read_ai_assignments, the AI assignment tracker (AI Training -> Assignments),
  * read by the people it was set up for only (`AI_ASSIGNMENT_TRACKER_EMAILS`). The emails and people are invented.
  */
 

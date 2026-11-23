@@ -5,7 +5,7 @@ import { lastResult, loopStandIn, type LoopDecision, type LoopView } from "./loo
 
 /**
  * ============================================================================
- * AI TRAINING -> ASSIGNMENTS: THE AI READS THE TRACKER (port from Ask Sunny; Pau, 23 Nov 2026)
+ * AI TRAINING -> ASSIGNMENTS: THE AI READS THE TRACKER (port from the sibling app; Pau, 23 Nov 2026)
  * ============================================================================
  *
  * The AI assignment tracker moved into AI Training as an Assignments tab, for four named people only
