@@ -237,12 +237,22 @@ async function formsOnFileAskedFor(context: ToolContext, evidence: unknown, pers
    */
   const rosterFirsts = roster.flatMap((row) => [...new Set([row.firstName, row.preferredFirstName].map((first) => foldName(first ?? "").trim().toLowerCase()).filter(Boolean))]);
   const ownFirsts = holders.length === 1 ? [...new Set([holders[0]!.firstName, holders[0]!.preferredFirstName].map((first) => foldName(first ?? "").trim().toLowerCase()).filter(Boolean))] : [];
+  /*
+   * Board f143 (22 Nov 2026): "show me <last name>s forms", a LAST name's possessive with no apostrophe, was refused as
+   * someone else's forms. A last-name word only this person holds on the roster names them too, as a first name does
+   * (whole, or its possessive with or without the apostrophe), and never when the word with the s is itself a roster name.
+   */
+  const lastWords = (row: { lastName?: string | null }) => [...new Set(foldName(row.lastName ?? "").toLowerCase().match(/[\p{L}'-]+/gu) ?? [])];
+  const rosterLasts = roster.flatMap(lastWords);
+  const ownLasts = holders.length === 1 ? lastWords(holders[0]!) : [];
+  const rosterWords = new Set([...rosterFirsts, ...rosterLasts]);
   const firstNamed = (text: string) => {
     const words = foldName(text).toLowerCase().match(/[\p{L}'-]+/gu) ?? [];
-    return ownFirsts.some((first) => {
-      if (rosterFirsts.filter((other) => other === first).length !== 1) return false;
-      return words.some((word) => word === first || word === `${first}'s` || word === `${first}'` || (word === `${first}s` && !first.endsWith("s") && !rosterFirsts.includes(word)));
+    const names = (own: readonly string[], all: readonly string[]) => own.some((name) => {
+      if (all.filter((other) => other === name).length !== 1) return false;
+      return words.some((word) => word === name || word === `${name}'s` || word === `${name}'` || (word === `${name}s` && !name.endsWith("s") && !rosterWords.has(word)));
     });
+    return names(ownFirsts, rosterFirsts) || names(ownLasts, rosterLasts);
   };
   const namedIn = (text: string) =>
     names.some((name) => mentionsPerson(text, name, rosterNames)) ||
