@@ -1223,19 +1223,6 @@ export function nameThenStartOfNext(name: string, typed: string): boolean {
   return own.some((word, at) => word === want[0] && want.slice(1).every((part, k) => part.length >= 2 && (own[at + 1 + k] ?? "").startsWith(part)));
 }
 
-/**
- * The forms whose kind the manager's words name, read from the forms' own template names and short names: a word of
- * `wanted` that some of these forms' names hold and not all of them ("exit" keeps the Resignation/Exit Form; "form",
- * which every name holds, keeps nothing). Empty when no word tells them apart.
- */
-export function rowsOfNamedKind<T extends { templateName: string; templateShortName?: string | null }>(rows: readonly T[], wanted: string): T[] {
-  const want = new Set(words(wanted));
-  if (want.size === 0 || rows.length === 0) return [];
-  const names = rows.map((row) => new Set(words(`${row.templateName} ${row.templateShortName ?? ""}`)));
-  const shared = new Set([...names[0]!].filter((word) => names.every((name) => name.has(word))));
-  return rows.filter((_row, index) => [...names[index]!].some((word) => want.has(word) && !shared.has(word)));
-}
-
 function words(text: string): string[] {
   return foldName(text)
     .toLowerCase()
@@ -2190,16 +2177,6 @@ export async function findPastForms(context: ToolContext, input: { employee_name
       const ca = /\bca\b|corrective|write[- ]?up|warning|verbal|written/.test(wantForm);
       const narrowed = rows.filter((row) => (followUp ? /follow/i.test(row.templateName) : true) && (coaching ? /coach/i.test(row.templateName) && !/follow/i.test(row.templateName) : true) && (ca ? /corrective/i.test(row.templateName) || row.templateKey === appConfig().formKeys.corrective : true));
       if (narrowed.length > 0) rows = narrowed;
-      /*
-       * Any other kind the manager named ("show me <first>s exit", Pau via QA, 23 Nov 2026: the sibling app's live chat
-       * listed all 11 forms and then asked "Coaching Form draft or Resignation/Exit Form?" though she had said exit): the
-       * forms whose own template name holds a word of it that not every one of these forms' names holds. From the
-       * template names, never a list of kinds.
-       */
-      if (!followUp && !coaching && !ca) {
-        const named = rowsOfNamedKind(rows, wantForm);
-        if (named.length > 0) rows = named;
-      }
     }
     const iso = typeof input.date === "string" ? isoDate(input.date, today) : null;
     const wantDate = iso ? { month: Number(iso.slice(5, 7)), day: Number(iso.slice(8, 10)), year: /\d{4}|\/\d{2}$/.test(String(input.date)) ? Number(iso.slice(0, 4)) : null } : undefined;
