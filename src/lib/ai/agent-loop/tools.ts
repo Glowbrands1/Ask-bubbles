@@ -7194,7 +7194,8 @@ export async function editForm(
     const ownRules = new Set(["employee_name", "warning_type", "payroll_deduct", PAYROLL_AMOUNT_KEY, "form_date", "follow_up_date", "action_plan"]);
     const squash = (text: string) => text.toLowerCase().replace(/\s+/g, " ").trim();
     const thisMessage = squash(withoutMessageIdTags(context.question));
-    const labels = (await import("@/lib/forms/form-write")).formWordsOf(loaded);
+    /* The one writer's own reading (FORM_EDIT_SINGLE_WRITER_ENABLED, on in production); with it off, the stated edits are not written here. */
+    const labels: Record<string, string> = formEditSingleWriterEnabled() ? (await import("@/lib/forms/form-write")).formWordsOf(loaded) : {};
     const clearQuotes = input.clear_evidence && typeof input.clear_evidence === "object" ? (input.clear_evidence as Record<string, unknown>) : {};
     const statedText = Object.fromEntries(
       Object.entries(values).filter(([field, value]) => !ownRules.has(field) && value.trim().length >= 8 && thisMessage.includes(squash(value))),
@@ -7204,7 +7205,9 @@ export async function editForm(
       return !ownRules.has(field) && quote.trim() !== "" && thisMessage.includes(squash(quote)) && quoteNamesField(quote, labels[field] ?? field);
     });
     const statedEdits: Record<string, string> = { ...statedText, ...Object.fromEntries(statedClears.map((field) => [field, ""])) };
-    const stated = await (await import("@/lib/forms/form-write")).statedFieldsWrite(id, statedEdits, context.actor.subject);
+    const stated = formEditSingleWriterEnabled()
+      ? await (await import("@/lib/forms/form-write")).statedFieldsWrite(id, statedEdits, context.actor.subject)
+      : { saved: [] as string[], rejected: [] as { key: string; reason: string }[] };
     for (const field of stated.saved) delete values[field];
     clearAsked = clearAsked.filter((field) => !stated.saved.includes(field));
     const statedLines = stated.saved.map((field) => ({ field: labels[field] ?? field, ...(statedEdits[field] === "" ? { cleared: true } : { now: untrusted(statedEdits[field]!) }) }));
