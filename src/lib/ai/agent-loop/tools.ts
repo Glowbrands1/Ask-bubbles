@@ -3606,6 +3606,8 @@ export async function proposeForm(
     exit_method_evidence?: unknown;
     exit_reason?: unknown;
     exit_reason_evidence?: unknown;
+    job_title?: unknown;
+    job_title_evidence?: unknown;
     effective_date?: unknown;
     payroll_deduct?: unknown;
     payroll_amount?: unknown;
@@ -5337,6 +5339,27 @@ export async function proposeForm(
   }
   /* A short form on the roster row is written out ("GM" → "General Manager"); any other roster title as Woven has it. */
   if (card.employeeRole) card.employeeRole = loopCardTitle(card.employeeRole) ?? card.employeeRole;
+  /*
+   * PAU'S RULING ON JOB TITLES (QA, 23 Nov 2026): the card uses Woven's title, unless the manager explicitly tells the AI
+   * to use another title for this person ("no, use Shift Lead"). That is the model's reading (job_title), kept only on
+   * the manager's own words of this request asking for it (job_title_evidence), and only when the quote holds the title,
+   * typed or as the company's title list reads it. Written as the list writes a company title, else as typed. Without
+   * that evidence Woven's title stands (and a title mentioned in passing is title_differs, below).
+   */
+  let titleSetByManager: string | null = null;
+  {
+    const asked = typeof input.job_title === "string" ? input.job_title.replace(/\s+/g, " ").trim().slice(0, 80) : "";
+    const quote = typeof (input.job_title_evidence as { quote?: unknown } | null | undefined)?.quote === "string" ? String((input.job_title_evidence as { quote: string }).quote).trim() : "";
+    if (asked && quote && card.employeeName && answerEvidence(context, input.job_title_evidence, "request", evidencePerson, { requestTurnIds }).ok) {
+      const listed = loopCardTitle(asked);
+      const quoted = loopTitleIn(quote);
+      if (holdsPhrase(quote, asked) || (listed !== null && quoted !== null && loopCardTitle(quoted) === listed)) {
+        card.employeeRole = listed ?? asked;
+        titleSetByManager = card.employeeRole;
+        jobTitleTyped = false;
+      }
+    }
+  }
   /* The policy Create sends is the card's (`cardPolicyFor`), never read back from the model's reply (code-check #40). */
   card.policyLine = policyLine;
   /*
@@ -5619,7 +5642,7 @@ export async function proposeForm(
     /* QA's live-app item 8: the card uses Woven's title; the manager called them something else ("<title>"). */
     ...(() => {
       const said = titleSaidFor(requestWords, employee.name, read.kind === "read" ? read.roster.map(displayName) : []);
-      return said && card.employeeRole && said.trim().toLowerCase() !== card.employeeRole.trim().toLowerCase() ? { title_differs: { woven: card.employeeRole, manager_said: said } } : {};
+      return !titleSetByManager && said && card.employeeRole && said.trim().toLowerCase() !== card.employeeRole.trim().toLowerCase() ? { title_differs: { woven: card.employeeRole, manager_said: said } } : {};
     })(),
     ...(template.key === appConfig().formKeys.exit ? { exit_dates: await exitDateLines(requestWords, today, Boolean(exitTermination)) } : {}),
     /*
@@ -5629,6 +5652,8 @@ export async function proposeForm(
     ...cardTicks,
     ...(exitTermination ? { exit_termination: { form_label: "Immediate involuntary separation", effective: exitTermination.date, ...(exitTermination.dated_today ? { dated_today: true } : {}) } } : {}),
     ...(jobTitleTyped ? { job_title_from_your_words: card.employeeRole } : {}),
+    /* Pau's ruling (QA, 23 Nov 2026): the manager asked for this title; the card and the saved form use it. */
+    ...(titleSetByManager ? { job_title_set: { title: titleSetByManager, say_exactly: `Job title set to ${titleSetByManager}, as you asked.` } } : {}),
     ...(whichSalon ? { which_store: true } : {}),
     ...(terminationStated ? { termination_stated: { approval: stated.TERMINATION_APPROVAL_LINE, plan_closing: stated.TERMINATION_PLAN_SENTENCE } } : {}),
     /*
