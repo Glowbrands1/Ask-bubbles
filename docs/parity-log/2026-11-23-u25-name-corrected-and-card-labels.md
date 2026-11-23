@@ -1,7 +1,7 @@
 # A corrected name says what else changed; the card's line labels stay out of the write-up (QA's Bubbles round 2, U25)
 
 **Reported:** U25 (store manager at Kearney; T1–T5 verbatim in the replay case). The ruling stands: undersales and
-under-performance coaching cites Standards of Conduct. QA asked for the three small defects; two are fixed here.
+under-performance coaching cites Standards of Conduct. QA asked for the three small defects; two are fixed here, and the third was the pack's own check.
 
 **(2) "nothing else changed" while the topic was dropped.**
 - **Problem:** T5 ("create coaching form for <P>; coaching on under performance") corrected the card's name and dropped T4's coaching topic. The reply still said "…; nothing else changed."
@@ -17,12 +17,15 @@ under-performance coaching cites Standards of Conduct. QA asked for the three sm
 - **Cause:** the drafting model echoed the card's own note line (`draftNotesFromCard`).
 - **Fix:** `loopCoachingWriteUp` removes any of those card line labels (`CARD_LINE`, now exported from `draft-notes.ts`) from the start of a section line and keeps the text. These are the app's own labels, not a word list.
 
-**(1) The empty reply to T3 "yes": not fixed here.** Main already replaces an empty model reply with the step-limit
-reply. The tester's trace for T3 has been asked for.
+**(1) The empty reply to T3 "yes": not an app bug (QA closed it).** The tester's round-2 harness (fda046a) stored an empty
+reply because the replay pack's old "I still need" check (`stillAsks`: who, which location or which date only) threw on
+the model's real reply, "I still need to know what happened … — could you tell me what it's about?". #1062 already made
+the check read any question. `still-need.test.ts` now pins that reply. Test only.
 
 **Tests:**
 - Replay cases `nov23-r2-u25-name-corrected-says-what-else-changed` and `nov23-r2-u25-saved-details-no-what-happened-label`: both fail before the fix and pass after.
 - `loop-coaching-write-up.test.ts` (new), with a control showing that "what happened:" inside a sentence stays.
+- `still-need.test.ts`: U25 T3's reply is accepted.
 
 **Ask Sunny: same gaps, port pending.** Sunny main 0caa7fc has the same `name_corrected` rule ("nothing else changed",
 always), no topic on its card record, and the same `loopCoachingWriteUp` without the label strip. Read-only here; the
