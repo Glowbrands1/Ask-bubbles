@@ -9,7 +9,7 @@ import { evidenceFrom, lastResult, loopStandIn, type LoopDecision, type LoopView
  * A FORM THE LIBRARY DOES NOT HAVE IS NEVER SWAPPED SILENTLY (board f099 on the loop; QA's live check of #1095, 23 Nov 2026)
  * ============================================================================
  *
- * QA, live on the loop: "create a store manager interview form for Marnie Holloway" → "Here's the Prescreen / Phone
+ * QA, live on the loop: "create a store manager interview form for <P>" → "Here's the Prescreen / Phone
  * Interview Form for **Marnie**."; with a Coaching card open, "Who is this Prescreen / Phone Interview Form for?". The form
  * the manager asked for (form_asked_evidence, this turn's words) is checked by code against the chosen form's own names:
  * no form answers to it → handed back (form_not_in_library: the reply says so and lists the forms); another library form
