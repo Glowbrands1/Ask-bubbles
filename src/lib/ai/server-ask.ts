@@ -107,7 +107,7 @@ import { loadConversationFormState, saveConversationFormState } from "./form-sta
 import { formCommandBypassesSearch, routeUnderstoodFormTurn } from "./form-tool-route";
 import { understandFormTurn } from "./form-tool-understand";
 import { formNameNotInLibrary, namesFormNotInLibrary, remapFormTurn, remapShouldRun, type FormRemapSlots } from "./form-full-remap";
-import { formNotInLibraryReply } from "./form-not-in-library";
+import { formNotInLibraryReply, libraryOffersForm } from "./form-not-in-library";
 import { historyForRemap } from "./form-remap-scope";
 import { withRemapDraftSources } from "./remap-draft-sources";
 import { augmentIntakeQuestion } from "./intake-augment";
@@ -573,7 +573,9 @@ async function answerQuestionCore(
     if (inventoryAnswer) return inventoryAnswer;
 
     // Board f099: a form the library has no title for is said so, with the forms that exist; an open card stays as it was.
-    if (namesFormNotInLibrary(request.question)) return formNotInLibraryReply(summaries, actor, formNameNotInLibrary(request.question), request.continueProposalTemplateKey ?? null);
+    if (namesFormNotInLibrary(request.question) && !libraryOffersForm(summaries, actor, formNameNotInLibrary(request.question))) {
+      return formNotInLibraryReply(summaries, actor, formNameNotInLibrary(request.question), request.continueProposalTemplateKey ?? null);
+    }
 
     // Hidden templates are already left out of `summaries`; one listed but not published is not filled by the remap either.
     const unpublished = buildFormInventory(summaries, actor)

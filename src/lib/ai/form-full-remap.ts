@@ -526,7 +526,11 @@ export function formNameNotInLibrary(text: string): string | null {
 
 export function namesFormNotInLibrary(text: string): boolean {
   if (!text.trim() || asksOnlyAboutFormsOnFile(text) || !namesFormOutsideRemap(text)) return false;
-  const intent = detectTemplateIntent(text);
+  // A question about a form ("when should I use a demotion form?") is a knowledge question, not a request for it.
+  if (/\?\s*$/.test(text.trim()) && /\b(?:what|how|when|where|who|why|which|does|is)\b/i.test(text)) return false;
+  const intent = detectTemplateIntent(text) as { kind: string; requestedCreation?: boolean; family?: string };
+  // A library family ("an EPP": six performance plans) is asked which one, as before.
+  if (intent.kind === "ambiguous" && intent.family) return false;
   return !(intent.kind === "explicit" || intent.kind === "clarify" || (intent.kind === "corrective_action" && intent.requestedCreation));
 }
 

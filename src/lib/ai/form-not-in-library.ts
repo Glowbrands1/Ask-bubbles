@@ -21,6 +21,24 @@ import type { AskResponse } from "./types";
  */
 const PRIMARY_TEMPLATE_KEY = "coaching";
 
+/** The forms this person can create, as the chooser offers them. */
+function offeredForms(summaries: readonly TemplateSummary[], actor: ChatActor): TemplateSummary[] {
+  return summaries
+    .filter((summary) => summary.active && summary.currentVersion?.status === "published")
+    .filter((summary) => Boolean(actor.role) && hasPermission(DEFAULT_PERMISSION_MATRIX, actor.role!, summary.requiredPermission as Parameters<typeof hasPermission>[2]))
+    .filter((summary) => offeredInChooser(summary.key));
+}
+
+/**
+ * The form asked for is one this person can create after all: a form they can create has the name's head word in its
+ * title ("a transfer form" and the library's Transfer form). Then the existing flow answers, as before.
+ */
+export function libraryOffersForm(summaries: readonly TemplateSummary[], actor: ChatActor, formName: string | null): boolean {
+  const head = formName?.split(" ").at(-1)?.replace(/s$/, "");
+  if (!head) return false;
+  return offeredForms(summaries, actor).some((summary) => summary.name.toLowerCase().split(/[^a-z]+/).some((word) => word.replace(/s$/, "") === head));
+}
+
 export function formNotInLibraryReply(
   summaries: readonly TemplateSummary[],
   actor: ChatActor,
@@ -28,10 +46,7 @@ export function formNotInLibraryReply(
   /** The template of the card on screen, if any: its menu would be dropped (NO_SELECTION_ON_OPEN_CARD), so the forms are named in the reply and the card is said to be still open. */
   openTemplateKey?: string | null,
 ): AskResponse {
-  const offered = summaries
-    .filter((summary) => summary.active && summary.currentVersion?.status === "published")
-    .filter((summary) => Boolean(actor.role) && hasPermission(DEFAULT_PERMISSION_MATRIX, actor.role!, summary.requiredPermission as Parameters<typeof hasPermission>[2]))
-    .filter((summary) => offeredInChooser(summary.key));
+  const offered = offeredForms(summaries, actor);
   const primary = offered.find((summary) => summary.key === PRIMARY_TEMPLATE_KEY) ?? offered[0];
   const missing = formName ? `There's no ${formName} form in the forms library` : "That form isn't in the forms library";
   if (!primary) {
