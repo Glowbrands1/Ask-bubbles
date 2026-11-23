@@ -9,7 +9,7 @@ import { cardLines, historyReply, withoutAppNotes, withoutCardLines } from "./ca
 import "server-only";
 
 import { withFullOffRosterName, withOneInactiveLine } from "./off-roster-line";
-import { cardTurns, personKey, readLoopRecords, replyTurns, type CardRecord, type CardSlot, type ExitOfferSlot, type NameQuestionSlot, type PersonAskedSlot, type TeamConfirmSlot } from "./card-record";
+import { cardTurns, personKey, readLoopRecords, shownTextKey, replyTurns, type CardRecord, type CardSlot, type ExitOfferSlot, type NameQuestionSlot, type PersonAskedSlot, type TeamConfirmSlot } from "./card-record";
 import { CLAUDE_EFFORT, CLAUDE_MAX_TOKENS, CLAUDE_MODEL } from "@/lib/config/models";
 import { MissingConfigurationError, requireEnv } from "@/lib/config/server-env";
 import { mainAnswerTimeoutMs, streamGapTimeoutMs } from "@/lib/config/ai-timeouts";
@@ -1484,6 +1484,16 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
           if (wovenLine.test(text)) text = text.split("\n").map((line) => line.split(/(?<=[.!?])\s+/).filter((sentence) => !wovenLine.test(sentence)).join(" ")).join("\n").replace(/\n{3,}/g, "\n\n").trim();
         }
         /*
+         * A7 follow-up (QA's option 2, 22 Nov 2026): the latest card's account still names its store, in the phrase the
+         * store reader matched in the manager's own words ("… came into the store at Empire to show …"). It goes back once
+         * so the model proposes the card again without it; if it comes back, the card stays as proposed.
+         */
+        if (stoppedAt === "reply" && effects.proposal && effects.storePhraseLeft) {
+          const phrase = effects.storePhraseLeft;
+          const again = await handBack(`[app check] The card's what_happened still names its ${appConfig().locationWord} ("${phrase}"); the card shows the ${appConfig().locationWord} on its own line. Call propose_form again with what_happened without "${phrase}", everything else the same. Then write your reply to the manager again.`);
+          if (again) text = again;
+        }
+        /*
          * QA's Bubbles re-run (22 Nov 2026, A8): with a card that has no store yet, the reply named stores nobody had named
          * ("which Sioux Falls location …, W 41st St or E 18th St?" from "SFS", ship from store). Read by the app's own store
          * reader: a store the reply names that the manager never named and the card does not hold goes back once; if it
@@ -1606,7 +1616,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
   /* QA's live re-test B8: a former employee is found in Woven, so the reply never also says they are not on the staff list. */
   if (inactiveLines.size === 1 && text) text = withOneInactiveLine(text, [...inactiveLines][0]!, appConfig().staffSystem);
   const cardSlot: CardSlot | null = effects.proposal
-    ? { proposalId: effects.proposal.proposalId, employeeKey: effects.proposalEmployeeId ? personKey(effects.proposalEmployeeId) : null, nameKey: effects.proposal.employeeName ? personKey(effects.proposal.employeeName) : null, templateKey: effects.proposal.templateKey, templateName: effects.proposal.templateName ?? null, ...(effects.proposalAsked?.length ? { asked: effects.proposalAsked } : {}), ...(effects.proposalLevel ? { level: effects.proposalLevel } : {}), ...(effects.proposalPayroll ? { payroll: effects.proposalPayroll } : {}), ...(effects.proposalPayroll === "yes" && effects.proposalPayrollAmount ? { payrollAmount: effects.proposalPayrollAmount } : {}), ...(effects.proposal.policyLine ? { policyLine: effects.proposal.policyLine } : {}), ...(effects.proposalAccountKey ? { accountKey: effects.proposalAccountKey } : {}), ...(effects.proposal.formDate ? { incidentDate: effects.proposal.formDate } : {}), ...(effects.proposal.subject === "team" && effects.proposal.locationId ? { teamStoreId: effects.proposal.locationId } : {}), ...(effects.proposalPriorDates?.length ? { priorDates: effects.proposalPriorDates } : {}), ...(effects.proposal.locationId ? { storeId: effects.proposal.locationId } : {}) }
+    ? { proposalId: effects.proposal.proposalId, employeeKey: effects.proposalEmployeeId ? personKey(effects.proposalEmployeeId) : null, nameKey: effects.proposal.employeeName ? personKey(effects.proposal.employeeName) : null, templateKey: effects.proposal.templateKey, templateName: effects.proposal.templateName ?? null, ...(effects.proposalAsked?.length ? { asked: effects.proposalAsked } : {}), ...(effects.proposalLevel ? { level: effects.proposalLevel } : {}), ...(effects.proposalPayroll ? { payroll: effects.proposalPayroll } : {}), ...(effects.proposalPayroll === "yes" && effects.proposalPayrollAmount ? { payrollAmount: effects.proposalPayrollAmount } : {}), ...(effects.proposal.policyLine ? { policyLine: effects.proposal.policyLine } : {}), ...(effects.proposalAccountKey ? { accountKey: effects.proposalAccountKey } : {}), ...(effects.proposal.issue ? { issueKey: shownTextKey(effects.proposal.issue) } : {}), ...(effects.proposal.formDate ? { incidentDate: effects.proposal.formDate } : {}), ...(effects.proposal.subject === "team" && effects.proposal.locationId ? { teamStoreId: effects.proposal.locationId } : {}), ...(effects.proposalPriorDates?.length ? { priorDates: effects.proposalPriorDates } : {}), ...(effects.proposal.locationId ? { storeId: effects.proposal.locationId } : {}) }
     : null;
   /* Fix batch items 4 and 3: this turn's "Did you mean", for the next turn's name question record (one-way keys only). */
   const nameQuestionSlot: NameQuestionSlot | null = effects.nameQuestion && stoppedAt === "reply"
