@@ -87,4 +87,20 @@ export const NOV23_REGULAR_ADMIN_CARD_ASKS_STORE_CASES: ReplayCase[] = [
       expect((t.forms() as Array<{ id: string; location_id?: string | null }>).find((row) => row.id === id)?.location_id).toBe(card?.locationId);
     },
   },
+  {
+    id: "nov23-regular-admin-card-store-in-words-filled",
+    title: "Control: the regular chat, an admin, \"create a coaching form for Marnie Holloway at West Dodge, …\" (no Woven store): the store in the manager's words fills the card, no store asked",
+    report: REPORT,
+    status: "fixed",
+    async run(t) {
+      start(t, NO_STORE);
+      const thread = t.thread();
+      const reply = await thread.say("create a coaching form for Marnie Holloway at West Dodge, she was late to her shift on 11/8/26");
+      const card = thread.proposal as Card;
+      expect(card?.locationId, JSON.stringify(card)).toBe("loc-264");
+      expect(reply.content, reply.content).not.toMatch(/Which store is this about\?/);
+      const id = await thread.create();
+      expect((t.forms() as Array<{ id: string; location_id?: string | null }>).find((row) => row.id === id)?.location_id).toBe("loc-264");
+    },
+  },
 ];
