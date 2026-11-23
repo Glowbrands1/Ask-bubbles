@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { typedAddressSpans, withoutAddressLines } from "./exit-details";
+import { typedAddressSpans, withoutAddressLines } from "./address-spans";
 
 /* QA (23 Nov 2026, the u22 live run): an address given as the employee's never names the card's store. */
 describe("typed addresses, for the store readers", () => {

@@ -5,7 +5,7 @@ import { COMPANY_JOB_TITLES, isJobTitleAbbreviation } from "@/config/company/job
 import { COMPANY_LOCATIONS, locationByCode, locationById, locationNameKey } from "@/lib/locations";
 
 import { extractFormDate } from "./form-date-answer";
-import { withoutAddressLines } from "./exit-details";
+import { withoutAddressLines } from "./address-spans";
 import { foldName } from "./fold-name";
 import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
 import { antiLoopEnabled, exitAnswerNotACorrectionEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";

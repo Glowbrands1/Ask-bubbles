@@ -23,7 +23,7 @@ import { answeredNameQuestions, answerNamesSomeoneElse, everKeptOrUsedTyped, isC
 import { employeeFirstName } from "@/lib/forms/employee-reference";
 import { AFFIRMATIVE, displayName, editDistance, matchEmployeeName, nameConfirmationQuestion, readNameConfirmation, rosterSpellingOf, type RosterEmployee } from "@/lib/forms/employee-match";
 import { offRosterTyped } from "@/lib/forms/roster-only-names";
-import { withoutAddressLines } from "@/lib/forms/exit-details";
+import { withoutAddressLines } from "@/lib/forms/address-spans";
 import { readLocationMentions } from "@/lib/forms/location-mention";
 import { locationById } from "@/lib/locations";
 import { COMPANY_LOCATION_NICKNAMES } from "@/config/company/locations";

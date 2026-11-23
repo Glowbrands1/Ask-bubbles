@@ -1,6 +1,6 @@
 import { authorizedLocationIds } from "@/lib/forms/location-scope";
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
-import { withoutAddressLines } from "@/lib/forms/exit-details";
+import { withoutAddressLines } from "@/lib/forms/address-spans";
 import { labelledStoreIds } from "@/lib/forms/store-cue";
 import { locationById } from "@/lib/locations";
 import type { StoreIndex } from "@/lib/stores/resolver";

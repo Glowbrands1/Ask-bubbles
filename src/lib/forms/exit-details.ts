@@ -1,4 +1,5 @@
 import { exitIntakeFixEnabled, exitShortcutWordsEnabled, exitStatedOnlyEnabled, exitTerminationStatedEnabled, fieldLabelNotAQuestionEnabled, resignMethodFollowupEnabled, exitTypoWordsEnabled } from "@/lib/config/chat-quality-flags";
+import { ADDRESS_LABEL, ADDRESS_THROUGH_ZIP, ADDRESS_TO_END } from "./address-spans";
 
 import { JOIN } from "./turn-join";
 import { editDistance } from "./typo-match";
@@ -623,10 +624,7 @@ function sentence(text: string): string {
  * is one, else to the end of the sentence. Never guessed from anything else.
  * Only with EXIT_INTAKE_FIX_ENABLED.
  */
-const ADDRESS_LABEL =
-  /\b(?:(?:permanent|home|mailing|current)\s+address(?:\s+is|\s*[:=\-–—])?|address\s*(?:is|[:=\-–—]))\s*/gi;
-const ADDRESS_THROUGH_ZIP = /^\d{1,6}[A-Za-z]?\s+[^\n]{2,100}?\b\d{5}(?:-\d{4})?\b/;
-const ADDRESS_TO_END = /^\d{1,6}[A-Za-z]?\s+[^\n.;!?]{2,100}?(?=\s*(?:[.;!?\n]|,\s*(?:she|he|they|her|his|last|and)\b|$))/i;
+/* The address shape lives in `address-spans.ts`, shared with the store readers that leave an address out. */
 
 function addressIn(turn: string): string | null {
   for (const match of turn.matchAll(ADDRESS_LABEL)) {
@@ -635,28 +633,6 @@ function addressIn(turn: string): string | null {
     if (found) return found[0].replace(/[\s,]+$/g, "").replace(/\s+/g, " ");
   }
   return null;
-}
-
-/**
- * QA (23 Nov 2026, the u22 live run): "address: 123 Test St, Lees Summit, MO. 00000" was read as the card's store. Every
- * address the reader above reads (the exit form's Permanent Address shape), where it sits in the text. Never gated: the
- * store readers use it only to leave an address out.
- */
-export function typedAddressSpans(text: string): Array<{ readonly start: number; readonly end: number; readonly address: string }> {
-  const spans: Array<{ start: number; end: number; address: string }> = [];
-  for (const match of (text ?? "").matchAll(ADDRESS_LABEL)) {
-    const start = (match.index ?? 0) + match[0].length;
-    const found = ADDRESS_THROUGH_ZIP.exec(text.slice(start)) ?? ADDRESS_TO_END.exec(text.slice(start));
-    if (found) spans.push({ start, end: start + found[0].length, address: found[0] });
-  }
-  return spans;
-}
-
-/** The text with every typed address blanked (same length), so no store reader reads a store inside one. */
-export function withoutAddressLines(text: string): string {
-  let out = text ?? "";
-  for (const span of typedAddressSpans(out)) out = out.slice(0, span.start) + " ".repeat(span.end - span.start) + out.slice(span.end);
-  return out;
 }
 
 /** The Permanent Address the manager typed, the later turn winning, or null. */
