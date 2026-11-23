@@ -42,6 +42,8 @@ import { caSalesPolicyEnabled, requiredFieldsAtFinalizeEnabled, revisionArchived
 import { blankRequiredFields, requiredFieldsMessage } from "./required-fields";
 import { isIsoCalendarDate } from "./form-date-answer";
 import { getCurrentVersion, getVersion, type TemplateVersionRow } from "./repository";
+import { HELD_FOR_HR, asHrApprovalState, editableDraft, heldForHr, withoutHeldForHr, type HrApprovalState } from "./hr-approval-rules";
+import { hrHoldLive, releaseStaleHold } from "./hr-approval-approvers";
 
 /** The form's own Date line — the same day as `form_instances.form_date`. */
 const FORM_DATE_KEY = "form_date";
@@ -91,6 +93,16 @@ export interface InstanceRow {
   revisesInstanceId: string | null;
   createdAt: string;
   updatedAt: string;
+  /**
+   * HR approval (`hr-approval-rules.ts`): null for a form that never went to HR. Read from the overview view, which
+   * carries it once migration 20261123002000 is applied; before that it is always null.
+   */
+  hrApprovalState: HrApprovalState | null;
+  hrApprovalRequestedAt: string | null;
+  /** Who last sent it to HR (anyone who may edit the draft may); they see it while it waits, as its creator does. */
+  hrApprovalRequestedBy: string | null;
+  /** Everyone who has ever sent it to HR, first send first; each keeps seeing it while it waits. */
+  hrApprovalSenders: string[];
 }
 
 export interface InstanceValueRow {
@@ -137,6 +149,10 @@ function mapInstance(row: Record<string, unknown>): InstanceRow {
     revisesInstanceId: (row.revises_instance_id as string | null) ?? null,
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
+    hrApprovalState: asHrApprovalState(row.hr_approval_state),
+    hrApprovalRequestedAt: (row.hr_approval_requested_at as string | null | undefined) ?? null,
+    hrApprovalRequestedBy: (row.hr_approval_requested_by as string | null | undefined) ?? null,
+    hrApprovalSenders: Array.isArray(row.hr_approval_senders) ? (row.hr_approval_senders as unknown[]).map(String) : [],
   };
 }
 
@@ -228,6 +244,13 @@ export interface InstanceListFilter {
    * case-insensitive ("corrective", "coach"). Letters only, as `employeeNameWords`.
    */
   templateNameWords?: string[];
+  /**
+   * HR APPROVAL: leave out every form waiting for HR (pending, sent back, rejected) except those this account created
+   * or sent.
+   * Set by `instanceListFilterFor` for everyone but HR while FORMS_HR_APPROVAL_ENABLED is on. Leaves `locationIds`
+   * as it is, so an unrestricted reader stays unrestricted otherwise.
+   */
+  hideAwaitingHrExceptCreatedBy?: string;
 }
 
 export async function listInstances(
@@ -244,6 +267,10 @@ export async function listInstances(
   const isoDay = (value: string | undefined) => (value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null);
   const dateFrom = isoDay(filter?.formDateFrom);
   const dateTo = isoDay(filter?.formDateTo);
+  /* An account id is a UUID or a `demo:` label; anything else would be interpolated into a PostgREST filter, so it reads nothing. */
+  const hideAwaitingHrRaw = filter?.hideAwaitingHrExceptCreatedBy;
+  if (hideAwaitingHrRaw !== undefined && !/^[A-Za-z0-9:_-]{1,120}$/.test(hideAwaitingHrRaw)) return [];
+  const hideAwaitingHrFor = hideAwaitingHrRaw;
 
   /*
    * Port from the sibling app's #1171 (QA's f072, 20 Nov 2026): "lucia ramirez" never found a form stored as "Lucía
@@ -264,6 +291,11 @@ export async function listInstances(
     }
     if (dateFrom) query = query.gte("form_date", dateFrom);
     if (dateTo) query = query.lte("form_date", dateTo);
+    if (hideAwaitingHrFor) {
+      query = query.or(
+        `hr_approval_state.is.null,hr_approval_state.eq.approved,created_by.eq."${hideAwaitingHrFor}",hr_approval_senders.cs.{"${hideAwaitingHrFor}"}`,
+      );
+    }
     // `archived_at` is presentation, not status — see the migration. The active
     // list is the default because it is what somebody opening the screen wants.
     if (view === "active") return query.is("archived_at", null);
@@ -475,13 +507,16 @@ export async function findRecentAssistantDraft(input: {
   if (templateError || !template) return null;
 
   const since = new Date((input.now ?? new Date()).getTime() - DUPLICATE_DRAFT_WINDOW_HOURS * 3_600_000);
-  const { data, error } = await supabase
+  const { data, error } = await withoutHeldForHr(
+    supabase
     .from("form_instances")
     .select("id, employee_name, location_id, created_at")
     .eq("template_id", template.id)
     .eq("created_by", input.createdBy)
     .eq("source", "assistant")
     .eq("status", "draft")
+    // HR APPROVAL: a form waiting for HR is not a draft the chat may pick up again.
+    )
     .gte("created_at", since.toISOString())
     .order("created_at", { ascending: false })
     .limit(25);
@@ -663,6 +698,7 @@ async function writeValues(
   accepted: DraftValues,
   filledBy: FieldResponsibility,
   provenance: Record<string, Record<string, unknown>> = {},
+  options: { viaHrApproval?: boolean } = {},
 ): Promise<void> {
   const supabase = getSupabaseAdmin();
   const rows = [
@@ -687,9 +723,22 @@ async function writeValues(
   ];
   if (rows.length === 0) return;
 
-  const { error } = await supabase
-    .from("form_instance_values")
-    .upsert(rows, { onConflict: "instance_id,field_key" });
+  /*
+   * HR's edit of a form waiting for them goes through the one function the value guard lets past the hold
+   * (migration 20261123002000); every other writer is refused there while the form is pending.
+   */
+  const { error } = options.viaHrApproval
+    ? await supabase.rpc("form_hr_approval_write_values", {
+        p_instance_id: instanceId,
+        p_rows: rows.map(({ field_key, value, checked, filled_by, provenance: rowProvenance }) => ({
+          field_key,
+          value,
+          checked,
+          filled_by,
+          provenance: rowProvenance,
+        })),
+      })
+    : await supabase.from("form_instance_values").upsert(rows, { onConflict: "instance_id,field_key" });
   if (error) throw new Error(`Could not save the form: ${error.message}`);
 
   /*
@@ -732,7 +781,7 @@ export async function applyStatedFacts(
   allowedKeys?: ReadonlySet<string>,
 ): Promise<string[]> {
   const loaded = await loadInstance(instanceId);
-  if (!loaded || loaded.instance.status !== "draft") return [];
+  if (!loaded || !editableDraft(loaded.instance)) return [];
 
   const selected = selectStatedFacts({
     document: parseFormDocument(loaded.version.document),
@@ -756,7 +805,14 @@ export async function saveInstanceValues(
   submitted: Partial<DraftValues>,
   actor: string,
   /** Where the edit came from, for the event row (port from the sibling app): "chat" when the agent loop wrote a value the manager stated in chat. Absent: the event is as before. */
-  options: { readonly via?: "chat" } = {},
+  options: {
+    readonly via?: "chat";
+    /**
+     * HR editing a form that waits for them (`hr-approval.ts`): written through `form_hr_approval_write_values`, the
+     * one path the database lets past the hold. Only the route that has checked the actor is an approver sets it.
+     */
+    readonly asHrApprover?: boolean;
+  } = {},
 ): Promise<{
   rejected: { key: string; reason: string }[];
   /** What was stored, after any required closing was re-attached. */
@@ -766,6 +822,12 @@ export async function saveInstanceValues(
   if (!loaded) throw new Error("That form no longer exists.");
   if (loaded.instance.status !== "draft") {
     throw new Error("This form is finalized. Create a revision to change it.");
+  }
+  const hrEdit = options.asHrApprover === true && heldForHr(loaded.instance.hrApprovalState);
+  if (heldForHr(loaded.instance.hrApprovalState) && !hrEdit) {
+    // Held only while the hold is live; otherwise (flag off, no approver left) the form goes back to a plain draft.
+    if (await hrHoldLive()) throw new HeldForHrError();
+    await releaseStaleHold(instanceId);
   }
 
   const document = parseFormDocument(loaded.version.document);
@@ -801,7 +863,7 @@ export async function saveInstanceValues(
     }),
   );
   // `writeValues` moves `form_instances.form_date` with the Date line.
-  await writeValues(instanceId, { values: changedValues, checked: changedChecked }, "manager");
+  await writeValues(instanceId, { values: changedValues, checked: changedChecked }, "manager", {}, { viaHrApproval: hrEdit });
   /*
    * FORM_EDIT_TOUCHES_UPDATED_AT_ENABLED (ported from the sibling app's batch G2: the card's "Save changes" left
    * updated_at where it was). Edited with Pau's standing approval, 15 Nov 2026. A manager's save that writes any value
@@ -813,12 +875,19 @@ export async function saveInstanceValues(
     const { error } = await getSupabaseAdmin().from("form_instances").update({ updated_at: new Date().toISOString() }).eq("id", instanceId);
     if (error) console.warn(`instances: the save to form ${instanceId} was written, but its updated_at could not be moved.`);
   }
-  await recordEvent(instanceId, "edited", actor, {
-    fields: Object.keys(result.values).length,
-    groups: Object.keys(result.checked).length,
-    rejected: result.rejected,
-    ...(options.via ? { via: options.via } : {}),
-  });
+  /*
+   * HR's edit of a waiting form is recorded in the approval history only (`recordHrEdit`), which only the creator and
+   * HR read: the form's general history is served to every reader once it is approved, and naming HR there would tell
+   * them it went through HR (owner, 23 Nov 2026).
+   */
+  if (!hrEdit) {
+    await recordEvent(instanceId, "edited", actor, {
+      fields: Object.keys(result.values).length,
+      groups: Object.keys(result.checked).length,
+      rejected: result.rejected,
+      ...(options.via ? { via: options.via } : {}),
+    });
+  }
 
   return { rejected: result.rejected, values };
 }
@@ -1004,6 +1073,15 @@ export class UnverifiedPolicyError extends Error {
 
 
 /** Thrown when a field the version marks `required` is blank at Finalize. See `required-fields.ts`. */
+/** Thrown when somebody but HR writes to a form waiting for HR approval. */
+export class HeldForHrError extends Error {
+  readonly code = HELD_FOR_HR;
+  constructor() {
+    super("This form is waiting for HR approval. You can change it again if HR sends it back.");
+    this.name = "HeldForHrError";
+  }
+}
+
 export class RequiredFieldsBlankError extends Error {
   readonly fields: { key: string; label: string }[];
 
@@ -1020,6 +1098,37 @@ export interface FinalizeOptions {
    * continue. Recorded on the event; never inferred, and never defaulted true.
    */
   readonly acknowledgeUnverifiedPolicy?: boolean;
+  /**
+   * HR approving a form that waits for them (`hr-approval.ts`): the only way a held form is finalized, and the
+   * update marks it approved in the same write.
+   */
+  readonly fromHrApproval?: boolean;
+  /** With `fromHrApproval`: the HR account that approved, stored on the form's private approval columns only. */
+  readonly hrDecidedBy?: string;
+}
+
+/**
+ * WHAT FINALIZE CHECKS BEFORE IT FREEZES ANYTHING: required fields, and an unverified policy the manager has not
+ * acknowledged. Shared with "Finalize and send to HR for approval" (`hr-approval.ts`), so a form sent to HR has passed exactly
+ * what Finalize would have asked of it, while the manager can still fix it.
+ */
+export function finalizePreflight(before: LoadedInstance, options: FinalizeOptions = {}): { unverified: string[] } {
+  // A required field left blank is refused while the record is still a draft the manager can fix.
+  const blankRequired = !requiredFieldsAtFinalizeEnabled() ? [] : blankRequiredFields(parseFormDocument(before.version.document), before.instance.variantKey, before.values);
+  if (blankRequired.length > 0) throw new RequiredFieldsBlankError(blankRequired);
+
+  const unverifiedFields = unverifiedPolicyFields(
+    parseFormDocument(before.version.document),
+    before.instance.variantKey,
+    before.values,
+  );
+  const unverified = unverifiedFields.map((field) => field.key);
+
+  if (unverified.length > 0 && options.acknowledgeUnverifiedPolicy !== true) {
+    throw new UnverifiedPolicyError(unverified, policyAcknowledgementWording(unverifiedFields, before.events, Boolean(before.instance.revisesInstanceId))
+        .message);
+  }
+  return { unverified };
 }
 
 export async function finalizeInstance(
@@ -1044,22 +1153,12 @@ export async function finalizeInstance(
    */
   const before = await loadInstance(instanceId);
   if (!before) throw new Error("That form no longer exists.");
-
-  // A required field left blank is refused while the record is still a draft the manager can fix.
-  const blankRequired = !requiredFieldsAtFinalizeEnabled() ? [] : blankRequiredFields(parseFormDocument(before.version.document), before.instance.variantKey, before.values);
-  if (blankRequired.length > 0) throw new RequiredFieldsBlankError(blankRequired);
-
-  const unverifiedFields = unverifiedPolicyFields(
-    parseFormDocument(before.version.document),
-    before.instance.variantKey,
-    before.values,
-  );
-  const unverified = unverifiedFields.map((field) => field.key);
-
-  if (unverified.length > 0 && options.acknowledgeUnverifiedPolicy !== true) {
-    throw new UnverifiedPolicyError(unverified, policyAcknowledgementWording(unverifiedFields, before.events, Boolean(before.instance.revisesInstanceId))
-        .message);
+  // A form waiting for HR is finalized only by HR's approval.
+  // While the hold is live (flag on, an approver exists); otherwise the creator's Finalize finalizes it, clearing the state.
+  if (heldForHr(before.instance.hrApprovalState) && options.fromHrApproval !== true && (await hrHoldLive())) {
+    throw new HeldForHrError();
   }
+  const { unverified } = finalizePreflight(before, options);
 
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
@@ -1068,6 +1167,16 @@ export async function finalizeInstance(
       status: "finalized",
       finalized_at: new Date().toISOString(),
       follow_up_date: followUpDate,
+      /*
+       * HR APPROVAL: approved in the same write that finalizes it. A form HR sent back or rejected that is finalized
+       * without them (only possible with FORMS_HR_APPROVAL_ENABLED off) leaves the approval flow, so it is not hidden
+       * as still waiting.
+       */
+      ...(options.fromHrApproval === true
+        ? { hr_approval_state: "approved", hr_approval_decided_at: new Date().toISOString(), hr_approval_decided_by: options.hrDecidedBy ?? actor }
+        : before.instance.hrApprovalState && before.instance.hrApprovalState !== "approved"
+          ? { hr_approval_state: null }
+          : {}),
     })
     .eq("id", instanceId)
     .eq("status", "draft")

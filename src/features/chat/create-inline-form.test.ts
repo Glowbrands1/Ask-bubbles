@@ -453,9 +453,18 @@ describe("f140. a card that still asks which store is never created", () => {
     expect(calls[0]?.body.locationId ?? null).toBeNull();
   });
 
-  it("control: a regular-chat card with no store that is not asking for one (an admin's card) is created as before (QA: old-chat work is Monday's)", async () => {
+  /*
+   * CHANGED ON PURPOSE (QA, 23 Nov 2026, the old chat's admin cards after #1087): this was the control that a regular-chat
+   * admin card with no store ("not_applicable") is still created. Every card now needs its store, the regular chat's too.
+   */
+  it("a regular-chat admin card with no store (not_applicable) is refused: nothing saved, the store asked", async () => {
     const { calls, call } = recorder();
-    await createInlineForm({ proposal: proposal({ locationId: null, locationResolution: "not_applicable" }), messages: [ACCOUNT], call, onCreated: () => {} });
+    await expect(createInlineForm({ proposal: proposal({ locationId: null, locationResolution: "not_applicable" }), messages: [ACCOUNT], call, onCreated: () => {} })).rejects.toThrow(/Which store is this about\?/);
+    expect(calls).toHaveLength(0);
+  });
+  it("control: the regular-chat admin card with its store picked is created at that store", async () => {
+    const { calls, call } = recorder();
+    await createInlineForm({ proposal: proposal({ locationId: "loc-264", locationResolution: "resolved" }), messages: [ACCOUNT], call, onCreated: () => {} });
     expect(calls[0]?.url).toBe("/api/forms/instances");
   });
 });

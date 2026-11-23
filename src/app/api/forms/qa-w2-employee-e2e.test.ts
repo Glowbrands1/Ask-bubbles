@@ -4,6 +4,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { AccessScope, ChatMessage } from "@/types";
 
+import { COMPANY_LOCATIONS as PICKED_STORE_LOCATIONS } from "@/lib/locations";
+/*
+ * Changed on purpose (QA, 23 Nov 2026): an all-store login's card asks which store and Create waits for it, so the store is
+ * picked on the card first, as the browser's picker does (the route offers every store; a harness that reads the answer
+ * before the route's last step sees "not_applicable", and the first store is picked the same way).
+ */
+const withPickedStore = <P extends { locationId?: string | null; locationResolution?: string; authorizedLocationIds?: readonly string[] }>(card: P): P =>
+  !card.locationId && (card.locationResolution === "needs_selection" || card.locationResolution === "not_applicable")
+    ? { ...card, locationId: card.authorizedLocationIds?.[0] ?? PICKED_STORE_LOCATIONS[0]!.id }
+    : card;
+
+
 /**
  * ============================================================================
  * QA, 22 OCT 2026 — WHO THE FORM IS FOR, END TO END (W2)
@@ -252,7 +264,7 @@ async function conversation(turns: string[]) {
     proposal: last.formProposal!,
     create: async () =>
       createInlineForm({
-        proposal: last.formProposal!,
+        proposal: withPickedStore(last.formProposal!),
         messages,
         call,
         onCreated: () => {},

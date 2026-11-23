@@ -1,3 +1,4 @@
+import { withCardOpening } from "./card-opening";
 import { exitReadBackMismatch, withoutUnsavedExitLines } from "./exit-read-back";
 import { EXIT_METHOD_LABELS } from "@/lib/forms/exit-details";
 import { observationDateMismatch, withoutMisdatedRestatements } from "./observation-dates";
@@ -475,14 +476,14 @@ function buildAgentLoopTools(config: AppConfig, planSteps = false) {
   },
   {
     name: "find_past_forms",
-    description: "List the forms on file (" + config.formsPageName + ") for one employee, or, with no employee_name, every form of a kind or period (\"who got a CA this month?\": form and date_from/date_to). Only when the manager asks about forms on file or history; never otherwise.",
+    description: "List the forms on file (" + config.formsPageName + ") for one employee, or, with no employee_name, every form of a kind or period (\"who got a CA this month?\": form and date_from/date_to), or every form about a topic (\"any forms about cash handling this month?\", \"who's been written up for dress code?\": about, with form and dates if given). Only when the manager asks about forms on file or history; never otherwise.",
     input_schema: object({
       employee_name: { type: "string", description: "The employee the manager named. Leave it out for a list of every form of a kind or period." },
       form: { type: "string", description: "The form the manager named (\"coaching\", \"CA\"), if any." },
       date: { type: "string", description: "The form's date as the manager gave it (\"10/31\"), if any." },
       date_from: { type: "string", description: "First form date of a period the manager asked about (\"this month\": the 1st), YYYY-MM-DD, if any." },
       date_to: { type: "string", description: "Last form date of that period (\"this month\": today), YYYY-MM-DD, if any." },
-      about: { type: "string", description: "Words the manager used about the form (\"" + examples.formAbout + "\"), if any." },
+      about: { type: "string", description: "Words the manager used about the form (\"" + examples.formAbout + "\"), if any. With no employee_name, the topic to search every form's saved text for (\"cash handling\", \"dress code\")." },
       forms_on_file_evidence: FORMS_ON_FILE_EVIDENCE,
       open: { type: "boolean", description: "true when the manager asks to open, edit or see one form on file (not a list of what is on file)." },
       include_archived: { type: "boolean", description: "true only when the manager asks for archived forms. Finalized forms are listed archived or not; this adds archived drafts." },
@@ -1615,6 +1616,8 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
   if (offRosterNames.size === 1 && text) text = withFullOffRosterName(text, [...offRosterNames][0]!, appConfig().staffSystem);
   /* QA's live re-test B8: a former employee is found in Woven, so the reply never also says they are not on the staff list. */
   if (inactiveLines.size === 1 && text) text = withOneInactiveLine(text, [...inactiveLines][0]!, appConfig().staffSystem);
+  /* QA (23 Nov 2026, u22 live): a reply with this turn's card that names no form opens with the card's own opening. */
+  if (effects.proposal && text) text = withCardOpening(text, effects.proposal.templateName, replyNames.size === 1 ? [...replyNames][0]! : effects.proposal.employeeName);
   const cardSlot: CardSlot | null = effects.proposal
     ? { proposalId: effects.proposal.proposalId, employeeKey: effects.proposalEmployeeId ? personKey(effects.proposalEmployeeId) : null, nameKey: effects.proposal.employeeName ? personKey(effects.proposal.employeeName) : null, templateKey: effects.proposal.templateKey, templateName: effects.proposal.templateName ?? null, ...(effects.proposalAsked?.length ? { asked: effects.proposalAsked } : {}), ...(effects.proposalLevel ? { level: effects.proposalLevel } : {}), ...(effects.proposalPayroll ? { payroll: effects.proposalPayroll } : {}), ...(effects.proposalPayroll === "yes" && effects.proposalPayrollAmount ? { payrollAmount: effects.proposalPayrollAmount } : {}), ...(effects.proposal.policyLine ? { policyLine: effects.proposal.policyLine } : {}), ...(effects.proposalAccountKey ? { accountKey: effects.proposalAccountKey } : {}), ...(effects.proposal.issue ? { issueKey: shownTextKey(effects.proposal.issue) } : {}), coachingTopic: (effects.proposal as { coachingTopic?: string | null }).coachingTopic ?? null, ...(effects.proposal.formDate ? { incidentDate: effects.proposal.formDate } : {}), ...(effects.proposal.subject === "team" && effects.proposal.locationId ? { teamStoreId: effects.proposal.locationId } : {}), ...(effects.proposalPriorDates?.length ? { priorDates: effects.proposalPriorDates } : {}), ...(effects.proposalOnFileOffered?.length ? { onFileOffered: effects.proposalOnFileOffered } : {}), ...(effects.proposal.locationId ? { storeId: effects.proposal.locationId } : {}) }
     : null;

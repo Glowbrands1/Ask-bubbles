@@ -24,6 +24,8 @@ import {
   visibleInstances,
 } from "@/lib/forms/instance-scope";
 import { pageFormsAccess } from "@/lib/forms/page-scope";
+import { HrApprovalTabs, HrQueueList, MyFormsWithHr } from "@/features/forms/hr-approval-lists";
+import { hrQueueSummary, listHrQueue, listMyFormsWithHr, type HrQueueRow, type MyHrFormRow } from "@/lib/forms/hr-approval";
 import { supabaseSecretKeyConfigured } from "@/lib/config/server-env";
 import { privateAwareLimit, privateCreatorsActive } from "@/lib/forms/private-creators";
 
@@ -76,6 +78,28 @@ export default async function FormMonitoringPage({
   const connected = supabaseSecretKeyConfigured();
   const access = connected ? await pageFormsAccess(identity) : null;
   const noStore = access?.noStore === true;
+
+  /*
+   * HR APPROVAL (FORMS_HR_APPROVAL_ENABLED). HR gets a "Pending HR approval" tab (`?view=hr`) listing every form
+   * waiting for them; a manager sees their own forms HR has not approved yet. Nobody else sees either: a form waiting
+   * for HR is not in anybody else's list at all (`instanceListFilterFor`).
+   */
+  const isHr = access?.actor.hrApprover === true;
+  const hrView = isHr && requestedView === "hr";
+  let hrQueue: HrQueueRow[] = [];
+  let hrSummary: { pending: number; overdue: number } | null = null;
+  let myWithHr: MyHrFormRow[] = [];
+  if (access) {
+    try {
+      if (isHr) {
+        hrSummary = await hrQueueSummary(access.actor);
+        if (hrView) hrQueue = await listHrQueue(access.actor);
+      }
+      myWithHr = await listMyFormsWithHr(access.actor);
+    } catch {
+      // A failed approval read leaves the ordinary list as it is; the tab and the card simply do not show.
+    }
+  }
 
   if (connected && access && !noStore) {
     try {
@@ -153,7 +177,12 @@ export default async function FormMonitoringPage({
           description="Every form created in Ask Bubbles, the template version it was filled from, and what is still outstanding."
         />
 
-        {!connected ? (
+        {hrSummary ? <HrApprovalTabs active={hrView ? "hr" : "all"} pending={hrSummary.pending} overdue={hrSummary.overdue} /> : null}
+        {!hrView ? <MyFormsWithHr rows={myWithHr} /> : null}
+
+        {hrView ? (
+          <HrQueueList rows={hrQueue} />
+        ) : !connected ? (
           <Notice tone="neutral" title="Forms are not connected in this deployment">
             Forms are stored in the live database, and this deployment has none connected. Nothing here is sample data.
           </Notice>

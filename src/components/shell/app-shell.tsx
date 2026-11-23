@@ -13,6 +13,8 @@ import { useSession } from "@/lib/session/session-context";
 import { cn } from "@/lib/utils/cn";
 import { usePreference, writePreference } from "@/lib/utils/client-store";
 import { SidebarNav } from "./sidebar";
+import { NotificationBell } from "@/features/notifications/notification-bell";
+import type { BellData } from "@/lib/notifications/types";
 import { UpdateNotice } from "./update-notice";
 import { backdropForPath, chromeForPath } from "./backdrop";
 import { ACTIVE_BRAND } from "@/lib/brand";
@@ -31,6 +33,7 @@ export function AppShell({
   showAppSwitcher = false,
   showLeadershipHub = false,
   meetingTabs = [],
+  bell = null,
 }: {
   children: ReactNode;
   overdueFollowUps?: number;
@@ -38,6 +41,11 @@ export function AppShell({
   showLeadershipHub?: boolean;
   /** The DM L10 tab(s), decided on the server from the Leadership Hub (attendees only). Empty: no tab. */
   meetingTabs?: { href: string; label: string }[];
+  /**
+   * The signed-in person's notifications, read on the server by the layout. Null: no bell. Shown in this bar on
+   * phones and in the rail on desktop (the bar is hidden there on band pages), never both at one width.
+   */
+  bell?: BellData | null;
 }) {
   const { hydrated, signedIn, demoMode, role } = useSession();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -106,6 +114,7 @@ export function AppShell({
           showAppSwitcher={showAppSwitcher}
           showLeadershipHub={showLeadershipHub}
           meetingTabs={meetingTabs}
+          bell={bell}
         />
       </aside>
 
@@ -163,6 +172,11 @@ export function AppShell({
               <Badge tone="primary" size="sm">
                 Demo
               </Badge>
+            ) : null}
+            {bell ? (
+              <span className="lg:hidden">
+                <NotificationBell data={bell} className={cn(band && "text-band-foreground hover:bg-band-chip-surface")} />
+              </span>
             ) : null}
             {/*
               THE PARENT BRAND, in an approved colour with no box around it —

@@ -295,6 +295,7 @@ import {
 } from "@/lib/forms/form-date-grounding";
 import { unreadDayBrief, unreadDayNotice, unreadIncidentDay } from "@/lib/forms/unread-day-date";
 import { draftDateApplies, fidelityGivenDates } from "@/lib/forms/form-input-fidelity";
+import { heldForHr } from "@/lib/forms/hr-approval-rules";
 
 /**
  * POST /api/forms/instances/[id]/draft
@@ -426,6 +427,16 @@ async function readOfficialPolicyManual(
 /** SPEND_GUARD_ALL_CALLS_ENABLED: this route's Claude calls are counted (`ai/spend-meter.ts`). Off, as before. */
 /* QA f071 / c259 (ported from the sibling app): the headings whose saved Policy Violated keeps "<box> — <section>" are `READERS_LINE_HEADINGS` (forms/readers-line-headings.ts). */
 
+/**
+ * QA's live re-run (23 Nov 2026, A1): the topic a loop card's policy line names after "Other — " ("Other — Opening
+ * checklist"), the Coaching Form's Other write-in; null when the card cites "Other" alone or no Other.
+ */
+function cardOtherTopic(line: unknown): string | null {
+  if (typeof line !== "string") return null;
+  const topic = /(?:^|;\s*)other\s*[—–:-]\s*([^;]+)$/i.exec(line.trim())?.[1]?.trim() ?? "";
+  return topic ? topic.slice(0, 120) : null;
+}
+
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   return withSpendMeter("forms_draft", () => postFormsDraft(request, context));
 }
@@ -450,6 +461,13 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
     if (loaded.instance.status !== "draft") {
       return NextResponse.json(
         { error: "This form is finalized. Create a revision to change it." },
+        { status: 409 },
+      );
+    }
+    // HR APPROVAL: a form waiting for HR is changed only by HR until they send it back.
+    if (heldForHr(loaded.instance.hrApprovalState)) {
+      return NextResponse.json(
+        { error: "This form is waiting for HR approval. You can change it again if HR sends it back.", code: "HELD_FOR_HR" },
         { status: 409 },
       );
     }
@@ -1731,7 +1749,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
     // A loop card's topic, and the topic after the person's name, come first (ported from the sibling app, QA, 17–18 Nov 2026).
     const otherWritten =
       body.cardFromLoop === true
-        ? guardOtherWriteIn(topical, notes, new Set(fields.map((field) => field.key)), loaded.instance.employeeName, typeof body.cardTopic === "string" ? body.cardTopic.trim().slice(0, 120) : null)
+        ? guardOtherWriteIn(topical, notes, new Set(fields.map((field) => field.key)), loaded.instance.employeeName, typeof body.cardTopic === "string" && body.cardTopic.trim() ? body.cardTopic.trim().slice(0, 120) : cardOtherTopic(body.cardPolicyLine), true)
         : guardOtherWriteIn(topical, notes, new Set(fields.map((field) => field.key)));
     /*
      * Ported from the sibling app (Pau via QA, 20 Nov 2026, item 14): a loop coaching card's Create saves Observed as what
@@ -2838,10 +2856,11 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         }
         /*
          * QA f071 (20 Nov 2026, live item 15): the card's line is the saved Policy Violated whether or not a Type of Offense
-         * label names its heading, so the card and the form show one label. Except the headings in
-         * `READERS_LINE_HEADINGS`, which keep the readers' "<box> — <section>".
+         * label names its heading, so the card and the form show one label. QA's live re-run (23 Nov 2026, A7 / U09): the
+         * headings filed under another box (`readers-line-headings.ts`) kept the readers' "<box> — <section>" and dropped the
+         * card's ", JBA Policy Manual p.<n>"; since c259 the card's line names the box itself, so it is saved for them too.
          */
-        if (cardLine && !readersLineBox(loopCardHeading) && fields.some((field) => field.key === "policy_violated")) {
+        if (cardLine && fields.some((field) => field.key === "policy_violated")) {
           loopCardDraft.values = { ...loopCardDraft.values, policy_violated: cardLine };
         }
       }
