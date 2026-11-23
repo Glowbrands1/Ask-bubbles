@@ -1024,6 +1024,10 @@ const NOT_ASKED = "Forms on file are looked at only when the manager asks about 
 /** What the turn's tools produced for the reply: the card and the edit, when there were any. */
 export interface ToolEffects {
   proposal: ChatFormProposal | null;
+  /** Pau's round 3 (U35 run a): propose_form already sent back a call that would drop the card on screen's account. */
+  cardAccountAsked?: boolean;
+  /** Pau's round 3 (U21 T7): propose_form already sent back a call that would drop the card on screen's prior actions. */
+  cardPriorAsked?: boolean;
   /** U24 (QA, 22 Nov 2026): the exit type(s) this turn's exit card ticks, by the form's labels, for the reply's "Filed as" line. */
   exitTicks?: readonly string[];
   /**
@@ -4010,6 +4014,30 @@ export async function proposeForm(
       error: `The manager asked for the ${template.name} on screen for ${employee.name}. Propose ${employee.name}'s card again now with what_happened: that card's account exactly as this chat shows it (the Observation of the earlier card), with ${employee.name}'s name in place of the earlier person's, and same_card_evidence again. Never ask what happened; never copy a level or a payroll answer.`,
     };
   }
+  /*
+   * THE CARD ON SCREEN KEEPS ITS ACCOUNT (Pau's round 3, 22 Nov 2026, U35 run a): T11 "Create a Corrective Action Form
+   * from this conversation." re-proposed this person's card on screen with no what_happened; the account is read from the
+   * request's own words, which hold none, so the Observation the card showed at T10 was wiped and the reply asked what
+   * happened again. The model's history shows a card reply only as "[card shown …]", so it is told here: with this
+   * person's card of this form on screen, made with an account (its record's account key), a call with no account goes
+   * back once, to pass the manager's account from the earlier turns. A card never given an account is made as before.
+   */
+  const hasAccount = typeof input.what_happened === "string" && input.what_happened.trim() !== "";
+  /*
+   * Coder 2's A1(b) cases (QA's live record): the same person's card is also one whose name this call corrects ("Della
+   * Varnick" on screen, "Della Varnich" now), and a switch between the account forms (a CA made a Coaching card "with the
+   * information given") carries the same account. An exit card's account is its own, so a switch to it is not this.
+   */
+  const cardShown = context.cardOnScreen ?? null;
+  const samePersonCard = Boolean(cardShown && ((employee.id && cardShown.employeeKey === personKey(employee.id)) || cardShown.nameKey === personKey(employee.name) || (nameCorrectedFrom !== null && cardShown.nameKey === personKey(nameCorrectedFrom))));
+  const sameAccountForm = Boolean(cardShown && (cardShown.templateKey === key || (ACCOUNT_FORMS.has(cardShown.templateKey) && ACCOUNT_FORMS.has(key))));
+  if (!hasAccount && !sameCardOther && !effects.cardAccountAsked && Boolean(cardShown?.accountKey) && samePersonCard && sameAccountForm) {
+    effects.cardAccountAsked = true;
+    return {
+      reason_code: "card_account_missing",
+      error: `${employee.name}'s ${cardShown?.templateName ?? template.name} on screen has an account of what happened, and this call gave none, so the card would lose it. Propose the card again now with what_happened: the manager's account from the earlier turns of this chat, in their words, with anything this message adds. Never ask the manager what happened again.`,
+    };
+  }
   const copiedFromCard = sameCardOther;
   /*
    * QA's ruling (22 Nov 2026, U21): "make the SAME corrective action but for <B>" is the manager's explicit ask, so the
@@ -4878,6 +4906,24 @@ export async function proposeForm(
     : [];
   const priorParts = priorActionsRead ? [...(onFileBeside.length > 0 ? [priorsOnFileLine(onFileBeside)] : []), priorActionsRead, ...listedSteps] : [];
   const priorActions = priorActionsRead ? priorParts.join(priorActionsRead.includes("\n") ? "\n" : "; ").slice(0, 600) : null;
+  /*
+   * THE CARD ON SCREEN KEEPS ITS PRIOR ACTIONS (Pau's round 3, U21 T7; QA, 22 Nov 2026): "add the direct policy from the
+   * official manual that goes with this" re-proposed Briony's card with the new policy and no prior_actions, and the card's
+   * "Coaching — 09/22/2026 …; JBA Woven policies acknowledged …" were wiped. With this person's card of this form on
+   * screen holding prior steps (its record's step dates) that neither this call, the manager's words read now, nor the
+   * forms on file give back, a call with no prior_actions goes back once, to pass the card's prior actions with any change
+   * this message asks for. A manager removing a step is a call that passes the steps left, and is kept as passed.
+   */
+  const onScreenStepDates = sameCardOnScreen(context.cardOnScreen, template.key, employee) ? (context.cardOnScreen?.priorDates ?? []) : [];
+  const givenBack = new Set(priorActions ? [...priorStepDates([priorActions], today).keys()] : []);
+  const stepsLost = onScreenStepDates.filter((iso) => !givenBack.has(iso));
+  if (!askedPriorActions && stepsLost.length > 0 && !effects.cardPriorAsked) {
+    effects.cardPriorAsked = true;
+    return {
+      reason_code: "card_prior_actions_missing",
+      error: `${employee.name}'s ${template.name} on screen has prior actions (steps dated ${stepsLost.join(", ")}), and this call gave none, so the card would lose them. Propose the card again now with prior_actions: the card's prior actions as the manager gave them in the earlier turns, with any change this message asks for, and everything else the card holds.`,
+    };
+  }
   /*
    * U09 / U21: a prior step on this card's Prior actions is never this incident's account (`accountWithoutPriorSteps`).
    * Only the steps the card keeps: a sentence leaves the Observation only when Prior actions holds it, so nothing is lost.
