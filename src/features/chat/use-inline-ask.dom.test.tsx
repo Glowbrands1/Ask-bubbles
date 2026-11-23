@@ -167,3 +167,22 @@ describe("a correction after a two-form message, asked inline", () => {
     expect(asks[1]!.activeFormCandidateIds).toBeUndefined();
   });
 });
+
+/* QA (23 Nov 2026): the band never sent a conversation id, so its turns were traced with no conversation. */
+describe("the band's conversation id", () => {
+  it("is sent from the first question on, the thread's own, and the same on the next", async () => {
+    const { result } = renderHook(() => useInlineAsk({ surface: "overview" }));
+
+    await act(async () => {
+      await result.current.send("coaching for Avery Testperson and a CA for Jordan Testperson");
+    });
+    await act(async () => {
+      await result.current.send("change the date to yesterday");
+    });
+
+    expect(asks).toHaveLength(2);
+    expect(asks[0]!.conversationId).toBe(conversations[0]!.id);
+    expect(asks[0]!.conversationId).toMatch(/^conv_/);
+    expect(asks[1]!.conversationId).toBe(asks[0]!.conversationId);
+  });
+});

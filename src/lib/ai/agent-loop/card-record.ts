@@ -51,6 +51,13 @@ export interface CardRecord {
    */
   readonly accountKey?: string | null;
   /**
+   * QA's Bubbles live re-run (22 Nov 2026, A7 T5; option 2): a one-way key of the account the card SHOWED (its Observation,
+   * spacing aside, every character else kept: `shownTextKey`), never the text. A later turn reads the account on screen
+   * from the reply's Observation line only when that line has this key, so the card keeps exactly what was shown
+   * (`account-kept.ts`). Null when none or for an older record.
+   */
+  readonly issueKey?: string | null;
+  /**
    * QA (16 Nov 2026, c219 live: "That change isn't on the card yet: policy (…)"): the policy line the card cited, a line of
    * the manual (never a name), so a later turn's card check compares the reply with the card on screen. Null when none or
    * for an older record.
@@ -79,7 +86,7 @@ export interface CardRecord {
 }
 
 /** What a turn writes into `slots.agent_loop.card`. */
-export type CardSlot = Omit<CardRecord, "messageId" | "asked" | "level" | "policyLine" | "payroll" | "payrollAmount" | "accountKey" | "incidentDate" | "teamStoreId" | "priorDates" | "storeId"> & { readonly priorDates?: readonly string[]; readonly asked?: readonly string[]; readonly level?: "verbal" | "written"; readonly policyLine?: string; readonly payroll?: "yes" | "no"; readonly payrollAmount?: string; readonly accountKey?: string; readonly incidentDate?: string; readonly teamStoreId?: string; readonly storeId?: string };
+export type CardSlot = Omit<CardRecord, "messageId" | "asked" | "level" | "policyLine" | "payroll" | "payrollAmount" | "accountKey" | "issueKey" | "incidentDate" | "teamStoreId" | "priorDates" | "storeId"> & { readonly priorDates?: readonly string[]; readonly asked?: readonly string[]; readonly level?: "verbal" | "written"; readonly policyLine?: string; readonly payroll?: "yes" | "no"; readonly payrollAmount?: string; readonly accountKey?: string; readonly issueKey?: string; readonly incidentDate?: string; readonly teamStoreId?: string; readonly storeId?: string };
 
 function isCardSlot(value: unknown): value is CardSlot {
   const row = value as Partial<CardSlot> | null;
@@ -194,7 +201,20 @@ type LoopRecords = { cards: CardRecord[]; nameQuestions: NameQuestionRecord[]; p
 const NO_RECORDS = (): LoopRecords => ({ cards: [], nameQuestions: [], personAsked: [], exitOffers: [], teamConfirms: [], whichForms: [], turns: [] });
 
 /** This user's loop records in this conversation, oldest first, from one read. Empty without a conversation id, or if the read fails. */
-export async function readLoopRecords(conversationId: string | undefined, userId: string, historyMessageIds: readonly string[] = []): Promise<LoopRecords> {
+/**
+ * QA (23 Nov 2026, the duplicate-tab finding): the open chat's id is in the address (`?c=<id>`), so a second tab opened on
+ * it (Duplicate tab, a copied address) posts to the same conversation id, and its turn took the first tab's records (its
+ * card as the chat's card). With `thisTab` (the request's own manager turns: ids and question keys), a record of this
+ * conversation counts only when it is this request's own: its message is one of these turns, by id or question key, or
+ * it is older than the earliest record that is (the history sent is the latest 20 turns only). A tab with no turns yet
+ * has none. With nothing of this history found at all, every record counts, as before.
+ */
+export interface ThisTab {
+  readonly messageIds: readonly string[];
+  readonly questionKeys: readonly string[];
+}
+
+export async function readLoopRecords(conversationId: string | undefined, userId: string, historyMessageIds: readonly string[] = [], thisTab?: ThisTab): Promise<LoopRecords> {
   /*
    * QA (16 Nov 2026, production chat_traces): the FIRST message of a new chat was traced with conversation_id NULL, so a
    * read by conversation never fetched it, and turn 1's records (the Did-you-mean, the which-person question, the card)
@@ -217,7 +237,7 @@ export async function readLoopRecords(conversationId: string | undefined, userId
      * QA's rule: a row read by message id counts only when its conversation_id is null (turn 1 from the home ask bar) or
      * this conversation; another conversation's row with the same message id is never this chat's.
      */
-    const rows = (results.flatMap((result) => (result.data ?? []) as (TraceRow & { created_at?: string; conversation_id?: string | null })[]))
+    const sorted = (results.flatMap((result) => (result.data ?? []) as (TraceRow & { created_at?: string; conversation_id?: string | null })[]))
       .filter((row) => !row.conversation_id || !conversationId || row.conversation_id === conversationId)
       .filter((row) => {
         const key = `${row.message_id ?? ""}\u0000${row.created_at ?? ""}`;
@@ -226,11 +246,12 @@ export async function readLoopRecords(conversationId: string | undefined, userId
         return true;
       })
       .sort((a, b) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? ""))) as TraceRow[];
+    const rows = thisTab ? ownRecords(sorted, thisTab) : sorted;
     return {
       cards: rows.flatMap((row) => {
         const card = row.slots?.agent_loop?.card;
         return isCardSlot(card)
-          ? [{ proposalId: card.proposalId, employeeKey: card.employeeKey ?? null, nameKey: card.nameKey ?? null, templateKey: card.templateKey, templateName: card.templateName ?? null, messageId: row.message_id, questionKey: questionKeyOf(row), asked: Array.isArray(card.asked) ? card.asked.filter((field): field is string => typeof field === "string") : [], level: card.level === "verbal" || card.level === "written" ? card.level : null, policyLine: typeof card.policyLine === "string" ? card.policyLine : null, payroll: card.payroll === "yes" || card.payroll === "no" ? card.payroll : null, payrollAmount: typeof card.payrollAmount === "string" && /^\d+(?:\.\d+)?$/.test(card.payrollAmount) ? card.payrollAmount : null, accountKey: typeof card.accountKey === "string" && /^[0-9a-f]{16}$/.test(card.accountKey) ? card.accountKey : null, incidentDate: typeof card.incidentDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(card.incidentDate) ? card.incidentDate : null, teamStoreId: typeof card.teamStoreId === "string" && /^loc-[A-Za-z0-9-]{1,16}$/.test(card.teamStoreId) ? card.teamStoreId : null, ...(Array.isArray(card.priorDates) ? { priorDates: card.priorDates.filter((date): date is string => typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)).slice(0, 12) } : {}), storeId: typeof card.storeId === "string" && /^loc-[A-Za-z0-9-]{1,16}$/.test(card.storeId) ? card.storeId : null }]
+          ? [{ proposalId: card.proposalId, employeeKey: card.employeeKey ?? null, nameKey: card.nameKey ?? null, templateKey: card.templateKey, templateName: card.templateName ?? null, messageId: row.message_id, questionKey: questionKeyOf(row), asked: Array.isArray(card.asked) ? card.asked.filter((field): field is string => typeof field === "string") : [], level: card.level === "verbal" || card.level === "written" ? card.level : null, policyLine: typeof card.policyLine === "string" ? card.policyLine : null, payroll: card.payroll === "yes" || card.payroll === "no" ? card.payroll : null, payrollAmount: typeof card.payrollAmount === "string" && /^\d+(?:\.\d+)?$/.test(card.payrollAmount) ? card.payrollAmount : null, accountKey: typeof card.accountKey === "string" && /^[0-9a-f]{16}$/.test(card.accountKey) ? card.accountKey : null, issueKey: typeof card.issueKey === "string" && /^[0-9a-f]{16}$/.test(card.issueKey) ? card.issueKey : null, incidentDate: typeof card.incidentDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(card.incidentDate) ? card.incidentDate : null, teamStoreId: typeof card.teamStoreId === "string" && /^loc-[A-Za-z0-9-]{1,16}$/.test(card.teamStoreId) ? card.teamStoreId : null, ...(Array.isArray(card.priorDates) ? { priorDates: card.priorDates.filter((date): date is string => typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)).slice(0, 12) } : {}), storeId: typeof card.storeId === "string" && /^loc-[A-Za-z0-9-]{1,16}$/.test(card.storeId) ? card.storeId : null }]
           : [];
       }),
       nameQuestions: rows.flatMap((row) => {
@@ -268,6 +289,17 @@ export async function readLoopRecords(conversationId: string | undefined, userId
   } catch {
     return NO_RECORDS();
   }
+}
+
+/** `readLoopRecords`' `thisTab` rule: this request's own records, and those older than the earliest of them. */
+function ownRecords<T extends TraceRow & { created_at?: string }>(rows: readonly T[], thisTab: ThisTab): T[] {
+  const ids = new Set(thisTab.messageIds);
+  const keys = new Set(thisTab.questionKeys);
+  if (ids.size === 0 && keys.size === 0) return [];
+  const own = (row: T) => Boolean((row.message_id && ids.has(row.message_id)) || (questionKeyOf(row) && keys.has(questionKeyOf(row)!)));
+  const first = rows.findIndex(own);
+  if (first < 0) return [...rows];
+  return rows.filter((row, index) => index < first || own(row));
 }
 
 /** The cards this user's loop made in this conversation, oldest first. None without a conversation id, or if the read fails. */
@@ -316,6 +348,11 @@ export function replyTurns<T extends { readonly messageId: string | null; readon
 /** A one-way key of a card's account (QA, c163): letters and digits only, any case, so a rebuild's same words match. */
 export function accountKey(account: string): string {
   return createHash("sha256").update(account.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim()).digest("hex").slice(0, 16);
+}
+
+/** A one-way key of the text a card showed (A7 T5): spacing aside, every character kept, so only the exact text matches. */
+export function shownTextKey(text: string): string {
+  return createHash("sha256").update(text.replace(/\s+/g, " ").trim()).digest("hex").slice(0, 16);
 }
 
 export function personKey(name: string): string {

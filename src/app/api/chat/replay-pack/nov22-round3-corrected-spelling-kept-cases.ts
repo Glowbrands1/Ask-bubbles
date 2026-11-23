@@ -34,22 +34,28 @@ const back = (view: LoopView, text: string) => {
 const issueOf = (proposal: unknown) => (proposal as { issue?: string | null } | null)?.issue ?? "";
 
 /** The live model: every turn's account is T1's, with T1's spelling (`account`); from T3 the card is the Coaching Form for the corrected name. */
-const live = (account: string, first = T1) =>
-  loopStandIn((view): LoopDecision => {
+const live = (account: string, first = T1, accountAfterFirst = true) => {
+  /* A hand-back for the card's missing account (A1(b)): from then on this turn, proposed with the account. */
+  const handedBackOn = new Set<string>();
+  return loopStandIn((view): LoopDecision => {
     const message = said(view);
-    if (lastResult(view, "propose_form")) return { text: "Here's the card." };
+    const result = lastResult(view, "propose_form") as { reason_code?: string; card?: unknown } | null;
+    if (result?.reason_code === "card_account_missing") handedBackOn.add(message);
+    const handedBack = handedBackOn.has(message);
+    if (result && (result.card || !handedBack)) return { text: "Here's the card." };
     const coaching = message === T3 || message === T4;
     const t1 = first;
     return {
       tool: "propose_form",
       input: {
-        template_key: coaching ? "coaching" : "dpoa", employee_name: coaching ? "Della Varnich" : "Della Varnick", what_happened: account,
+        template_key: coaching ? "coaching" : "dpoa", employee_name: coaching ? "Della Varnich" : "Della Varnick", ...(accountAfterFirst || message === first || handedBack ? { what_happened: account } : {}),
         ...(message === t1 ? {} : { store: message === T4 ? "Omaha dodge" : "Dodge" }), policy: headingWith(view, /attendance/i),
         person_evidence: evidenceFrom(view, coaching ? "della varnich" : "della varnick", coaching ? back(view, T3) : back(view, t1)),
         ...(message === T3 ? { form_change_evidence: evidenceFrom(view, "Create the coaching form") } : {}),
       },
     };
   });
+};
 
 function start(t: ReplayContext) {
   vi.setSystemTime(new Date("2026-11-22T15:29:00Z"));
@@ -104,6 +110,47 @@ export const NOV22_ROUND3_CORRECTED_SPELLING_KEPT_CASES: ReplayCase[] = [
       expect((thread.proposal as { earlierNames?: string[] } | null)?.earlierNames ?? [], "the card does not carry the earlier spelling").toContainEqual(expect.stringMatching(/varnick/i));
       const id = await thread.create();
       expect(t.values(id).coaching_details ?? "", `the saved write-up kept the old surname:\n${t.values(id).coaching_details}`).not.toMatch(/varnick/i);
+    },
+  },
+  {
+    id: "nov22-r3-a1b-correction-keeps-other-persons-sentence",
+    title: "Round 3 A1(b), QA's live record: T1's account \"Della was 10 minutes late … Della Varnock covered for Della.\"; after T3's surname correction (Varnick → Varnich) the card's account still says the coworker covered, never drops the sentence",
+    report: `${REPORT}; QA's live record (22 Nov 2026): after the correction the card's account lost "Della Varnock covered for Della."`,
+    status: "fixed",
+    async run(t) {
+      start(t);
+      const first = `${T1}. Della Varnock covered for her`;
+      /* QA's live account, the same every turn (the model passes it whole). */
+      t.loopModel!(live("Della was 10 minutes late on the last two shifts, on 10/5 and 10/15. Della Varnock covered for Della.", first));
+      const thread = t.thread();
+      const issues: string[] = [];
+      for (const turn of [first, T2, T3, T4]) {
+        await thread.say(turn);
+        issues.push(issueOf(thread.proposal));
+      }
+      expect(thread.proposal?.employeeName, "the correction did not reach the card (the case proves nothing)").toBe("Della Varnich");
+      expect(issues.slice(2).filter((issue) => !/Della Varnock covered for/.test(issue)), `the coworker's sentence was dropped:\n${issues.join("\n")}`).toEqual([]);
+    },
+  },
+  {
+    id: "nov22-r3-a1b-correction-without-account-keeps-it",
+    title: "Round 3 A1(b), QA's live record: the surname correction re-proposed with NO what_happened: the card keeps its account, the coworker's sentence included",
+    report: `${REPORT}; QA's live record (22 Nov 2026): after the correction the card's account lost "Della Varnock covered for Della."`,
+    status: "fixed",
+    async run(t) {
+      start(t);
+      const first = `${T1}. Della Varnock covered for her`;
+      const account = "Della was 10 minutes late on the last two shifts, on 10/5 and 10/15. Della Varnock covered for Della.";
+      /* After T1, the model re-proposes for the name only (no what_happened). */
+      t.loopModel!(live(account, first, false));
+      const thread = t.thread();
+      const issues: string[] = [];
+      for (const turn of [first, T2, T3, T4]) {
+        await thread.say(turn);
+        issues.push(issueOf(thread.proposal));
+      }
+      expect(issues[0], "T1's card has no account (the case proves nothing)").toMatch(/Della Varnock covered for/);
+      expect(issues.slice(1).filter((issue) => !/Della Varnock covered for/.test(issue)), `the account was dropped:\n${issues.join("\n")}`).toEqual([]);
     },
   },
 ];
