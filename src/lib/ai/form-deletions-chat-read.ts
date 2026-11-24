@@ -1,6 +1,6 @@
 import "server-only";
 
-import { hasPermission, DEFAULT_PERMISSION_MATRIX } from "@/lib/permissions";
+import { hasPermission, activePermissionMatrix } from "@/lib/permissions";
 import type { Role } from "@/types";
 
 import {
@@ -19,7 +19,7 @@ import {
  */
 export async function loadFormDeletionsChatBlock(input: { readonly question: string; readonly role: Role | null }): Promise<string | null> {
   if (!asksWhoDeletedAForm(input.question)) return null;
-  if (input.role === null || !hasPermission(DEFAULT_PERMISSION_MATRIX, input.role, "manage_users")) return formDeletionsNotPermittedBlock();
+  if (input.role === null || !hasPermission(activePermissionMatrix(), input.role, "manage_users")) return formDeletionsNotPermittedBlock();
   const employee = deletedFormsEmployee(input.question);
   try {
     return formatFormDeletionsBlock(await readFormDeletions(employee), employee);

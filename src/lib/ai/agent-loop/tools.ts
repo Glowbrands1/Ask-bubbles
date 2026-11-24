@@ -9,7 +9,7 @@ import { saysAmountUnknown } from "@/lib/ai/amount-unknown-ack";
 
 import { randomUUID } from "node:crypto";
 
-import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
+import { activePermissionMatrix, hasPermission } from "@/lib/permissions";
 import { businessToday, formatBusinessTime } from "@/lib/business-date";
 import { appConfig } from "./app-config";
 import { isoDate, monthDayToIso, readDates, sameDate, withoutDates, type ReadDate } from "./dates";
@@ -1838,7 +1838,7 @@ function positionKey(text: string): string {
 
 export async function listStaffTool(context: ToolContext, effects: ToolEffects, input: { store?: unknown; position?: unknown }): Promise<ToolResult> {
   const scope = context.actor.scope;
-  if (!["create_coaching_form", "create_corrective_action"].some((permission) => hasPermission(DEFAULT_PERMISSION_MATRIX, context.actor.role, permission as never))) {
+  if (!["create_coaching_form", "create_corrective_action"].some((permission) => hasPermission(activePermissionMatrix(), context.actor.role, permission as never))) {
     return { reason_code: "scope", error: "This role cannot list the staff. Say so." };
   }
   /* Pau's decision 7 (this app): a district or region login lists the staff of any of its stores. */
@@ -3715,7 +3715,7 @@ async function creatableTemplates(role: Role): Promise<TemplateSummary[]> {
    * never offered nor proposed. `listTemplateSummaries` already leaves it out; checked here too, so the loop never
    * depends on one list for it.
    */
-  return rows.filter((row) => !isHiddenTemplate(row.key) && row.active && row.currentVersion && hasPermission(DEFAULT_PERMISSION_MATRIX, role, row.requiredPermission as never));
+  return rows.filter((row) => !isHiddenTemplate(row.key) && row.active && row.currentVersion && hasPermission(activePermissionMatrix(), role, row.requiredPermission as never));
 }
 
 /** The templates this manager may create, for the system prompt. Empty when they cannot be read. */

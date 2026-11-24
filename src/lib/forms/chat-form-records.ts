@@ -6,7 +6,7 @@ import { businessToday } from "@/lib/business-date";
 import { formRecordsNoJudgementEnabled, formsOnFileCountsEnabled, formsOnFileOrderMatchPossibleEnabled, priorRecordFinalOnlyEnabled } from "@/lib/config/chat-quality-flags";
 import { countFormsOnFile, type FormCounts } from "./forms-on-file-counts";
 import { locationById } from "@/lib/locations";
-import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
+import { activePermissionMatrix, hasPermission } from "@/lib/permissions";
 import type { AccessScope, Role } from "@/types";
 
 import type { FormsActor } from "./access";
@@ -710,7 +710,7 @@ export interface FormRecordsActor {
  */
 export async function chatFormsActor(actor: FormRecordsActor): Promise<FormsActor | null> {
   if (!actor.verified || !actor.subject || !actor.role || !actor.scope) return null;
-  if (!hasPermission(DEFAULT_PERMISSION_MATRIX, actor.role, "view_form_monitoring")) return null;
+  if (!hasPermission(activePermissionMatrix(), actor.role, "view_form_monitoring")) return null;
   const visibility = await resolveFormsVisibility({
     subject: actor.subject,
     role: actor.role,
@@ -768,7 +768,7 @@ export async function loadFormRecords(input: {
   // Fails closed: no verified identity, no read. Chat is live-only, so this is
   // the ordinary state of a signed-in manager.
   if (!actor.verified || !actor.subject || !actor.role || !actor.scope) return null;
-  if (!hasPermission(DEFAULT_PERMISSION_MATRIX, actor.role, "view_form_monitoring")) return null;
+  if (!hasPermission(activePermissionMatrix(), actor.role, "view_form_monitoring")) return null;
 
   const today = input.today ?? businessToday();
   const viewerId = input.markCreator ? actor.subject : null;
