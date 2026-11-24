@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { redactHrApproval } from "@/lib/forms/hr-approval-rules";
 
 import { teamTopicReadConversation } from "@/lib/forms/team-card-not-product";
 import { sameRequestReadConversation } from "@/lib/forms/same-request-other-person";
@@ -171,7 +172,8 @@ export async function GET(request: Request) {
     // offer a "Delete 5" that removed nothing, and would leak how many exist.
     const sweep = await findDemoInstances();
     return NextResponse.json({
-      instances,
+      // The approval columns only for those who may read HR's decision (owner, 23 Nov 2026: no leaks).
+      instances: instances.map((instance) => redactHrApproval(actor, instance)),
       view,
       demo: {
         deletable: visibleInstances(actor, sweep.deletable).length,

@@ -28,17 +28,27 @@ export async function loadFormDeletionsChatBlock(input: { readonly question: str
   }
 }
 
+const DELETED_WHILE_WITH_HR: ReadonlySet<string> = new Set(["pending", "changes_requested", "rejected"]);
+
 async function readFormDeletions(employee: string | null): Promise<FormDeletionRow[]> {
   const { getSupabaseAdmin } = await import("@/lib/supabase/server");
   let query = getSupabaseAdmin()
     .from("form_instance_deletions")
-    .select("template_name, employee_name, form_date, status, location_name, deleted_by, deleted_by_role, deleted_via, deleted_at");
+    .select(
+      "template_name, employee_name, form_date, status, location_name, deleted_by, deleted_by_role, deleted_via, deleted_at, hr_state:snapshot->instance->>hr_approval_state",
+    );
   // The forms' own employee-name search shape (part of the name, any case); characters the filter syntax reads are dropped.
   const said = (employee ?? "").replace(/[^\p{L}\p{N}' -]/gu, " ").replace(/\s+/g, " ").trim();
   if (said) query = query.or(`employee_name.ilike.*${said}*`);
   const { data, error } = await query.order("deleted_at", { ascending: false }).limit(FORM_DELETIONS_MAX);
   if (error) throw new Error(error.message);
-  const rows = (data ?? []) as Record<string, unknown>[];
+  /*
+   * A FORM DELETED WHILE IT WAS WITH HR IS LEFT OUT (owner, 23 Nov 2026: "are u sure this doesnt leak information,
+   * that other people cant see what a certain manager created?"). While it waited, only its creator, its senders and
+   * HR knew it existed; this record is read by administrators, so "who deleted the write-up for X?" would tell them a
+   * manager wrote one. The state is read from the snapshot the deletion trigger keeps of the row.
+   */
+  const rows = ((data ?? []) as Record<string, unknown>[]).filter((row) => !DELETED_WHILE_WITH_HR.has(String(row.hr_state ?? "")));
   const { readUser } = await import("@/lib/admin/user-directory");
   const names = new Map<string, string | null>();
   for (const id of new Set(rows.map((row) => row.deleted_by).filter((id): id is string => typeof id === "string" && id !== ""))) {

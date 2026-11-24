@@ -107,7 +107,9 @@ describe("the approval panel", () => {
 
 /*
  * The owner (23 Nov 2026): "its so small pending approval, make it red button and animated shaking if theres a pending".
- * And "Sunny approvals ↗" for people with access to both apps: a plain link, no count.
+ * (The sibling app's approvals were a "Sunny approvals ↗" link here; they are now a tab on this page, tested in
+ * hr-approval-lists.dom.test.tsx. Owner, 23 Nov 2026: "i dont want the sunny approval in a different page and link,
+ * just a tab pls".)
  */
 describe("the Pending HR approval button", () => {
   it("with forms waiting: red and shaking", () => {
@@ -132,25 +134,9 @@ describe("the Pending HR approval button", () => {
     expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.hr-pending-shake\s*\{\s*animation: none;/);
   });
 
-  it("not HR: no pending button", () => {
-    render(<HrApprovalTabs active="all" pending={3} overdue={0} showPending={false} sunnyHref="https://sunny.example/forms/monitoring?view=hr" />);
-    expect(screen.queryByTestId("hr-pending-tab")).toBeNull();
-  });
+  /*
+   * CHANGED ON PURPOSE: "not HR: no pending button" tested a `showPending={false}` that existed only to show the
+   * sibling link to non-approvers. The link is gone (see above), so the page renders these tabs for HR only and the
+   * prop is gone with it; that a non-approver sees no tab is the page's `hrSummary` check, unchanged.
+   */
 });
-
-describe("Sunny approvals ↗", () => {
-  it("a link to the sibling app's Pending HR approval view, in a new tab, with no count", () => {
-    render(<HrApprovalTabs active="all" pending={1} overdue={0} sunnyHref="https://sunny.example/forms/monitoring?view=hr" />);
-    const link = screen.getByTestId("sunny-approvals-tab");
-    expect(link.textContent).toBe("Sunny approvals ↗");
-    expect(link.getAttribute("href")).toBe("https://sunny.example/forms/monitoring?view=hr");
-    expect(link.getAttribute("target")).toBe("_blank");
-    expect(link.getAttribute("rel")).toContain("noopener");
-  });
-
-  it("without the app switcher: no link", () => {
-    render(<HrApprovalTabs active="all" pending={1} overdue={0} />);
-    expect(screen.queryByTestId("sunny-approvals-tab")).toBeNull();
-  });
-});
-

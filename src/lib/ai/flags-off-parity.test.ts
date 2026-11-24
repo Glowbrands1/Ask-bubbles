@@ -225,8 +225,9 @@ const ALLOWED_UI = [
   // HR's "Needs your decision" list (hr-approval-lists.tsx), and the card's Print beside Download PDF (inline-form.tsx,
   // listed below); "its so small pending approval, make it red button and animated shaking if theres a pending" — the
   // Pending HR approval button (hr-approval-lists.tsx) and its .hr-pending-shake in globals.css (listed above), off under
-  // reduced motion; and "Sunny approvals ↗" on the Forms Register (monitoring/page.tsx, listed below) for app-switcher
-  // accounts only. The approval UI is behind FORMS_HR_APPROVAL_ENABLED: off, the server sends no approval data, so none of
+  // reduced motion; and the sibling app's approvals on the Forms Register (monitoring/page.tsx, listed below), first a
+  // "Sunny approvals ↗" link, then (owner: "i dont want the sunny approval in a different page and link, just a tab pls")
+  // an in-page tab next to Pending HR approval, for HR approvers only. The approval UI is behind FORMS_HR_APPROVAL_ENABLED: off, the server sends no approval data, so none of
   // it renders. Print shows on any finalized form and opens the same server PDF as Download PDF.
   "src/features/forms/hr-approval-manager-replied.dom.test.tsx",
   // ...and its one sidebar entry, with the rail tests that list what an Employee sees.
