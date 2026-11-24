@@ -49,7 +49,7 @@ import {
 } from "./instances";
 import { NO_PRIOR_ACTION, POLICY_MANUAL_SIGNED_KEY, PRIOR_ACTIONS_KEY } from "./prior-actions";
 import { takeReaderFoundNothing } from "./reader-found-nothing";
-import { editableDraft } from "./hr-approval-rules";
+import { editableDraftNow } from "./hr-edit-scope";
 import { spokenDates } from "./relative-date";
 import { draftableCheckboxGroups, draftableFields, type DraftValues } from "./responsibility";
 import { copiedContent } from "./same-form-copy";
@@ -513,7 +513,7 @@ export async function writeFormEdits(instanceId: string, ops: readonly FormEditO
   /* 1. load */
   const loaded = rules.loaded ?? (await loadInstance(instanceId));
   // A form waiting for HR approval is not the chat's to change: refused as a finalized one is.
-  if (!loaded || !editableDraft(loaded.instance)) return refusedAll(keysOfOps.map((key) => ({ key, reason: "not_draft" })));
+  if (!loaded || !editableDraftNow(loaded.instance)) return refusedAll(keysOfOps.map((key) => ({ key, reason: "not_draft" })));
   const snapshot = snapshotOf(loaded);
   const before: FormDraft = snapshot.draft;
 
@@ -873,6 +873,25 @@ export async function writeRevisionEdits(
 }
 
 /**
+ * Failure 2, item 4 (port of the sibling app's #1297; Pau's ruling via QA, 23 Nov 2026): edits the manager states in this
+ * message ("Remove dates for notice given and notice fulfilled", "How Employee Resigned should state: …"), saved as the
+ * manager's own edit (as the form page saves their typing: the manager as actor, via chat). The caller (the agent loop's
+ * edit_form) has checked each new text, or each clear, against this message's own words; this takes only those fields.
+ * Drafts only: the manager's save refuses a finalized form, so the finalized original is never written.
+ */
+export async function statedFieldsWrite(instanceId: string, values: Record<string, string>, actorId: string): Promise<{ saved: string[]; rejected: { key: string; reason: string }[] }> {
+  const keys = Object.keys(values);
+  if (keys.length === 0) return { saved: [], rejected: [] };
+  try {
+    const result = await saveInstanceValues(instanceId, { values, checked: {} }, actorId, { via: "chat" });
+    const rejected = result.rejected.filter((row) => keys.includes(row.key));
+    return { saved: keys.filter((key) => !rejected.some((row) => row.key === key)), rejected };
+  } catch {
+    return { saved: [], rejected: keys.map((key) => ({ key, reason: "not_draft" })) };
+  }
+}
+
+/**
  * The agent loop's dictated Action Plan (port from the sibling app): an Action Plan the manager dictated in chat, word
  * for word, saved as the manager's own edit (as the form page saves their typing), via chat. Only action_plan; the
  * caller (the loop's edit_form) checks the words are the manager's current message. Drafts only.
@@ -938,7 +957,7 @@ export async function statedWrite(
 ): Promise<string[]> {
   // As `applyStatedFacts` writes them: only into an empty line. A filled line is kept, not refused.
   const loaded = context.loaded ?? (await loadInstance(instanceId));
-  if (!loaded || !editableDraft(loaded.instance)) return [];
+  if (!loaded || !editableDraftNow(loaded.instance)) return [];
   const filled = new Set(
     loaded.values.filter((row) => (row.value ?? "").trim() !== "" || row.checked.length > 0).map((row) => row.fieldKey),
   );

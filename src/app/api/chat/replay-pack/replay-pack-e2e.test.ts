@@ -267,12 +267,13 @@ vi.mock("@/lib/config/server-env", async (importOriginal) => {
 });
 
 vi.mock("@/lib/auth/server", async () => {
-  const { DEFAULT_PERMISSION_MATRIX, hasPermission } = await import("@/lib/permissions");
+  // The ACTIVE matrix, as production's authorizeRequest reads it: the defaults plus what an administrator saved (23 Nov 2026).
+  const { activePermissionMatrix, hasPermission } = await import("@/lib/permissions");
   const { AuthError } = await import("@/lib/auth/types");
   return {
     authorizeRequest: async (_request: Request, permission: string) => {
       const role = (state as { role?: string }).role ?? "district_manager";
-      if (!hasPermission(DEFAULT_PERMISSION_MATRIX, role as never, permission as never)) {
+      if (!hasPermission(activePermissionMatrix(), role as never, permission as never)) {
         throw new AuthError("forbidden", "Your role does not have permission to do that.");
       }
       return {
@@ -646,6 +647,7 @@ const { foldName } = await import("@/lib/forms/fold-name");
 const chatRoute = await import("../route");
 const instancesRoute = await import("../../forms/instances/route");
 const draftRoute = await import("../../forms/instances/[id]/draft/route");
+const instanceRoute = await import("../../forms/instances/[id]/route");
 /* AGENT_LOOP_ENABLED (ported from the sibling app's pack, QA 21 Nov 2026): the loop's model seam, its directory seam and its manual cache. */
 const agentLoopRun = await import("@/lib/ai/agent-loop/run");
 const { __setAgentLoopModelForTests } = agentLoopRun;
@@ -663,8 +665,11 @@ const ACTOR_EMAIL = "qa-manager@example.test";
 async function call<T>(url: string, init?: RequestInit): Promise<T> {
   const request = new Request(`https://app.test${url}`, init);
   const draft = /^\/api\/forms\/instances\/([^/]+)\/draft$/.exec(url);
+  const instance = /^\/api\/forms\/instances\/([^/]+)$/.exec(url);
   const response = draft
     ? await draftRoute.POST(request, { params: Promise.resolve({ id: draft[1]! }) })
+    : instance && init?.method === "PATCH"
+      ? await instanceRoute.PATCH(request, { params: Promise.resolve({ id: instance[1]! }) })
     : url === "/api/forms/instances"
       ? await instancesRoute.POST(request)
       : null;
@@ -1093,6 +1098,12 @@ function context(): ReplayContext {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ notes, keepManagerValues: true }),
+      }),
+    saveOnCard: (instanceId, values) =>
+      call<Record<string, unknown>>(`/api/forms/instances/${instanceId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ values, checked: {} }),
       }),
     typeOnForm: (instanceId, values) => {
       for (const [key, value] of Object.entries(values)) {

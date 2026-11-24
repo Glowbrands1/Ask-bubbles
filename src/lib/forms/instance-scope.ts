@@ -3,7 +3,7 @@ import "server-only";
 import { FORM_FAMILY_READ_PERMISSIONS } from "@/config/company/forms/categories";
 
 import { AuthError } from "@/lib/auth/types";
-import { DEFAULT_PERMISSION_MATRIX, asdNoFormMonitoringEnabled, hasPermission } from "@/lib/permissions";
+import { activePermissionMatrix, asdNoFormMonitoringEnabled, hasPermission } from "@/lib/permissions";
 
 import { authorizeForms, type FormsActor } from "./access";
 import {
@@ -74,7 +74,7 @@ export type InstanceAction =
   | "view"
   /** Change its content: save, assistant draft, finalize, revise, follow-up. */
   | "edit"
-  /** Manage the record itself: archive, restore, delete. */
+  /** Manage the record itself: delete. */
   | "manage";
 
 /**
@@ -113,7 +113,7 @@ export function actorMaySeeInstance(
    *   A manager files a coaching record at location A.
    *   They transfer, and their scope becomes location B.
    *   Their AccessScope no longer covers location A at all.
-   *   They could still open, edit, finalize, archive and delete that record —
+   *   They could still open, edit, finalize and delete that record —
    *   and download its PDF — because they had once created it.
    *
    * Authorization here answers "may this person see this location's HR records
@@ -274,7 +274,7 @@ export function withoutUnreadable<T extends Pick<InstanceRow, "layoutFamily">>(
  */
 function actorHolds(actor: FormsActor, permission: Permission): boolean {
   if (!actor.verified) return true;
-  return actor.role !== null && hasPermission(DEFAULT_PERMISSION_MATRIX, actor.role, permission);
+  return actor.role !== null && hasPermission(activePermissionMatrix(), actor.role, permission);
 }
 
 /**

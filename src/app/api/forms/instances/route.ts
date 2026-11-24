@@ -23,7 +23,6 @@ import {
   InstanceProtectedError,
   listInstances,
   loadInstance,
-  type InstanceView,
 } from "@/lib/forms/instances";
 import { instanceListFilterFor, visibleInstances } from "@/lib/forms/instance-scope";
 import { authorizeLocation } from "@/lib/forms/location-scope";
@@ -120,11 +119,6 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
     const actor = await authorizeForms(request, "view_form_monitoring");
-    const { searchParams } = new URL(request.url);
-
-    const requested = searchParams.get("view");
-    const view: InstanceView =
-      requested === "archived" || requested === "all" ? requested : "active";
 
     /*
      * ==========================================================================
@@ -160,13 +154,12 @@ export async function GET(request: Request) {
     // PRIVATE_CREATOR_FORMS: over-read, then trim to the default page of 200; off, as before.
     const instances = visibleInstances(
       actor,
-      await listInstances(view, privateCreatorsActive() ? privateAwareLimit(200) : undefined, instanceListFilterFor(actor)),
+      await listInstances(privateCreatorsActive() ? privateAwareLimit(200) : undefined, instanceListFilterFor(actor)),
     ).slice(0, 200);
 
     // The sweep's shape is returned alongside so the screen can say "Delete 5
     // demo forms" with a real number rather than counting what it happens to
-    // be showing — the active list is filtered, and a count taken from it
-    // would be wrong the moment somebody switches to Archived.
+    // be showing — the list is capped, and a count taken from it could be short.
     //
     // Scoped by the same rule: a count of forms the caller may not see would
     // offer a "Delete 5" that removed nothing, and would leak how many exist.
@@ -174,7 +167,6 @@ export async function GET(request: Request) {
     return NextResponse.json({
       // The approval columns only for those who may read HR's decision (owner, 23 Nov 2026: no leaks).
       instances: instances.map((instance) => redactHrApproval(actor, instance)),
-      view,
       demo: {
         deletable: visibleInstances(actor, sweep.deletable).length,
         protected: visibleInstances(actor, sweep.protected).length,
@@ -323,6 +315,33 @@ export async function POST(request: Request) {
       // AI_READS_CODE_CHECKS_ENABLED: "Marlowe, Quinn" read as "Marlowe" is the card's Quinn Marlowe when the reader's quote says so.
       if (!currency.current && !readerSamePerson(body, currency.resolvedName)) {
         return NextResponse.json({ error: currency.reason, code: "proposal_superseded" }, { status: 409 });
+      }
+      /*
+       * THE LAST GATE FOR THE SAME INCIDENT (QA's live check of #1123, 24 Nov 2026: "create a verbal CA for <P> with all the
+       * same information given" put up a second CA with no date on the card, so the agent loop had nothing to compare).
+       * A Corrective Action or Coaching card the loop made is held here when this person (by name, as the card names
+       * them) already has that form on file for the date the form will be saved with (a form filed since the card was made
+       * counts), unless the manager said that date is a separate incident (the loop's record). The reply's own question.
+       */
+      const sameDayKinds = settledNames ? settledNames.sameIncidentKinds() : new Set<string>();
+      const saveDate = isIsoCalendarDate(body.formDate) ? body.formDate : businessToday();
+      if (settlement && sameDayKinds.has(body.templateKey) && settlement.sameIncidentChecked !== saveDate) {
+        const [{ formsOnFileSameDay, sameDayOnFileQuestion }, { candidateNameWords }, { samePerson }] = await Promise.all([
+          import("@/lib/forms/same-incident"),
+          import("@/lib/forms/chat-form-records"),
+          import("@/lib/forms/proposal"),
+        ]);
+        const cardName = body.employeeName ?? "";
+        const onFile = await formsOnFileSameDay(actor, {
+          nameWords: candidateNameWords(cardName),
+          isPerson: (name) => samePerson(name, cardName) || settlement.isSettledName(name),
+          templateKey: body.templateKey,
+          formDate: saveDate,
+        });
+        if (onFile.length > 0) {
+          const first = cardName.trim().split(/\s+/)[0] || cardName;
+          return NextResponse.json({ error: sameDayOnFileQuestion(first, template.name, onFile), code: "same_incident_on_file" }, { status: 409 });
+        }
       }
     }
 
@@ -842,7 +861,7 @@ function incidentText(conversation: unknown, employeeName: string): string {
  *
  * A finalized demo form is not swept. The rule about signed documents does not
  * bend because the document happens to be synthetic — those are reported and
- * left for archiving.
+ * left on file.
  */
 export async function DELETE(request: Request) {
   try {

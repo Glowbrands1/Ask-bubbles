@@ -7,7 +7,7 @@ import type { FormsActor } from "./access";
 /**
  * HR APPROVAL, THE WHOLE ROUND TRIP (owner request, 23 Nov 2026), against the real `instances.ts` and `hr-approval.ts`:
  *
- *   the manager presses "Finalize and send to HR for approval"   → still a draft, pending; HR's bell rings
+ *   the manager presses "Finalize and send for approval"   → still a draft, pending; HR's bell rings
  *   the manager tries to change it                          → refused while HR has it
  *   HR edits it                                             → saved, in the approval history only
  *   HR sends it back without a note                         → refused: a note is required
@@ -128,7 +128,7 @@ describe("the round trip", () => {
     // 4. HR edits it: saved through the one path past the hold, recorded in the approval history only.
     const eventsBefore = store.form_instance_events!.length;
     // As the PATCH route does it: the save, then the approval history's "edited".
-    await saveInstanceValues(instance.id, { values: { form_date: "2026-11-22" }, checked: {} }, HR, { asHrApprover: true });
+    await saveInstanceValues(instance.id, { values: { form_date: "2026-11-22" }, checked: {} }, HR, { pastHrHold: true });
     await recordHrEdit(instance.id, hr);
     expect((await loadInstance(instance.id))!.instance.formDate).toBe("2026-11-22");
     expect(store.form_instance_events!.length, "HR's edit reached the form's general history").toBe(eventsBefore);
@@ -138,16 +138,21 @@ describe("the round trip", () => {
     await expect(decideHrApproval(instance.id, manager, "approve", null)).rejects.toThrow(/Only HR/);
     const back = await decideHrApproval(instance.id, hr, "send_back", "Please add the date she was told.");
     expect(back.hrApprovalState).toBe("changes_requested");
-    expect(bells("thistle@example.com")[0]).toMatchObject({ kind: "form_hr_approval_decision", title: "HR sent your form back for changes" });
+    // Changed on purpose (24 Nov 2026): the sender's first bell is now their own "You sent a form for HR approval"
+    // receipt (owner request), so the decision is looked up by kind instead of being the first item.
+    expect(bells("thistle@example.com").find((bell) => bell.kind === "form_hr_approval_decision")).toMatchObject({ title: "HR sent your form back for changes" });
     await saveInstanceValues(instance.id, { values: { form_date: "2026-11-21" }, checked: {} }, CREATOR);
 
     // 6. The manager's reply and HR's note: only the two of them read the history.
     await commentOnHrApproval(instance.id, manager, "Added it.");
     const view = await hrApprovalViewFor(manager, (await loadInstance(instance.id))!.instance);
+    // Changed on purpose (24 Nov 2026): the manager's edit of the sent-back form (step 5) is now in the approval
+    // thread, as their reply (owner: "yeh" to editing alone counting as a reply).
     expect(view?.history.map((entry) => [entry.action, entry.by])).toEqual([
       ["submitted", "You"],
       ["edited", "HR"],
       ["changes_requested", "HR"],
+      ["edited", "You"],
       ["commented", "You"],
     ]);
     expect(view?.history.find((entry) => entry.action === "changes_requested")?.note).toBe("Please add the date she was told.");
@@ -320,6 +325,28 @@ describe("the manager's note reaches HR's bell", () => {
  * "colene sent to marissa, marissa replied and it shows … 'sent back for changes' still. it should be Manager Replied
  * to changes. then view then approve." And the tab read "Pending HR approval (0)" while the row was listed.
  */
+/*
+ * THE CHAT'S EDIT OF A WAITING FORM (owner, 24 Nov 2026, asked "Should I let chat edits work there too, like edits on
+ * the form?": "sure"). The agent loop's edit_form checks the person may edit it, then writes inside `withHrEditScope`
+ * for that one form. The scope lets that form's writes past the hold; nothing outside it, and no other form.
+ */
+describe("the chat's edit of a form waiting for HR", () => {
+  it("inside the scope for that form the save goes past the hold; outside it, or for another form, it is refused", async () => {
+    const { withHrEditScope } = await import("./hr-edit-scope");
+    const waiting = await policyReview();
+    await sendForHrApproval(waiting.id, manager, null, ACK);
+    const other = await policyReview();
+    await sendForHrApproval(other.id, manager, null, ACK);
+
+    await expect(saveInstanceValues(waiting.id, { values: { form_date: "2026-11-20" }, checked: {} }, CREATOR, { via: "chat" })).rejects.toBeInstanceOf(HeldForHrError);
+    await withHrEditScope(waiting.id, () => saveInstanceValues(waiting.id, { values: { form_date: "2026-11-20" }, checked: {} }, CREATOR, { via: "chat" }));
+    expect((await loadInstance(waiting.id))!.instance).toMatchObject({ formDate: "2026-11-20", hrApprovalState: "pending" });
+    await expect(
+      withHrEditScope(waiting.id, () => saveInstanceValues(other.id, { values: { form_date: "2026-11-20" }, checked: {} }, CREATOR, { via: "chat" })),
+    ).rejects.toBeInstanceOf(HeldForHrError);
+  });
+});
+
 describe("manager replied to changes", () => {
   async function sentBack() {
     const instance = await policyReview();
@@ -351,6 +378,36 @@ describe("manager replied to changes", () => {
     expect(hrView).toMatchObject({ state: "changes_requested", stage: "manager_replied", label: "Manager replied to changes", canApproveSentBack: true, canDecide: false });
     // The manager's own list says the same.
     expect((await listMyFormsWithHr(manager)).map((row) => row.label)).toEqual(["Manager replied to changes"]);
+  });
+
+  /*
+   * EDITING ALONE IS THE MANAGER'S REPLY. Asked "Do you want editing alone to count as a reply too? Then HR would get
+   * Approve as soon as the manager changes anything on a sent-back form", the owner answered (24 Nov 2026): "yeh".
+   */
+  it.each([
+    ["on the card", {}],
+    ["in chat", { via: "chat" as const }],
+  ])("the manager edits the sent-back form %s, without a note: HR's row reads \"Manager replied to changes\", HR is told, and HR can approve it", async (_where, options) => {
+    const instance = await sentBack();
+    await saveInstanceValues(instance.id, { values: { form_date: "2026-11-21" }, checked: {} }, CREATOR, options);
+    expect((await listHrQueue(hr)).map((row) => [row.id, row.managerReplied])).toEqual([[instance.id, true]]);
+    expect((await hrQueueSummary(hr))!.pending).toBe(1);
+    const hrView = await hrApprovalViewFor(hr, (await loadInstance(instance.id))!.instance);
+    expect(hrView).toMatchObject({ stage: "manager_replied", label: "Manager replied to changes", canApproveSentBack: true });
+    const updated = bells("hr.wren@example.com").filter((row) => row.kind === "form_hr_approval_updated");
+    expect(updated.map((row) => row.title)).toEqual(["A form you sent back was updated"]);
+    expect(String(updated[0]!.body)).toMatch(/changed by Thistle\. You can approve it now, or send it back again\.$/);
+    const approved = await decideHrApproval(instance.id, hr, "approve", null);
+    expect(approved).toMatchObject({ status: "finalized", hrApprovalState: "approved" });
+  });
+
+  it("a save that changes nothing, or HR's own edit, is not the manager's reply", async () => {
+    const instance = await sentBack();
+    const stored = (await loadInstance(instance.id))!.values.find((row) => row.fieldKey === "form_date")?.value ?? "";
+    await saveInstanceValues(instance.id, { values: { form_date: stored }, checked: {} }, CREATOR);
+    await recordHrEdit(instance.id, hr);
+    expect((await listHrQueue(hr))[0]).toMatchObject({ id: instance.id, managerReplied: false });
+    await expect(decideHrApproval(instance.id, hr, "approve", null)).rejects.toThrow(/once the manager replies with a note, edits it, or sends it again/);
   });
 
   it("HR's own note after sending it back is not the manager's reply", async () => {
@@ -405,3 +462,10 @@ describe("manager replied to changes", () => {
     await expect(decideHrApproval(instance.id, hr, "approve", null)).rejects.toThrow(/sent back for changes/);
   });
 });
+
+/*
+ * REMOVED ON PURPOSE (Pau, 23 Nov 2026, archiving removed): main's block here (QA, 23 Nov: "An archived form that was
+ * pending HR must never show in 'Needs your decision', be counted, or ring a bell") tested archiveInstance and the
+ * archived_at filter in the HR queue. There is no archiving any more, so the rule is moot; a form waiting for HR is
+ * always Draft, and the queue tests above still cover list, count, reminder and bells.
+ */

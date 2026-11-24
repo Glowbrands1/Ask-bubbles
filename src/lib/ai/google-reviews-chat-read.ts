@@ -5,7 +5,7 @@ import { supabaseReadiness } from "@/lib/config/server-env";
 import { EMPTY_QUERY, readGoalData, readMonthlyProgress, readPeriodTrend, readReviewPage, readStoreSummaries, type StoreSummary } from "@/lib/google-reviews/views";
 import type { GoalContext } from "@/lib/google-reviews/goals";
 import { codeOfLocationId } from "@/lib/locations";
-import { hasPermission, DEFAULT_PERMISSION_MATRIX } from "@/lib/permissions";
+import { hasPermission, activePermissionMatrix } from "@/lib/permissions";
 import { reportingScopeOf } from "@/lib/reporting/scope/authorized-locations";
 import type { AccessScope, Role } from "@/types";
 
@@ -114,7 +114,7 @@ export async function loadGoogleReviewsChatBlock(input: {
 }): Promise<GoogleReviewsChatBlock | null> {
   if (!isGoogleReviewQuestion(input.question)) return null;
 
-  if (input.role === null || !hasPermission(DEFAULT_PERMISSION_MATRIX, input.role, "view_reports")) {
+  if (input.role === null || !hasPermission(activePermissionMatrix(), input.role, "view_reports")) {
     return { text: reviewsNotPermittedBlock(), figures: false };
   }
 

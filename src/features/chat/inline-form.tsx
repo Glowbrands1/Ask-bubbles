@@ -155,7 +155,7 @@ interface LoadedInstance {
   cardChangeAmount?: boolean;
   /**
    * HR APPROVAL (FORMS_HR_APPROVAL_ENABLED): the approval panel, sent by the server only to the form's creator and HR.
-   * `finalizeToHr`: this reader's Finalize sends the form to HR instead ("Finalize and send to HR for approval").
+   * `finalizeToHr`: this reader's Finalize sends the form to HR instead ("Finalize and send for approval").
    */
   hrApproval?: HrApprovalPanelView;
   finalizeToHr?: boolean;
@@ -288,7 +288,7 @@ export function InlineForm({
    * the manager is never asked twice.
    */
   const [confirmingFinalize, setConfirmingFinalize] = React.useState(false);
-  /** The optional "Note to HR" typed beside "Finalize and send to HR for approval"; sent with it, cleared once sent. */
+  /** The optional "Note to HR" typed beside "Finalize and send for approval"; sent with it, cleared once sent. */
   const [hrNote, setHrNote] = React.useState("");
 
   const call = React.useCallback(
@@ -379,7 +379,8 @@ export function InlineForm({
   ).some((field) => field.semantics === "follow_up_timeframe");
   const prefilling = prefill.kind === "running";
   /*
-   * HR APPROVAL: a form waiting for HR is read-only for its creator; HR may edit it (`canEdit`) before deciding.
+   * HR APPROVAL: while a form waits for HR, HR, its creator and its senders may still edit it (`canEdit`; owner, 24 Nov
+   * 2026), and HR reads the updated version. Anybody else's card is read-only.
    * `toHr`: this Finalize sends the form to HR, so the button and the confirmation say so.
    */
   const hrApproval = loaded.hrApproval ?? null;
@@ -440,7 +441,7 @@ export function InlineForm({
    * The follow-up date, through its own canonical route.
    *
    * `PUT /api/forms/instances/[id]/follow-up` validates the calendar date,
-   * refuses an archived or already-completed follow-up, and records
+   * refuses an already-completed follow-up, and records
    * `follow_up_started` or `follow_up_date_changed` so the history says which
    * happened. None of that is re-implemented here.
    */
@@ -985,7 +986,7 @@ export function InlineForm({
               ) : null}
             </div>
           ) : heldForHr || hrReviewing ? (
-            /* HR APPROVAL: no Finalize while the form waits — HR decides in the approval panel below. */
+            /* HR APPROVAL: no Finalize while the form waits — HR decides in the approval panel below; edits still save. */
             null
           ) : (
             <>
@@ -1022,7 +1023,7 @@ export function InlineForm({
                 {action.kind === "busy" && action.what === "finalize" ? (
                   <Loader2 className="animate-spin" />
                 ) : null}
-                {toHr ? "Finalize and send to HR for approval" : "Finalize"}
+                {toHr ? "Finalize and send for approval" : "Finalize"}
               </Button>
               <span className="text-xs text-subtle-foreground">
                 {toHr
@@ -1129,7 +1130,7 @@ export function InlineForm({
           >
             <p className="text-[13px] leading-relaxed text-muted-foreground">
               {toHr
-                ? "HR reviews it and approves, sends it back for changes, or rejects it. You cannot change it while HR has it. It is finalized when HR approves it."
+                ? "This form will be reviewed and approved by HR before it is final. HR approves it, sends it back for changes, or rejects it, and you get a notification either way. You can still edit it while HR has it; HR sees the updated version."
                 : loaded.instance.revisesInstanceId
                 ? "Its values are frozen and it replaces the finalized original. To change it afterwards, edit it as a new draft. Signatures are signed on paper."
                 : "Its values are frozen. To change it afterwards, edit it as a new draft. Signatures are signed on paper."}
@@ -1423,7 +1424,12 @@ function prefillNoticeFor(
     return { tone: "attention", text: prefill.message };
   }
 
-  if (prefill.kind === "complete") return prefill.notice ? { tone: "attention", text: prefill.notice } : null;
+  /*
+   * Pau, 23 Nov 2026: "rmeove this" — the box under the Store line that strung
+   * together the policy-requirement, draft-left-out and follow-up notices after a
+   * draft completed. A completed draft shows no notice on the card.
+   */
+  if (prefill.kind === "complete") return null;
 
   /* unknown — reopened from storage. Read the form's own history. */
   if (loaded.instance.source !== "assistant") return null;

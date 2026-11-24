@@ -2,6 +2,7 @@ import { editDistance as closeEditDistance } from "@/lib/forms/close-spelling";
 import { quoteNamesOption } from "@/lib/forms/option-label";
 import { whichFormChoice, whichFormEntry, type WhichFormEntry, type WhichFormRecord } from "./which-form";
 import "server-only";
+import { heldForHr, WAITING_FOR_HR_CHAT_REPLY } from "@/lib/forms/hr-approval-rules";
 
 import { keptPlanSteps } from "@/lib/forms/stated-plan-steps";
 import { withReadersLineBox } from "@/lib/forms/readers-line-headings";
@@ -9,14 +10,16 @@ import { saysAmountUnknown } from "@/lib/ai/amount-unknown-ack";
 
 import { randomUUID } from "node:crypto";
 
-import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
+import { activePermissionMatrix, hasPermission } from "@/lib/permissions";
 import { businessToday, formatBusinessTime } from "@/lib/business-date";
 import { appConfig } from "./app-config";
 import { isoDate, monthDayToIso, readDates, sameDate, withoutDates, type ReadDate } from "./dates";
 import { storePhraseLeftInAccount } from "./store-phrase";
 import { shownAccount, unaskedAccountChange } from "./account-kept";
 import { earlierPriorDates, priorDateLine, priorStepDates } from "./prior-step-dates";
+import type { FormsActor } from "@/lib/forms/access";
 import { candidateNameWords, chatFormsActor, formDateRangeFromInput, formKindFromText, ofKind } from "@/lib/forms/chat-form-records";
+import { formsOnFileSameDay, sameDayOnFileQuestion, type SameDayOnFile } from "@/lib/forms/same-incident";
 import { CURRENT_MESSAGE_ID, holdsPhrase, identifiedTurns, readEvidence, verifyEvidence, withoutMessageIdTags, type IdentifiedTurn } from "./evidence";
 import { personNamedInRequest, requestStart } from "./person-in-request";
 import { answeredNameQuestions, answerNamesSomeoneElse, everKeptOrUsedTyped, isConfirmedSpelling, latestTurnAnswersFor, latestTurnConfirms, latestTurnKeepsOrUsesTyped, latestTurnKeepsTyped, spellingKeysConfirmedFor, spellingKeysConfirmedForName, type NameQuestionView } from "./confirmed-spelling";
@@ -79,7 +82,7 @@ import { expandPolicyQuery } from "@/lib/knowledge/policy-retrieval";
 import type { SourceCitation } from "@/types";
 import { followUpChangeAsked, followUpForCard, followUpLine, statedFollowUpDate } from "@/lib/forms/follow-up-default";
 import type { AccessScope, ChatFormProposal, ChatMessage, Role } from "@/types";
-import { accountKey, personKey, replyTurns, shownTextKey, type CardRecord, type ExitOfferRecord, type NameQuestionRecord, type PersonAskedRecord, type TurnRecord } from "@/lib/ai/agent-loop/card-record";
+import { accountKey, personKey, replyTurns, shownTextKey, type CardRecord, type ExitOfferRecord, type NameQuestionRecord, type PersonAskedRecord, type SameIncidentRecord, type TurnRecord } from "@/lib/ai/agent-loop/card-record";
 import { TEAM_SUBJECT_LABEL } from "@/lib/forms/team-subject";
 
 /**
@@ -150,6 +153,8 @@ export interface ToolContext {
   /** QA (16 Nov 2026; c158, c208): every card this chat's loop made, and every "who is it for?" it asked, oldest first. */
   readonly cardRecords?: readonly CardRecord[];
   readonly personAskedRecords?: readonly PersonAskedRecord[];
+  /** Pau's review (23 Nov 2026): every "open that one, or is this a separate incident?" this chat's loop asked (`card-record.ts`). */
+  readonly sameIncidentRecords?: readonly SameIncidentRecord[];
   /** QA's code audit, coach_team C: the last reply asked the open Coaching draft's "create all?" (the server's record). */
   readonly teamConfirmAsked?: boolean;
   /** QA (#1055's follow-up): the exit-form offer the last reply's tools made (its record), or null. Never read from the reply. */
@@ -216,6 +221,25 @@ export function formsOnFileAsked(context: Pick<ToolContext, "question" | "histor
 }
 
 /**
+ * A roster name's possessive typed without the apostrophe, read as one ("<first>s" is "<first>'s"), and (port of the
+ * sibling app's c679323: a live manager's "show me <first>sexit", 23 Nov 2026) one typed with no space before the next
+ * word either: a word that starts with a roster name, then "s", then three or more letters, and is not itself a roster
+ * name, is that name's possessive and the word after it ("<First>'s exit"). Roster names only.
+ */
+export function withRosterPossessives(text: string, roster: readonly Pick<RosterEmployee, "firstName" | "lastName" | "preferredFirstName">[]): string {
+  const names = new Set(roster.flatMap((row) => [row.firstName, row.preferredFirstName ?? "", row.lastName]).map((name) => (name ?? "").trim().toLowerCase()).filter((name) => /^[\p{L}'-]+$/u.test(name)));
+  const spaced = text.replace(/(?<![\p{L}'-])([\p{L}'-]+?)s(?![\p{L}'-])/gu, (word, stem: string) => (names.has(stem.toLowerCase()) && !names.has(word.toLowerCase()) ? `${stem}'s` : word));
+  return spaced.replace(/(?<![\p{L}'-])[\p{L}'-]{5,}(?![\p{L}'-])/gu, (word) => {
+    if (names.has(word.toLowerCase())) return word;
+    for (let at = word.length - 4; at >= 2; at -= 1) {
+      const stem = word.slice(0, at);
+      if (word[at]?.toLowerCase() === "s" && names.has(stem.toLowerCase())) return `${stem}'s ${word.slice(at + 1)}`;
+    }
+    return word;
+  });
+}
+
+/**
  * QA's review of PR 1a (15 Nov 2026): the ask is about THIS person. The cited turn names the person whose forms are
  * looked at (the roster-name match request_evidence uses); or it names nobody and the manager's nearest earlier turn that
  * names someone names this person ("has she had a ca before?"); or, only when the cited turn names nobody, the person
@@ -250,7 +274,8 @@ async function formsOnFileAskedFor(context: ToolContext, evidence: unknown, pers
   const ownLasts = holders.length === 1 ? lastWords(holders[0]!) : [];
   const rosterWords = new Set([...rosterFirsts, ...rosterLasts]);
   const firstNamed = (text: string) => {
-    const words = foldName(text).toLowerCase().match(/[\p{L}'-]+/gu) ?? [];
+    /* Port of the sibling app's c679323 ("show me <first>sexit"): a possessive run into the next word is read first. */
+    const words = foldName(withRosterPossessives(text, roster)).toLowerCase().match(/[\p{L}'-]+/gu) ?? [];
     const names = (own: readonly string[], all: readonly string[]) => own.some((name) => {
       if (all.filter((other) => other === name).length !== 1) return false;
       return words.some((word) => word === name || word === `${name}'s` || word === `${name}'` || (word === `${name}s` && !name.endsWith("s") && !rosterWords.has(word)));
@@ -280,7 +305,12 @@ async function formsOnFileAskedFor(context: ToolContext, evidence: unknown, pers
     const turns = identifiedTurns(context.history as ChatMessage[], context.question, context.questionMessageId);
     const replyNames = (turn: IdentifiedTurn | undefined) => {
       const replyText = turn?.role === "assistant" ? withoutMessageIdTags(turn.content).replace(/[*_]/g, "") : "";
-      return replyText !== "" && names.some((name) => holdsPhrase(replyText, name));
+      /*
+       * Port of the sibling app's b49bc42 (a live manager's "yes", 23 Nov 2026): the reply asked "do you want to see
+       * <First>'s Resignation/Exit Form on file?", by first name only, and her "yes" was refused twice. A first name only
+       * this roster person holds names them in the app's own question too (`firstNamed`).
+       */
+      return replyText !== "" && (names.some((name) => holdsPhrase(replyText, name)) || firstNamed(replyText));
     };
     if (replyNames(turns[asked.index - 1])) return { ok: true };
     /*
@@ -294,7 +324,8 @@ async function formsOnFileAskedFor(context: ToolContext, evidence: unknown, pers
     const sinceCited = turns.filter((turn) => turn.role === "user" && turn.index >= asked.index);
     if (asked.index < current.index && replyNames(turns[current.index - 1]) && !sinceCited.some((turn) => namesSomeone(withoutMessageIdTags(turn.content)))) return { ok: true };
   }
-  const antecedent = asked.before.find(namesSomeone);
+  /* The manager's earlier turn that names someone, a lower-case first name only one roster person holds included ("show me <first>sexit"). */
+  const antecedent = asked.before.find((turn) => namesSomeone(turn) || firstNamed(turn));
   if (antecedent !== undefined && namedIn(antecedent)) return { ok: true };
   // PR 2: the card on screen, by the server's card record (its person's roster id, or the key of a typed name), never the reply's text.
   const onScreen = context.cardOnScreen;
@@ -605,8 +636,40 @@ export function requestTurns(
 }
 
 /** QA's Bubbles re-run (22 Nov 2026, A11): open_form / edit_form of a listed form while "Which one?" is open needs the manager's pick. */
-function whichFormRefusal(context: ToolContext, id: string, evidence: unknown): ToolResult | null {
-  const choice = whichFormChoice({ asked: context.whichFormAsked, instanceId: id, evidence, history: context.history, question: context.question, questionMessageId: context.questionMessageId });
+/**
+ * The kind of form this request names (port of the sibling app's fab0a04: a live manager's "show me <first>sexit", then
+ * "yes", "yes", "11202026"; Pau, 23 Nov 2026: "she clearly said exit form, but sunny at the bottom keep asking coaching or
+ * exit"). Read from the manager's own words: this message, then the manager's earlier turns back to where this request
+ * began. A request runs on while each reply in between ended in a question, so "yes" and "11202026" keep the "exit" said
+ * before them. Each turn is read with the roster's possessives and `formKindFromText`, the template-name kinds the period
+ * listings use. Null when no turn of this request names a kind.
+ */
+export function requestFormKind(
+  context: Pick<ToolContext, "question" | "history">,
+  roster: readonly Pick<RosterEmployee, "firstName" | "lastName" | "preferredFirstName">[],
+): ReturnType<typeof formKindFromText> {
+  const history = (context.history ?? []) as ChatMessage[];
+  const said = [context.question ?? ""];
+  for (let at = history.length - 1; at >= 0; at -= 1) {
+    const turn = history[at]!;
+    if (turn.role === "assistant") {
+      if (!/\?\s*$/.test(withoutMessageIdTags(String(turn.content ?? "")).trim())) break;
+      continue;
+    }
+    if (turn.role === "user") said.push(withoutMessageIdTags(String(turn.content ?? "")));
+  }
+  for (const text of said) {
+    const kind = formKindFromText(withRosterPossessives(text, roster));
+    if (kind) return kind;
+  }
+  return null;
+}
+
+async function whichFormRefusal(context: ToolContext, id: string, evidence: unknown): Promise<ToolResult | null> {
+  /* The kind this request names (`requestFormKind`): a listed form of another kind is never the pick while one of that kind is listed. */
+  const read = context.whichFormAsked ? await rosterFor(context.actor.scope) : null;
+  const kind = read ? requestFormKind(context, read.kind === "read" ? read.roster : []) : null;
+  const choice = whichFormChoice({ asked: context.whichFormAsked, instanceId: id, evidence, history: context.history, question: context.question, questionMessageId: context.questionMessageId, kindWords: kind?.templateNameWords ?? null });
   return choice.ok ? null : { reason_code: choice.reason_code, error: choice.error };
 }
 
@@ -1088,6 +1151,10 @@ export interface ToolEffects {
   nameLines?: Record<string, string>;
   /** Fix batch item 6: propose_form asked who this form is for (no person yet), for the record. */
   personAsked?: { templateKey: string };
+  /** Pau's review (23 Nov 2026): propose_form asked whether this person's form on file for this date is meant (no card made). */
+  sameIncidentAsked?: { templateKey: string; employeeKey: string; date: string };
+  /** The incident date this turn's card cleared the same-incident check for (`same-incident.ts`), for Create's last check. */
+  proposalSameIncidentChecked?: string | null;
   /** coach_team asked "create all?" for this open Coaching draft this turn, for the record. */
   teamConfirm?: { sourceInstanceId: string };
   /** QA's Bubbles re-run (22 Nov 2026, A11): the forms this turn's find_past_forms listed with which_form_question. */
@@ -1107,7 +1174,7 @@ export interface ToolEffects {
   /** Round 3 U21: this turn already handed the card back once because its incident_date was a prior step's date. */
   priorDateNamed?: boolean;
   /** Round 3 U16: the forms read_form read this turn (person, form date and account), so a copy keeps its date. */
-  formsRead?: { employeeName: string | null; formDate: string | null; account: string }[];
+  formsRead?: { employeeName: string | null; formDate: string | null; account: string; templateKey?: string; instanceId?: string }[];
   /** QA (16 Nov 2026): propose_form ran for a form this turn, so a form is chosen (find_staff may ask the name). */
   formChosen?: boolean;
   /** Batch G (G4), by the rebuild plan's PR 1b: find_past_forms found forms on file to open (open: true) for this person. */
@@ -1840,7 +1907,7 @@ function positionKey(text: string): string {
 
 export async function listStaffTool(context: ToolContext, effects: ToolEffects, input: { store?: unknown; position?: unknown }): Promise<ToolResult> {
   const scope = context.actor.scope;
-  if (!["create_coaching_form", "create_corrective_action"].some((permission) => hasPermission(DEFAULT_PERMISSION_MATRIX, context.actor.role, permission as never))) {
+  if (!["create_coaching_form", "create_corrective_action"].some((permission) => hasPermission(activePermissionMatrix(), context.actor.role, permission as never))) {
     return { reason_code: "scope", error: "This role cannot list the staff. Say so." };
   }
   /* Pau's decision 7 (this app): a district or region login lists the staff of any of its stores. */
@@ -1913,7 +1980,7 @@ export async function listStaffTool(context: ToolContext, effects: ToolEffects, 
 const PERIOD_LIST_LIMIT = 100;
 /*
  * QA's f081 (20 Nov 2026): "list ca for the month" read the newest 100 forms by created_at and said "The list stops at
- * 100", where the month had more (every salon, archived included). The month is read up to 1000 rows (PostgREST's page),
+ * 100", where the month had more (every store). The month is read up to 1000 rows (PostgREST's page),
  * counted by code over all of them, and up to 100 are listed; past 1000 it says the counts are of the first 1000 read.
  */
 const PERIOD_READ_LIMIT = 1000;
@@ -1938,22 +2005,16 @@ function notListedDays(rest: readonly { formDate: string | null }[]): { date: st
 }
 
 /*
- * QA's f081 (20 Nov 2026, from production's data: every archived form with a real name is finalized; archived drafts are
- * test drafts): a finalized form counts and is listed whether or not it is archived (marked archived), as "who got a CA"
- * asks what was filed; an archived DRAFT is left out unless the manager asks for archived forms (include_archived).
+ * No archived forms (Pau, 23 Nov 2026: "the archived should not be acknowledged as a form, all just should be finalized or
+ * drafted"). Every form the manager may see is counted and listed under its own status, as the Forms Register shows it.
  */
-function onFileKept(input: { include_archived?: unknown }) {
-  const all = input.include_archived === true;
-  return <T extends { archivedAt: string | null; status: string }>(row: T) => all || !(row.archivedAt && row.status === "draft");
-}
-const ARCHIVED_NOTE = "Finalized forms are included whether or not archived (each archived one marked archived: say \"(archived)\"); archived drafts are left out unless the manager asks for archived forms (include_archived).";
 
 /*
  * "WHO GOT A CA THIS MONTH?" (the owner, 18 Nov 2026, on the sibling app: "why capped at 20"). With no employee, a form
  * kind or a period lists every such form this manager may see, read by form date and form name in the query (not the
  * newest rows filtered after), and says whether the list is complete or stopped at its cap.
  */
-async function findFormsInPeriod(context: ToolContext, input: { form?: unknown; date_from?: unknown; date_to?: unknown; forms_on_file_evidence?: unknown; include_archived?: unknown }): Promise<ToolResult> {
+async function findFormsInPeriod(context: ToolContext, input: { form?: unknown; date_from?: unknown; date_to?: unknown; forms_on_file_evidence?: unknown }): Promise<ToolResult> {
   const asked = formsOnFileAsked(context, input.forms_on_file_evidence);
   if (!asked.ok) return privacyRefusal(asked.reason, undefined, context);
   const today = context.today || businessToday();
@@ -1964,13 +2025,13 @@ async function findFormsInPeriod(context: ToolContext, input: { form?: unknown; 
   if (actor === undefined) return { reason_code: "read_failed", error: `${appConfig().formsPageName} could not be read just now. Say so; do not say there are no forms.` };
   if (actor === null) return { reason_code: "scope", error: `This manager's role cannot view ${appConfig().formsPageName}, so past forms cannot be listed.` };
   try {
-    const read = await listInstances("all", PERIOD_READ_LIMIT, {
+    const read = await listInstances(PERIOD_READ_LIMIT, {
       ...instanceListFilterFor(actor),
       ...(range ? { formDateFrom: range.from, formDateTo: range.to } : {}),
       ...(kind ? { templateNameWords: kind.templateNameWords } : {}),
     });
     /* QA's code audit (item 28): a Coaching kind never keeps a Follow-Up Coaching Form (`ofKind`). */
-    const visible = ofKind(visibleInstances(actor, read), kind).filter(onFileKept(input));
+    const visible = ofKind(visibleInstances(actor, read), kind);
     /* f081: listed by form date (newest first), then employee; counted over every visible row, never only the listed ones. */
     const sorted = [...visible].sort((a, b) => (b.formDate ?? "").localeCompare(a.formDate ?? "") || a.employeeName.localeCompare(b.employeeName));
     const rows = wholeDays(sorted, PERIOD_LIST_LIMIT);
@@ -1991,11 +2052,9 @@ async function findFormsInPeriod(context: ToolContext, input: { form?: unknown; 
         status: row.status,
         form_date: row.formDate,
         store: salonLabel(row.locationId, row.locationName) ?? `no ${locationWord()}`,
-        ...(row.archivedAt ? { archived: true } : {}),
       })),
       complete,
       counts,
-      archived: input.include_archived === true ? "every archived form included, each marked archived" : ARCHIVED_NOTE,
       ...(visible.length > rows.length ? { listed: rows.length, of: visible.length, not_listed_days: notListed } : {}),
       note: `${complete ? "Every such form this manager can see, read by form date: never say the list is capped or that some may be missing." : `More than ${PERIOD_READ_LIMIT} forms match: the counts are of the first ${PERIOD_READ_LIMIT} read. Say so, and that ${appConfig().formsPageName} has the full list.`} Numbers come only from counts (total, by_person, by_form, by_date): copy them, never count or add rows yourself, and never put one person's forms under another's name.${visible.length > rows.length ? ` ${rows.length} of ${visible.length} forms are listed; say how many are not shown. The list stops at the end of a day: the days in not_listed_days are given as counts only, so never write rows for them, and the number you say is shown is ${rows.length}.` : ""} A draft is not on file.`,
     };
@@ -2018,7 +2077,7 @@ async function findFormsInPeriod(context: ToolContext, input: { form?: unknown; 
  */
 const TOPIC_LIST_LIMIT = 25;
 
-async function findFormsByTopic(context: ToolContext, input: { form?: unknown; date_from?: unknown; date_to?: unknown; about?: unknown; forms_on_file_evidence?: unknown; include_archived?: unknown }): Promise<ToolResult> {
+async function findFormsByTopic(context: ToolContext, input: { form?: unknown; date_from?: unknown; date_to?: unknown; about?: unknown; forms_on_file_evidence?: unknown }): Promise<ToolResult> {
   const asked = formsOnFileAsked(context, input.forms_on_file_evidence);
   if (!asked.ok) return privacyRefusal(asked.reason, undefined, context);
   const search = await import("@/lib/forms/form-topic-search");
@@ -2031,13 +2090,13 @@ async function findFormsByTopic(context: ToolContext, input: { form?: unknown; d
   if (actor === undefined) return { reason_code: "read_failed", error: `${appConfig().formsPageName} could not be read just now. Say so; do not say there are no forms.` };
   if (actor === null) return { reason_code: "scope", error: `This manager's role cannot view ${appConfig().formsPageName}, so past forms cannot be searched.` };
   try {
-    const read = await listInstances("all", PERIOD_READ_LIMIT, {
+    const read = await listInstances(PERIOD_READ_LIMIT, {
       ...instanceListFilterFor(actor),
       ...(range ? { formDateFrom: range.from, formDateTo: range.to } : {}),
       ...(kind ? { templateNameWords: kind.templateNameWords } : {}),
     });
     /* Exactly the forms this manager may see in the forms page: never wider (the saved text is read for these ids only). */
-    const visible = ofKind(visibleInstances(actor, read), kind).filter(onFileKept(input));
+    const visible = ofKind(visibleInstances(actor, read), kind);
     const saved = await search.readFormTopicText(visible.map((row) => row.id));
     const matched = visible
       .filter((row) => search.matchesTopic(saved.get(row.id)?.text ?? "", topic))
@@ -2067,7 +2126,6 @@ async function findFormsByTopic(context: ToolContext, input: { form?: unknown; d
           store: salonLabel(row.locationId, row.locationName) ?? `no ${locationWord()}`,
           policy: text?.policy ?? (text?.offense.length ? text.offense.join(", ") : null),
           level: text?.level ?? null,
-          ...(row.archivedAt ? { archived: true } : {}),
         };
       }),
       counts,
@@ -2081,7 +2139,7 @@ async function findFormsByTopic(context: ToolContext, input: { form?: unknown; d
   }
 }
 
-export async function findPastForms(context: ToolContext, input: { employee_name?: unknown; form?: unknown; date?: unknown; date_from?: unknown; date_to?: unknown; about?: unknown; forms_on_file_evidence?: unknown; open?: unknown; include_archived?: unknown }, effects?: ToolEffects): Promise<ToolResult> {
+export async function findPastForms(context: ToolContext, input: { employee_name?: unknown; form?: unknown; date?: unknown; date_from?: unknown; date_to?: unknown; about?: unknown; forms_on_file_evidence?: unknown; open?: unknown }, effects?: ToolEffects): Promise<ToolResult> {
   const typed = typeof input.employee_name === "string" ? input.employee_name.trim() : "";
   /* FORM_TOPIC_SEARCH_ENABLED (port of the sibling app's #1266): a topic with no employee searches every visible form's saved text. */
   const topicAsked = typed === "" && input.open !== true && typeof input.about === "string" && input.about.trim() !== "";
@@ -2133,8 +2191,7 @@ export async function findPastForms(context: ToolContext, input: { employee_name
      * whole words of its employee's name (`wholeNameWords`: the full name, the first name or the last name), the same
      * person by `samePerson`, or one roster holder's other name (aliases).
      */
-    let rows = visibleInstances(actor, await listInstances("all", 200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }))
-      .filter(onFileKept(input))
+    let rows = visibleInstances(actor, await listInstances(200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }))
       .filter((row) => samePerson(row.employeeName, typed) || wholeNameWords(row.employeeName, typed) || nameThenStartOfNext(row.employeeName, typed) || (aliases.length > 0 && sameRosterPerson(row.employeeName, typed, people)));
     /*
      * Item 27: the typed name fits forms of more than one person ("Sato": Ann Sato and Maryann Sato) and is nobody's full name
@@ -2152,7 +2209,7 @@ export async function findPastForms(context: ToolContext, input: { employee_name
      */
     if (rows.length === 0) {
       const { closelySpelledEmployee } = await import("@/lib/forms/reopen-close-spelling");
-      const visible = visibleInstances(actor, await listInstances("all", 200, instanceListFilterFor(actor)));
+      const visible = visibleInstances(actor, await listInstances(200, instanceListFilterFor(actor)));
       const fits = [...new Set(visible.map((row) => row.employeeName))].filter((name) => closelySpelledEmployee(typed, [name]) === name);
       if (fits.length > 1) return { forms: [], close_names: fits.slice(0, 5), note: "Several people on file have a name close to that spelling. Ask which one, by name." };
       /*
@@ -2179,6 +2236,20 @@ export async function findPastForms(context: ToolContext, input: { employee_name
       const ca = /\bca\b|corrective|write[- ]?up|warning|verbal|written/.test(wantForm);
       const narrowed = rows.filter((row) => (followUp ? /follow/i.test(row.templateName) : true) && (coaching ? /coach/i.test(row.templateName) && !/follow/i.test(row.templateName) : true) && (ca ? /corrective/i.test(row.templateName) || row.templateKey === appConfig().formKeys.corrective : true));
       if (narrowed.length > 0) rows = narrowed;
+    }
+    /*
+     * Port of the sibling app's c679323 and fab0a04 (a live manager's "show me <first>sexit", 23 Nov 2026: all 11 of her
+     * forms were listed, twice, and the one Resignation/Exit Form never opened). The kind of form the request names, read
+     * against the forms' own template names (`formKindFromText`'s template-name words and `ofKind`: the same reader as the
+     * period listings), keeps only forms of that kind: from the model's `form`, or else the quote that asked, or else the
+     * request's own turns (`requestFormKind`: "yes" after "show me <first>sexit" keeps "exit"). One form of that kind left
+     * is the one to open; several are listed alone.
+     */
+    {
+      const ownWords = [wantForm, String((input.forms_on_file_evidence as { quote?: unknown } | null | undefined)?.quote ?? "")];
+      const kind = ownWords.map((text) => formKindFromText(withRosterPossessives(text, people))).find((found) => found !== null) ?? requestFormKind(context, people);
+      const ofThatKind = kind ? ofKind(rows.filter((row) => kind.templateNameWords.some((word) => row.templateName.toLowerCase().includes(word))), kind) : [];
+      if (ofThatKind.length > 0) rows = ofThatKind;
     }
     const iso = typeof input.date === "string" ? isoDate(input.date, today) : null;
     const wantDate = iso ? { month: Number(iso.slice(5, 7)), day: Number(iso.slice(8, 10)), year: /\d{4}|\/\d{2}$/.test(String(input.date)) ? Number(iso.slice(0, 4)) : null } : undefined;
@@ -2221,7 +2292,15 @@ export async function findPastForms(context: ToolContext, input: { employee_name
      * also the manager's own message, and each Corrective Action's level, from its own Type of Warning on the form, is on
      * its row and in its choice line, so the level the manager named singles it out. Form data; no word list.
      */
-    const asked = new Set([...words(wantForm), ...words(typeof input.about === "string" ? input.about : ""), ...words(askedQuote), ...words(withoutMessageIdTags(context.question))]);
+    /*
+     * Failure 2, item 1 (port of the sibling app's #1297, Pau's review via QA, 23 Nov 2026): an area manager pasted HR's
+     * edit request for <P>'s exit form ("… gave verbal notice of her immediate resignation …") and was told no exit form was
+     * on file: "verbal" matched the Verbal-level Corrective Actions and every other form was dropped. A level is read only
+     * from the manager's own words of this request (their message and the quote of it), never the model's form or about;
+     * it narrows only when the forms asked about are all Corrective Actions; and it only ever chooses among Corrective
+     * Actions (a form of another kind has no level, so a level never drops it). Form data; no word list.
+     */
+    const asked = new Set([...words(askedQuote), ...words(withoutMessageIdTags(context.question))]);
     const levelLabel: Record<string, string> = { verbal: "Verbal Warning", written: "Written Warning", termination: "Termination", demotion: "Demotion" };
     const levelOf = new Map<string, string[]>();
     if (rows.length <= 20) {
@@ -2232,9 +2311,11 @@ export async function findPastForms(context: ToolContext, input: { employee_name
         levelOf.set(row.id, ticked);
       }));
     }
-    if (asked.size > 0 && rows.length > 1 && levelOf.size > 0) {
-      const named = rows.filter((row) => (levelOf.get(row.id) ?? []).some((key) => asked.has(key.toLowerCase())));
-      if (named.length > 0 && named.length < rows.length) rows = named;
+    const aboutCorrective = rows.length > 0 && rows.every((row) => row.templateKey === appConfig().formKeys.corrective);
+    if (aboutCorrective && asked.size > 0 && rows.length > 1 && levelOf.size > 0) {
+      const levelNamed = (row: (typeof rows)[number]) => (levelOf.get(row.id) ?? []).some((key) => asked.has(key.toLowerCase()));
+      const named = rows.filter((row) => levelOf.has(row.id) && levelNamed(row));
+      if (named.length > 0 && named.length < levelOf.size) rows = rows.filter((row) => !levelOf.has(row.id) || levelNamed(row));
     }
     const levelText = (id: string) => (levelOf.get(id) ?? []).map((key) => levelLabel[key] ?? key).join(", ") || null;
     const described = Boolean(wantForm || wantDate || about.length > 0);
@@ -2253,7 +2334,6 @@ export async function findPastForms(context: ToolContext, input: { employee_name
         store: salonLabel(row.locationId, row.locationName) ?? `no ${locationWord()}`,
         ...(levelText(row.id) ? { level: levelText(row.id) } : {}),
         choice: choices.get(row)!,
-        ...(row.archivedAt ? { archived: true } : {}),
       }));
     /* "Draw me up a coaching document … she already has one" (the live re-run's sun-late-date): none on file is no reason to stop. */
     if (forms.length === 0) {
@@ -2327,7 +2407,6 @@ export async function findPastForms(context: ToolContext, input: { employee_name
       /* QA's f081: counted by code over every form found (not only the 20 listed); the reply copies the numbers. */
       counts: countFormsOnFile(rows),
       count_note: "Numbers come only from counts (total, by_form, by_date): copy them, never count or add rows yourself, and never put another person's forms under this name.",
-      archived: input.include_archived === true ? "every archived form included, each marked archived" : ARCHIVED_NOTE,
       /* Never a silent cut ("why capped at 20", 18 Nov 2026): more than the 20 listed are on file for this person. */
       ...(rows.length > forms.length ? { more_on_file: rows.length - forms.length, more_note: `${rows.length - forms.length} more forms are on file for this person than listed; say so, or narrow by form or dates.` } : {}),
       ...(withdrawn ? { card_withdrawn: `The ${withdrawn} card proposed earlier this turn was withdrawn: the manager asked to open a form on file, not to make one.` } : {}),
@@ -2417,7 +2496,7 @@ export async function readForm(context: ToolContext, input: { instance_id?: unkn
     const accountField = ["observation", "coaching_details"].find((key) => fieldKeys.has(key)) ?? null;
     if (effects) {
       const account = accountField ? (shownRows.find((row) => row.key === accountField)?.shown ?? "") : "";
-      (effects.formsRead ??= []).push({ employeeName: loaded.instance.employeeName ?? null, formDate: loaded.instance.formDate ?? null, account });
+      (effects.formsRead ??= []).push({ employeeName: loaded.instance.employeeName ?? null, formDate: loaded.instance.formDate ?? null, account, templateKey: loaded.instance.templateKey, instanceId: loaded.instance.id });
     }
     return {
       instance_id: loaded.instance.id,
@@ -3134,8 +3213,8 @@ export interface PriorOnFile {
  * QA's live re-run (23 Nov 2026, U09 on 9340334): for an incident on 11/1 the card's Prior actions listed ten forms on file
  * dated 11/10–11/17, all AFTER the incident. A form on file is a prior action only when it is dated before this card's
  * incident date (`before`: the date this proposal gives, else that of this person's card proposed earlier this turn or on
- * screen, as a re-proposal often gives none); with no incident date at all, on or before today, as before. Only finalized forms count (an archived
- * draft is a test draft, as find_past_forms reads it; a draft is never a prior step).
+ * screen, as a re-proposal often gives none); with no incident date at all, on or before today, as before. Only finalized forms count (a draft
+ * is never a prior step).
  */
 async function finalizedPriorsOnFile(context: ToolContext, person: RosterEmployee, roster: readonly RosterEmployee[], today: string, before: string | null = null): Promise<PriorOnFile[]> {
   const actor = await chatFormsActor(context.actor).catch(() => undefined);
@@ -3144,9 +3223,26 @@ async function finalizedPriorsOnFile(context: ToolContext, person: RosterEmploye
   const kinds = new Set([keys.corrective, keys.coaching, keys.followUpCoaching]);
   const names = fullNamesOf(person);
   const nameWords = [...new Set(names.flatMap(candidateNameWords))];
-  const rows = visibleInstances(actor, await listInstances("all", 200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }).catch(() => []))
+  /*
+   * WHICH FORMS ARE THIS PERSON'S ON FILE (QA, 23 Nov 2026; the sibling app's live chat behind Pau's review, where two
+   * archived Written CAs were read as the person's; archiving has since been removed, 24 Nov 2026). A form filed under the first name alone IS this
+   * person's (Pau: "its right"), except when someone else with that first name is at the form's store (Pau: "there might
+   * be other Paulynes in store, or Kim or Mary"): another roster person there, or a former employee with a form there
+   * under a fuller name. Then it is not attributed to either. A form with no store recorded is checked against everyone.
+   */
+  const listed = visibleInstances(actor, await listInstances(200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }).catch(() => []));
+  const firstNameShared = (row: (typeof listed)[number]) => {
+    const word = row.employeeName.trim();
+    if (word.split(/\s+/).length !== 1) return false;
+    const at = row.locationId ?? null;
+    const here = (ids: readonly string[]) => at === null || ids.includes(at);
+    const otherOnRoster = roster.some((other) => other.id !== person.id && here(other.locationIds) && fullNamesOf(other).some((full) => samePerson(full, word)));
+    const formerThere = listed.some((other) => other !== row && (at === null || other.locationId === at) && other.employeeName.trim().split(/\s+/).length > 1 && samePerson(other.employeeName, word) && !names.some((full) => samePerson(full, other.employeeName)));
+    return otherOnRoster || formerThere;
+  };
+  const rows = listed
     .filter((row) => row.status === "finalized" && kinds.has(row.templateKey) && (row.formDate ?? "") <= today && (!before || (row.formDate ?? "") < before))
-    .filter((row) => names.some((full) => samePerson(full, row.employeeName)) || sameRosterPerson(row.employeeName, displayName(person), roster))
+    .filter((row) => !firstNameShared(row) && (names.some((full) => samePerson(full, row.employeeName)) || sameRosterPerson(row.employeeName, displayName(person), roster)))
     .sort((a, b) => (a.formDate ?? "").localeCompare(b.formDate ?? "") || a.createdAt.localeCompare(b.createdAt))
     .slice(-10);
   const levelName: Record<string, string> = { verbal: "Verbal Warning", written: "Written Warning", termination: "Termination" };
@@ -3158,6 +3254,92 @@ async function finalizedPriorsOnFile(context: ToolContext, person: RosterEmploye
       : null;
     return { form: row.templateName, level, date: row.formDate ?? null };
   }));
+}
+
+/* Pau's review (24 Nov 2026 PHT, via QA): this person's form of this kind on file for one date (`same-incident.ts`), by roster id as find_past_forms reads them. The open form being edited is not another one. */
+async function sameDayFormsOnFile(context: ToolContext, person: RosterEmployee, roster: readonly RosterEmployee[], templateKey: string, formDate: string): Promise<SameDayOnFile[]> {
+  const actor = await chatFormsActor(context.actor).catch(() => undefined);
+  if (!actor) return [];
+  const names = fullNamesOf(person);
+  return formsOnFileSameDay(actor, {
+    nameWords: [...new Set(names.flatMap(candidateNameWords))],
+    isPerson: (employeeName) => names.some((full) => samePerson(full, employeeName)) || sameRosterPerson(employeeName, displayName(person), roster),
+    templateKey,
+    formDate,
+    except: [context.openFormId],
+  });
+}
+
+/**
+ * ============================================================================
+ * THIS MANAGER'S FORMS FOR THIS PERSON THAT ARE WITH HR (owner, 24 Nov 2026)
+ * ============================================================================
+ *
+ * The owner: "should be able to create new form same person not block them, if they created 1 again for the same person,
+ * it should open the one they sent to hr so they can edit it if same problem, if not same problem they can still get
+ * notified they created a ca form prior fro X offense and policy and be able to edit it". A form waiting for HR, or sent
+ * back, is not on file (`finalizedPriorsOnFile` leaves it out), so a second request for the same person said nothing about
+ * it and made a second form. These are the forms this manager created or sent (`isCreatorOrSender`), never anybody
+ * else's, each with its offense and policy read from the form.
+ */
+export interface FormWithHr {
+  instanceId: string;
+  form: string;
+  templateKey: string;
+  date: string | null;
+  state: "pending" | "changes_requested";
+  offense: string | null;
+  policy: string | null;
+}
+
+async function ownFormsWithHr(context: ToolContext, names: readonly string[]): Promise<FormWithHr[]> {
+  const actor = await chatFormsActor(context.actor).catch(() => undefined);
+  if (!actor || names.length === 0) return [];
+  const { isCreatorOrSender } = await import("@/lib/forms/hr-approval-rules");
+  const nameWords = [...new Set(names.flatMap(candidateNameWords))];
+  const listed = visibleInstances(actor, await listInstances("active", 200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }).catch(() => []));
+  const rows = listed
+    .filter((row) => row.status === "draft" && !row.archivedAt && (row.hrApprovalState === "pending" || row.hrApprovalState === "changes_requested"))
+    .filter((row) => isCreatorOrSender({ id: context.actor.subject }, row) && names.some((full) => samePerson(full, row.employeeName)))
+    .slice(0, 5);
+  const { policyNamesFromViolated } = await import("@/lib/forms/ca-action-plan");
+  return Promise.all(rows.map(async (row) => {
+    const values = await authorizeInstance(context.request, row.id, "view").then(({ loaded }) => loaded.values).catch(() => []);
+    const valueOf = (key: string) => values.find((value) => value.fieldKey === key)?.value?.trim() || null;
+    // The account's first sentence, without the form's own "Observed:" heading, on one line.
+    const account = (valueOf("observation") ?? valueOf("coaching_details") ?? valueOf("additional_details") ?? "")
+      .replace(/^\s*(?:observed|observation(?: of offense)?|details)\s*:\s*/i, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    const firstSentence = account ? (/^.*?[.!?](?=\s|$)/.exec(account)?.[0] ?? account).slice(0, 160) : null;
+    // The policy by its heading, never the manual's title and page.
+    const policies = policyNamesFromViolated(valueOf("policy_violated")).filter((name) => !/policy manual/i.test(name));
+    return {
+      instanceId: row.id,
+      form: row.templateName,
+      templateKey: row.templateKey,
+      date: row.formDate ?? null,
+      state: row.hrApprovalState as "pending" | "changes_requested",
+      offense: firstSentence,
+      policy: policies.length > 0 ? policies.join(", ") : null,
+    };
+  }));
+}
+
+/** "You already sent HR a Corrective Action Form for <P> dated 11/20/2026 (Attendance: <offense>). It's still waiting for HR; you can open it to change it." */
+export function formsWithHrLine(name: string, forms: readonly FormWithHr[]): string {
+  const usDay = (iso: string | null) => {
+    const found = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso ?? "");
+    return found ? `${found[2]}/${found[3]}/${found[1]}` : null;
+  };
+  return forms
+    .map((form) => {
+      const what = [form.policy, form.offense].filter(Boolean).join(": ");
+      const dated = usDay(form.date) ? ` dated ${usDay(form.date)}` : "";
+      const where = form.state === "pending" ? "It's still waiting for HR" : "HR sent it back for changes";
+      return `You already sent HR a ${form.form} for ${name}${dated}${what ? ` (${what})` : ""}. ${where}; you can open it to change it.`;
+    })
+    .join(" ");
 }
 
 /** The prior actions line for forms on file: "Corrective Action Form, Verbal Warning — 10/20/2026; Coaching Form — 09/12/2026". */
@@ -3236,7 +3418,7 @@ async function editAskedFormsOnFile(context: ToolContext, effects: ToolEffects, 
   if (!actor) return null;
   const names = fullNamesOf(person);
   const nameWords = [...new Set(names.flatMap(candidateNameWords))];
-  const onFile = visibleInstances(actor, await listInstances("all", 200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }).catch(() => []))
+  const onFile = visibleInstances(actor, await listInstances(200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }).catch(() => []))
     .filter((row) => row.templateKey === template.key && (names.some((full) => samePerson(full, row.employeeName)) || sameRosterPerson(row.employeeName, displayName(person), roster)));
   if (onFile.length === 0) return null;
   const cardForm = shown.templateName ?? "card";
@@ -3366,10 +3548,10 @@ async function exitFormsOnFile(context: ToolContext, name: string, exitKey: stri
   if (!actor) return [];
   const nameWords = candidateNameWords(name);
   if (nameWords.length === 0) return [];
-  const rows = visibleInstances(actor, await listInstances("all", 200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }).catch(() => []));
+  const rows = visibleInstances(actor, await listInstances(200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }).catch(() => []));
   const mdy = (iso: string) => (/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso) ? `${iso.slice(5, 7)}/${iso.slice(8, 10)}/${iso.slice(0, 4)}` : iso);
   return rows
-    .filter((row) => row.templateKey === exitKey && row.status !== "revised" && !row.archivedAt && samePerson(row.employeeName, name))
+    .filter((row) => row.templateKey === exitKey && row.status !== "revised" && samePerson(row.employeeName, name))
     .slice(0, 5)
     .map((row) => ({ status: row.status, date: mdy(row.formDate), store: row.locationName }));
 }
@@ -3739,7 +3921,7 @@ async function creatableTemplates(role: Role): Promise<TemplateSummary[]> {
    * never offered nor proposed. `listTemplateSummaries` already leaves it out; checked here too, so the loop never
    * depends on one list for it.
    */
-  return rows.filter((row) => !isHiddenTemplate(row.key) && row.active && row.currentVersion && hasPermission(DEFAULT_PERMISSION_MATRIX, role, row.requiredPermission as never));
+  return rows.filter((row) => !isHiddenTemplate(row.key) && row.active && row.currentVersion && hasPermission(activePermissionMatrix(), role, row.requiredPermission as never));
 }
 
 /** The templates this manager may create, for the system prompt. Empty when they cannot be read. */
@@ -3909,6 +4091,7 @@ export async function proposeForm(
     incident_time?: unknown;
     store?: unknown;
     no_store_evidence?: unknown;
+    separate_incident_evidence?: unknown;
   },
 ): Promise<ToolResult> {
   /*
@@ -4661,6 +4844,8 @@ export async function proposeForm(
   const requestStarts = new Set([
     ...(context.cardRecords ?? []).filter(isThisCard).map((record) => record.messageId),
     ...(context.personAskedRecords ?? []).filter((record) => record.templateKey === template.key).map((record) => record.messageId),
+    /* Pau's review (23 Nov 2026): this person's same-incident question for this form starts the request, as the card's record does. */
+    ...(context.sameIncidentRecords ?? []).filter((record) => record.templateKey === template.key && Boolean(employee.id) && record.employeeKey === personKey(employee.id!)).map((record) => record.messageId),
     ...whoAskedTurns,
     ...nameAskedTurns,
   ].filter((id): id is string => Boolean(id)));
@@ -5751,6 +5936,20 @@ export async function proposeForm(
    */
   const datedToday = ACCOUNT_FORMS.has(template.key) && !awaiting && !date && datesGiven.length === 0 && !ACCOUNT_WHEN.test(requestWords) && readDates(requestWords).every((read) => isPriorDate(monthDayToIso(`${read.month}/${read.day}`, today)));
   ACCOUNT_WHEN.lastIndex = 0;
+  /*
+   * Failure 2, item 7 (port of the sibling app's #1297, Pau's review via QA, 23 Nov 2026): "her last day worked was
+   * 11/17/2026 …" and the exit card was dated 11/17. On an exit form, a date the manager's words give to one of the form's
+   * own date lines (last day worked, notice given, notice fulfilled; read by `readExitFacts`) is that line's date, never
+   * the form's: the form keeps its own date. A termination's date is set above (exitTermination) and is not this.
+   */
+  const exitLineDates = new Set<string>();
+  if (!exitTermination && template.key === appConfig().formKeys.exit) {
+    const exitDates = (await import("@/lib/forms/exit-facts")).readExitFacts(requestWords, today);
+    for (const line of [exitDates.lastDayWorked, exitDates.noticeGiven, exitDates.noticeFulfilled]) if (line) exitLineDates.add(line);
+    if (date && exitLineDates.has(isoDate(date, today) ?? date)) date = null;
+  }
+  /* The card's own date read from the message is held to the same rule: an exit date line's date leaves the form dated today. */
+  const ownFormDate = proposal.formDate && exitLineDates.has(proposal.formDate) ? today : proposal.formDate;
   /* Batch E (E12): a date after today is never on the card, the model's or today's reading (the field is refused; the fact says so). */
   const futureDate = dateAfterToday ?? (incidentForm && !date && proposal.formDate && proposal.formDate > today ? proposal.formDate : null);
   /*
@@ -5774,7 +5973,7 @@ export async function proposeForm(
   const card: ChatFormProposal = {
     ...proposal,
     sourceMessageIds: requestIds,
-    formDate: exitTermination ? exitTermination.date : datesAsked.length > 0 || futureDate ? null : date ?? (fromAnotherRequest(proposal.formDate) || isPriorDate(proposal.formDate) ? null : proposal.formDate) ?? null,
+    formDate: exitTermination ? exitTermination.date : datesAsked.length > 0 || futureDate ? null : date ?? (fromAnotherRequest(ownFormDate) || isPriorDate(ownFormDate) ? null : ownFormDate) ?? null,
     fromAgentLoop: true as const,
     /* QA item 17 (20 Nov 2026): an exit card the model decided is a termination (locked on the word) tells Create, as the CA's does. */
     ...(level ? { warningLevel: level } : loopTermination || exitTermination ? { loopTermination: true as const } : {}),
@@ -5971,6 +6170,28 @@ export async function proposeForm(
   /* The policy Create sends is the card's (`cardPolicyFor`), never read back from the model's reply (code-check #40). */
   card.policyLine = policyLine;
   /*
+   * THE SAME FORM IS ALREADY WITH HR (owner, 24 Nov 2026, `ownFormsWithHr`). The same kind of form for the same person on
+   * the same date (an exit: any one, a person leaves once) is the same problem: that form is opened for the manager to
+   * change, never a second one made, unless the manager asked for another (`asksNewForm`). Any other form of theirs with
+   * HR for this person is said in one line (`with_hr`), and the card goes on.
+   */
+  const withHr = await ownFormsWithHr(context, [card.employeeName ?? employee.name, ...(employee.id && read.kind === "read" ? fullNamesOf(read.roster.find((row) => row.id === employee.id) ?? { firstName: "", lastName: "", preferredFirstName: null }).filter((full) => full.trim() !== "") : [])].filter((name): name is string => Boolean(name && name.trim())));
+  const sameWithHr = withHr.find((form) => form.templateKey === template.key && (exitForm || (card.formDate !== null && card.formDate !== undefined && form.date === card.formDate)));
+  if (sameWithHr && !asksNewForm) {
+    // Opened as open_form opens a draft: this manager's own form, so no forms-on-file ask is needed to show it to them.
+    effects.formOpened = { instanceId: sameWithHr.instanceId, templateName: sameWithHr.form, revisesInstanceId: null };
+    return {
+      opened: true,
+      same_form_with_hr: true,
+      form: sameWithHr.form,
+      employee: card.employeeName ?? employee.name,
+      status: "draft",
+      say_exactly: `${formsWithHrLine(card.employeeName ?? employee.name, [sameWithHr]).replace(/; you can open it to change it\.$/, ".")} I've opened it so you can change it; HR sees your changes.`,
+      note: "This is the same form the manager already sent to HR, now open on their screen to edit (edit_form changes it; HR sees the changes). No new card was made: propose one only if the manager asks for another form.",
+    };
+  }
+  const otherWithHr = withHr.filter((form) => form !== sameWithHr);
+  /*
    * EARLIER CARD (PR 2; replaces run.ts's bold-name match and EARLIER_CARD_STAYS line): the latest earlier card in this
    * chat, by the server's record, was another person's. Compared by roster id (by name only when either has none). It
    * stays creatable (`earlierCardKept`), and the model is told so as the earlier_card fact.
@@ -6000,6 +6221,46 @@ export async function proposeForm(
     effects.replyMustAsk = effects.nameNotConfirmed.ask;
     return { reason_code: "close_spelling_not_confirmed", error: `This turn already asked the manager whether they meant ${employee.name}; the card waits for their answer in a later turn. Do not propose it again now. End your reply with ask_exactly, exactly.`, ask_exactly: effects.nameNotConfirmed.ask };
   }
+  /*
+   * Pau's review (23 Nov 2026, via QA): a Corrective Action or Coaching card for a person and incident date that already
+   * has that form on file (draft or finalized) is not made until the manager answers: the reply says so plainly and asks
+   * whether to open it or whether this is a separate incident. The manager's own words that it is a separate incident
+   * (separate_incident_evidence, a quote of this request) build the card; a card already on screen for this person, form
+   * and date was asked about before. Never a word list: the forms on file and the date decide.
+   */
+  const sameDayKinds = new Set([appConfig().formKeys.corrective, appConfig().formKeys.coaching]);
+  const onScreenSameDay = sameCardOnScreen(context.cardOnScreen, template.key, employee) && (context.cardOnScreen?.incidentDate ?? null) === card.formDate;
+  const separateStated = answerEvidence(context, input.separate_incident_evidence, "request", evidencePerson, { requestTurnIds }).ok;
+  const sameDayPerson = employee.id && read.kind === "read" ? read.roster.find((row) => row.id === employee.id) ?? null : null;
+  /*
+   * QA's live check of #1123 (24 Nov 2026): "create a verbal CA for <P> with all the same information given" read her
+   * 11/14 Verbal CA (read_form) and proposed the copy with NO date, so there was nothing to compare and a second CA went
+   * up unasked. A card with no date of its own, made in a turn that read this person's form of the same kind on file,
+   * is checked against that form's date: the form it was taken from (form data, never the account's words).
+   */
+  const copiedFrom = !card.formDate
+    ? [...(effects.formsRead ?? [])].reverse().find((form) => form.templateKey === template.key && Boolean(form.formDate && /^\d{4}-\d{2}-\d{2}$/.test(form.formDate)) && Boolean(form.employeeName && samePerson(form.employeeName, employee.name)))
+    : undefined;
+  const sameDayDate = card.formDate ?? copiedFrom?.formDate ?? null;
+  if (sameDayKinds.has(template.key) && sameDayDate && sameDayPerson && !(onScreenSameDay && card.formDate) && !separateStated) {
+    const onFile = await sameDayFormsOnFile(context, sameDayPerson, read.kind === "read" ? read.roster : [], template.key, sameDayDate);
+    if (onFile.length > 0) {
+      const ask = sameDayOnFileQuestion(replyNameFor(card.employeeName ?? employee.name, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null), card.templateName ?? template.name, onFile);
+      effects.replyMustAsk = ask;
+      effects.sameIncidentAsked = { templateKey: template.key, employeeKey: personKey(employee.id!), date: sameDayDate };
+      return {
+        reason_code: "same_incident_on_file",
+        same_incident_on_file: onFile.map((form) => ({ instance_id: form.id, form: form.form, status: form.status, form_date: form.formDate, finalized_at: form.finalizedAt })),
+        error: `${employee.name} already has ${onFile.length === 1 ? "this form" : "these forms"} on file for ${sameDayDate}. The card was not made and Create is held. Say so and end your reply with ask_exactly, exactly. If the manager then wants that form, open it (open_form with its instance_id); if they say this is a separate incident, propose the card again with separate_incident_evidence (their words).`,
+        ask_exactly: ask,
+      };
+    }
+  }
+  /*
+   * The date the manager said is a separate incident (this turn's words, or the same card on screen that carried it), for
+   * Create's last check: Create asks again for any other date, as a form may have been filed since this card was made.
+   */
+  effects.proposalSameIncidentChecked = sameDayKinds.has(template.key) && card.formDate && (separateStated || (onScreenSameDay && context.cardOnScreen?.sameIncidentChecked === card.formDate)) ? card.formDate : null;
   const refused = anotherCard(card.employeeName);
   if (refused) {
     const next = (card.employeeName ?? "").split(/\s+/)[0] || "the next person";
@@ -6205,6 +6466,8 @@ export async function proposeForm(
      * with; on the manager's yes (or when they name one), propose again with prior_actions holding it.
      */
     ...(priorsOnFile.length > 0 ? { prior_on_file: { forms: priorsOnFile, line: onFileLine, on_card: false, ...(onFileOffer ? { ask_exactly: onFileOffer } : {}) } } : {}),
+    /* The owner (24 Nov 2026): a form of theirs for this person already with HR is said, with its offense and policy. */
+    ...(otherWithHr.length > 0 ? { with_hr: { forms: otherWithHr.map(({ instanceId, form, date, state, offense, policy }) => ({ instance_id: instanceId, form, date, state, offense, policy })), say_exactly: formsWithHrLine(card.employeeName ?? employee.name, otherWithHr) } } : {}),
     ...(corrective && payroll === "yes" && !amount && statedAmount ? { payroll_amount_said: `$${statedAmount}` } : {}),
     ...(cleaning && !careAndCleaning ? { cleaning_duty: cleaning } : {}),
     ...(awaiting ? { policy_named_by_manager: policyNamedByManager } : {}),
@@ -6634,10 +6897,19 @@ async function updateTeamCard(context: ToolContext, effects: ToolEffects, before
 
 /* ----------------------------------------------------------- edit form --- */
 
+/** Item 4 (port of the sibling app's #1297): a quote names a form field when it holds at least half of the label's words (by prefix, "dates" for "Date"). */
+function quoteNamesField(quote: string, label: string): boolean {
+  const wordsOf = (text: string) => [...new Set((text.toLowerCase().match(/[a-z]+/g) ?? []).filter((word) => word.length >= 3))];
+  const labelWords = wordsOf(label);
+  const quoted = wordsOf(quote);
+  const named = labelWords.filter((word) => quoted.some((typed) => typed === word || typed.startsWith(word) || word.startsWith(typed)));
+  return labelWords.length > 0 && named.length >= Math.ceil(labelWords.length / 2);
+}
+
 export async function editForm(
   context: ToolContext,
   effects: ToolEffects,
-  input: { instance_id?: unknown; values?: unknown; forms_on_file_evidence?: unknown; intent?: unknown; name_evidence?: unknown; account_evidence?: unknown; level_evidence?: unknown; payroll_evidence?: unknown },
+  input: { instance_id?: unknown; values?: unknown; forms_on_file_evidence?: unknown; intent?: unknown; name_evidence?: unknown; account_evidence?: unknown; level_evidence?: unknown; payroll_evidence?: unknown; clear_evidence?: unknown },
 ): Promise<ToolResult> {
   let id = typeof input.instance_id === "string" ? input.instance_id.trim() : "";
   if (id === "") return { reason_code: "missing_input", error: "Give the form's instance_id." };
@@ -6666,25 +6938,48 @@ export async function editForm(
    */
   const openedThisTurn = effects.formOpened?.instanceId ?? null;
   if (id !== context.openFormId && id !== openedThisTurn && !fromShownCard) {
-    const unchosen = whichFormRefusal(context, id, (input as { choice_evidence?: unknown }).choice_evidence);
+    const unchosen = await whichFormRefusal(context, id, (input as { choice_evidence?: unknown }).choice_evidence);
     if (unchosen) return unchosen;
     const refused = await formOnFileRefusal(context, id, input.forms_on_file_evidence);
     if (refused) return refused;
   }
   /*
    * WAITING FOR HR (owner, 23 Nov 2026: "can the AI edit a form that's been sent back for changes?"). A form HR sent back
-   * or rejected is the manager's to change, so the edit goes on as usual. One waiting for HR is frozen until HR decides:
-   * refused here with the reason, so the reply says HR has it, instead of each field's bare "not_draft". After the
-   * privacy gates above, so it never tells somebody the form exists.
+   * or rejected is the manager's to change, so the edit goes on as usual. One waiting for HR may be changed by its
+   * creator, anyone who sent it, and HR, as on the card (`mayEditWhileWithHr`; owner, 24 Nov 2026, asked "Should I let
+   * chat edits work there too, like edits on the form?": "sure"). Their edit runs inside the scope that lets the writers
+   * past the hold for this one form (`hr-edit-scope.ts`), and is recorded in the approval history with HR told, as the
+   * card's Save does (`recordHrEdit`). Anybody else is refused with the reason. After the privacy gates above, so it never
+   * tells somebody the form exists.
    */
   {
     const { heldForHr } = await import("@/lib/forms/hr-approval-rules");
-    const held = await (await import("@/lib/forms/instances")).loadInstance(id).catch(() => null);
-    if (held && held.instance.status === "draft" && heldForHr(held.instance.hrApprovalState) && (await (await import("@/lib/forms/hr-approval-approvers")).hrHoldLive())) {
-      return {
-        reason_code: "held_for_hr",
-        error: "This form is waiting for HR approval, so nobody but HR can change it until HR approves it or sends it back. Nothing was written. Tell the manager it is with HR, and that they can add a note for HR on the form.",
-      };
+    const instances = await import("@/lib/forms/instances");
+    const held = await instances.loadInstance(id).catch(() => null);
+    const scoped = await import("@/lib/forms/hr-edit-scope");
+    if (
+      held &&
+      held.instance.status === "draft" &&
+      heldForHr(held.instance.hrApprovalState) &&
+      !scoped.inHrEditScope(id) &&
+      (await (await import("@/lib/forms/hr-approval-approvers")).hrHoldLive())
+    ) {
+      const approvals = await import("@/lib/forms/hr-approval");
+      const hrApprover = await (await import("@/lib/forms/hr-approval-approvers")).resolveHrApprover(context.actor.subject);
+      const formsActor = { id: context.actor.subject, role: context.actor.role, verified: context.actor.verified, scope: context.actor.scope, visibility: context.actor.scope, hrApprover } as unknown as FormsActor;
+      if (!approvals.mayEditWhileWithHr(formsActor, held.instance)) {
+        return {
+          reason_code: "held_for_hr",
+          error: "This form is waiting for HR approval, so only the manager who made it, whoever sent it, and HR can change it until HR decides. Nothing was written. Tell the manager it is with HR.",
+        };
+      }
+      const valuesBefore = JSON.stringify(held.values.map((row) => [row.fieldKey, row.value, row.checked]));
+      const result = await scoped.withHrEditScope(id, () => editForm(context, effects, input));
+      const after = await instances.loadInstance(id).catch(() => null);
+      if (after && JSON.stringify(after.values.map((row) => [row.fieldKey, row.value, row.checked])) !== valuesBefore) {
+        await approvals.recordHrEdit(id, formsActor);
+      }
+      return result;
     }
   }
   const values: Record<string, string> = {};
@@ -6948,6 +7243,17 @@ export async function editForm(
       if (refusedName) return refusedName;
     }
     /*
+     * HARD GUARD, WAITING FOR HR (owner, 24 Nov 2026: "the chat should say "waiting for HR approval" instead of a general
+     * save error"): a form sent for HR approval is frozen to the chat's writer (`editableDraft`), so the edit is refused
+     * here, before anything is written, with the words the card uses: it is waiting for HR approval, and it is changed on
+     * the form itself, where HR sees the update. Never a generic save failure. An edit the WAITING FOR HR step above let
+     * through (the creator, a sender or HR, inside `withHrEditScope`; #1130) is not refused here: it is saved.
+     */
+    if (loaded.instance.status === "draft" && heldForHr(loaded.instance.hrApprovalState ?? null) && !(await import("@/lib/forms/hr-edit-scope")).inHrEditScope(id)) {
+      const note = "Tell the manager exactly this: the form is waiting for HR approval, so it was not changed from chat; they can change it on the form itself and HR sees the updated version. Never call it a save error.";
+      return { reason_code: "waiting_for_hr_approval", error: WAITING_FOR_HR_CHAT_REPLY, nothing_written: true, note };
+    }
+    /*
      * HARD GUARD: a finalized form is never written. A change to one opens a NEW draft revising it, by the same code
      * the card's "Edit as new draft" and today's chat reopen use (`openEditableDraft` → `reviseFinalizedForm`), and the
      * change is applied there; the original stays as it was (the form_instance_values_frozen trigger also holds it).
@@ -6957,7 +7263,7 @@ export async function editForm(
       const draft = await openEditableDraft(context.request, id, { revise: true, reason: context.question.slice(0, 500) });
       const openedBefore = effects.formOpened ?? null;
       effects.formOpened = formOpenedFor(draft);
-      const revisedEdit = await editForm({ ...context, openFormId: draft.instanceId }, effects, { instance_id: draft.instanceId, values: input.values, intent: input.intent, name_evidence: input.name_evidence, account_evidence: input.account_evidence, level_evidence: input.level_evidence, payroll_evidence: input.payroll_evidence });
+      const revisedEdit = await editForm({ ...context, openFormId: draft.instanceId }, effects, { instance_id: draft.instanceId, values: input.values, intent: input.intent, name_evidence: input.name_evidence, account_evidence: input.account_evidence, level_evidence: input.level_evidence, payroll_evidence: input.payroll_evidence, clear_evidence: input.clear_evidence });
       /*
        * F3 (QA, batch F): A REFUSED EDIT LEAVES NO EMPTY REVISION. When the edit on the new draft is refused (an
        * unstated level or payroll, a reword that changes the person, an unknown field…), the revision this call opened
@@ -7209,15 +7515,54 @@ export async function editForm(
     /* QA's review: only a plan the message marks, saved as the manager typed it (from the message, never the model's string). */
     const planToSave = values.action_plan ? dictatedActionPlan(context.question, values.action_plan) : null;
     if (planToSave !== null) delete values.action_plan;
+    /*
+     * Failure 2, item 4 (port of the sibling app's #1297, 1dd1bee and 917bfd67; Pau's ruling via QA, 23 Nov 2026): HR's
+     * "Remove dates for notice given and notice fulfilled" came to edit_form as those fields with an empty value, which
+     * the writers read as nothing to write. An empty value the model sends is a field to clear: it goes to the writers'
+     * own clear list (their rules decide what may be cleared; the account field is guarded above and the name only
+     * changes by a name correction).
+     */
+    let clearAsked = Object.keys(values).filter((field) => values[field]!.trim() === "" && field !== accountField && field !== "employee_name");
+    for (const field of clearAsked) delete values[field];
+    /*
+     * Pau's ruling, item 4 ("apply every edit in the request, including clearing fields"): HR's request pasted by the
+     * manager clears the notice dates and restates How Employee Resigned, fields the manager typed, which the writers
+     * never blank or replace for the chat. A field whose new text (8+ characters) is quoted from THIS message, or whose
+     * clear is asked in this message's own words naming that field by its label (clear_evidence), is the manager's own
+     * edit: saved as theirs (via chat, `statedFieldsWrite`), on a draft only (the revision draft of a finalized form, or
+     * their own draft), and the reply names each one (stated_edits). Every other field keeps the guard. Fields with their
+     * own rules (name, level, payroll, the dates and the plan) are not this. The message's words and the form's own
+     * labels; no word list.
+     */
+    const ownRules = new Set(["employee_name", "warning_type", "payroll_deduct", PAYROLL_AMOUNT_KEY, "form_date", "follow_up_date", "action_plan"]);
+    const squash = (text: string) => text.toLowerCase().replace(/\s+/g, " ").trim();
+    const thisMessage = squash(withoutMessageIdTags(context.question));
+    /* The one writer's own reading (FORM_EDIT_SINGLE_WRITER_ENABLED, on in production); with it off, the stated edits are not written here. */
+    const labels: Record<string, string> = formEditSingleWriterEnabled() ? (await import("@/lib/forms/form-write")).formWordsOf(loaded) : {};
+    const clearQuotes = input.clear_evidence && typeof input.clear_evidence === "object" ? (input.clear_evidence as Record<string, unknown>) : {};
+    const statedText = Object.fromEntries(
+      Object.entries(values).filter(([field, value]) => !ownRules.has(field) && value.trim().length >= 8 && thisMessage.includes(squash(value))),
+    );
+    const statedClears = clearAsked.filter((field) => {
+      const quote = typeof clearQuotes[field] === "string" ? String(clearQuotes[field]) : "";
+      return !ownRules.has(field) && quote.trim() !== "" && thisMessage.includes(squash(quote)) && quoteNamesField(quote, labels[field] ?? field);
+    });
+    const statedEdits: Record<string, string> = { ...statedText, ...Object.fromEntries(statedClears.map((field) => [field, ""])) };
+    const stated = formEditSingleWriterEnabled()
+      ? await (await import("@/lib/forms/form-write")).statedFieldsWrite(id, statedEdits, context.actor.subject)
+      : { saved: [] as string[], rejected: [] as { key: string; reason: string }[] };
+    for (const field of stated.saved) delete values[field];
+    clearAsked = clearAsked.filter((field) => !stated.saved.includes(field));
+    const statedLines = stated.saved.map((field) => ({ field: labels[field] ?? field, ...(statedEdits[field] === "" ? { cleared: true } : { now: untrusted(statedEdits[field]!) }) }));
     // The revision's writer, as chat-revision.ts saves: the one writer with FORM_EDIT_SINGLE_WRITER_ENABLED, else the old one.
     const written = formEditSingleWriterEnabled()
-      ? await (await import("@/lib/forms/form-write")).writeRevisionEdits(id, { values, checked }, [], {
+      ? await (await import("@/lib/forms/form-write")).writeRevisionEdits(id, { values, checked }, clearAsked, {
           actorId: context.actor.subject,
           latest: context.question,
           /* Batch G (G5): the payroll answer the guard above checked against this message, written as the manager's. */
           ...(statedPayroll.length > 0 ? { managerStated: statedPayroll } : {}),
         })
-      : await applyAssistantRevision(id, { values, checked }, [], context.actor.subject);
+      : await applyAssistantRevision(id, { values, checked }, clearAsked, context.actor.subject);
     /*
      * Batch G (G8, a production chat: "Action Plan: Violation of Company policy has resulted in immediate termination of
      * employment."; QA's conditions, Pau's standing approval, 15 Nov 2026): an Action Plan the manager dictated in this
@@ -7247,8 +7592,8 @@ export async function editForm(
       }
     }
     /* PR 3: claimed = what the writers accepted; the saved list is what the form shows after the write. */
-    const claimed = [...Object.keys(written.accepted.values ?? {}), ...Object.keys(written.accepted.checked ?? {}), ...(documentDate !== null ? ["form_date"] : []), ...(dictatedPlan !== null ? ["action_plan"] : []), ...written.rejected.map((row) => row.key)];
-    const reasons = new Map(written.rejected.map((row) => [row.key, row.reason] as const));
+    const claimed = [...stated.saved, ...stated.rejected.map((row) => row.key), ...Object.keys(written.accepted.values ?? {}), ...Object.keys(written.accepted.checked ?? {}), ...("cleared" in written && Array.isArray(written.cleared) ? (written.cleared as string[]) : []), ...(documentDate !== null ? ["form_date"] : []), ...(dictatedPlan !== null ? ["action_plan"] : []), ...written.rejected.map((row) => row.key)];
+    const reasons = new Map([...stated.rejected, ...written.rejected].map((row) => [row.key, row.reason] as const));
     const { saved: savedChanges, refused: refusedAll, unchanged: unchangedAll, now: saved } = await recordSaved(claimed, reasons);
     const updated = savedChanges.map((change) => change.field);
     /* The value the draft already held equals the one asked for (an amount by its figure; any field). */
@@ -7282,7 +7627,9 @@ export async function editForm(
       saved: savedChanges,
       refused,
       /* QA's live finding (16 Nov 2026): what the change was saved on, so the reply never says "press Create" on a saved draft. */
-      form_state: "saved_draft",
+form_state: "saved_draft",
+      /* Item 4 (port of the sibling app's #1297): every field this message cleared or restated, by the form's own label; the reply names each. */
+      ...(statedLines.length > 0 ? { stated_edits: statedLines, stated_edits_note: "Name every field in stated_edits in your reply, by its label, word for word: each one cleared, or what it now says." } : {}),
       ...(followUpSet ? { follow_up: followUpLine(followUpSet.to) } : {}),
       /* "as you said" only for what this message stated (QA, 16 Nov 2026): an edit's level and payroll are this message's own. */
       ...(updated.some((field) => STATED_EDIT_FIELDS.has(field)) ? { stated_this_turn: updated.filter((field) => STATED_EDIT_FIELDS.has(field)) } : {}),
@@ -7530,7 +7877,7 @@ export async function openForm(context: ToolContext, effects: ToolEffects, input
   const id = typeof input.instance_id === "string" ? input.instance_id.trim() : "";
   if (id === "") return { reason_code: "missing_input", error: "Give the form's instance_id (from find_past_forms)." };
   if (id !== context.openFormId) {
-    const unchosen = whichFormRefusal(context, id, input.choice_evidence);
+    const unchosen = await whichFormRefusal(context, id, input.choice_evidence);
     if (unchosen) return unchosen;
     const refused = await formOnFileRefusal(context, id, input.forms_on_file_evidence);
     if (refused) return refused;

@@ -1,7 +1,7 @@
 import { isHiddenTemplate } from "@/config/company/forms/hidden";
 import { RETIRED_TEMPLATE_KEYS } from "@/config/company/forms/retired";
 import { ACTIVE_BRAND } from "@/lib/brand";
-import { DEFAULT_PERMISSION_MATRIX, ROLE_LABEL, ROLES, hasPermission } from "@/lib/permissions";
+import { activePermissionMatrix, ROLE_LABEL, ROLES, hasPermission } from "@/lib/permissions";
 import type { AskResponse } from "@/lib/ai/types";
 import type { Permission, Role } from "@/types";
 
@@ -88,7 +88,7 @@ export function guideAccess(role: Role | null | undefined): GuideAccess<Role> {
     role: role ?? null,
     roles: ROLES,
     roleLabel: (entry) => ROLE_LABEL[entry] ?? entry,
-    may: (entry, permission) => hasPermission(DEFAULT_PERMISSION_MATRIX, entry, permission as Permission),
+    may: (entry, permission) => hasPermission(activePermissionMatrix(), entry, permission as Permission),
     hiddenRoles: ["developer"],
   };
 }

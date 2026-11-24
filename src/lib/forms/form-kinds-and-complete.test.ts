@@ -19,7 +19,7 @@ const read = vi.hoisted(() => ({ rows: [] as Array<Record<string, unknown>>, vis
 vi.mock("server-only", () => ({}));
 vi.mock("./instances", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./instances")>()),
-  listInstances: async (_shelf: string, limit: number, filter?: { templateNameWords?: string[] }) => {
+  listInstances: async (limit: number, filter?: { templateNameWords?: string[] }) => {
     read.asked.push(limit);
     const words = filter?.templateNameWords ?? [];
     // The real read: template-name words matched as part of the name (ilike), so "coaching" also reads a follow-up.

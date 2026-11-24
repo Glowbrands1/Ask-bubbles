@@ -71,7 +71,6 @@ function instanceRow(row: Row) {
     followedUpBy: null,
     finalizedAt: row.status === "finalized" ? "2026-11-21T12:00:00Z" : null,
     exportedAt: null,
-    archivedAt: null,
     revisesInstanceId: null,
     createdAt: "2026-11-20T12:00:00Z",
     updatedAt: "2026-11-20T12:00:00Z",
@@ -159,7 +158,7 @@ async function load(viewer: Viewer, env: { flag?: boolean } = {}) {
         : null;
     },
     // The query filter is recorded; the predicate (`visibleInstances`) is what each test checks.
-    listInstances: async (_view: string, _limit?: number, filter?: unknown) => {
+    listInstances: async (_limit?: number, filter?: unknown) => {
       listFilters.push(filter);
       return rows.map(instanceRow);
     },
@@ -191,6 +190,15 @@ async function load(viewer: Viewer, env: { flag?: boolean } = {}) {
     decideHrApproval: async () => null,
     commentOnHrApproval: async () => undefined,
     recordHrEdit: async () => undefined,
+    // The real rule (owner, 24 Nov 2026): HR, the creator or a sender may edit a form while it waits for HR.
+    mayEditWhileWithHr: (
+      actor: { id: string; verified?: boolean; hrApprover?: boolean },
+      instance: { createdBy: string; hrApprovalState?: string | null; hrApprovalRequestedBy?: string | null; hrApprovalSenders?: readonly string[] },
+    ) =>
+      instance.hrApprovalState === "pending" &&
+      (actor.hrApprover === true ||
+        (actor.verified === true &&
+          (instance.createdBy === actor.id || instance.hrApprovalRequestedBy === actor.id || (instance.hrApprovalSenders ?? []).includes(actor.id)))),
     withdrawnFromHr: async () => undefined,
     HrApprovalError: class extends Error {},
   }));

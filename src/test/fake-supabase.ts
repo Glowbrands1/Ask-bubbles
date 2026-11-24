@@ -83,6 +83,8 @@ const CASCADES = ["form_instance_values", "form_instance_events"] as const;
 class FakeQuery implements PromiseLike<{ data: unknown; error: null }> {
   private op: "select" | "delete" | "update" | "insert" | "upsert" | null = null;
   private upsertRows: Row[] = [];
+  /** `ignoreDuplicates`: as in Postgres (ON CONFLICT DO NOTHING), an existing row is left alone and only new rows return. */
+  private ignoreDuplicates = false;
   private insertRows: Row[] | null = null;
   private conflictKeys: string[] = [];
   private filters: Predicate[] = [];
@@ -147,9 +149,10 @@ class FakeQuery implements PromiseLike<{ data: unknown; error: null }> {
    * what makes saving idempotent — a fake that appended duplicates would let a
    * double-save look fine here and corrupt a form in Postgres.
    */
-  upsert(payload: Row | Row[], options?: { onConflict?: string }) {
+  upsert(payload: Row | Row[], options?: { onConflict?: string; ignoreDuplicates?: boolean }) {
     this.op = "upsert";
     this.upsertRows = Array.isArray(payload) ? payload : [payload];
+    this.ignoreDuplicates = options?.ignoreDuplicates === true;
     this.conflictKeys = (options?.onConflict ?? "id").split(",").map((key) => key.trim());
     return this;
   }
@@ -267,14 +270,21 @@ class FakeQuery implements PromiseLike<{ data: unknown; error: null }> {
     const rows = this.rows();
 
     if (this.op === "upsert") {
+      const inserted: Row[] = [];
       for (const incoming of this.upsertRows) {
         const existing = rows.find((row) =>
           this.conflictKeys.every((key) => row[key] === incoming[key]),
         );
-        if (existing) Object.assign(existing, incoming);
-        else rows.push({ id: fakeId(), ...incoming });
+        if (existing) {
+          if (!this.ignoreDuplicates) Object.assign(existing, incoming);
+        } else {
+          const row = { id: fakeId(), ...incoming };
+          rows.push(row);
+          inserted.push(row);
+        }
       }
-      return { data: null, error: null };
+      // With ignoreDuplicates the caller reads back which rows were new (the HR 6 AM reminder's once-a-day check).
+      return { data: this.ignoreDuplicates ? inserted : null, error: null };
     }
 
     if (this.op === "insert") {

@@ -42,7 +42,8 @@ import { caSalesPolicyEnabled, requiredFieldsAtFinalizeEnabled, revisionArchived
 import { blankRequiredFields, requiredFieldsMessage } from "./required-fields";
 import { isIsoCalendarDate } from "./form-date-answer";
 import { getCurrentVersion, getVersion, type TemplateVersionRow } from "./repository";
-import { HELD_FOR_HR, asHrApprovalState, editableDraft, heldForHr, withoutHeldForHr, type HrApprovalState } from "./hr-approval-rules";
+import { HELD_FOR_HR, asHrApprovalState, heldForHr, withoutHeldForHr, type HrApprovalState } from "./hr-approval-rules";
+import { editableDraftNow, inHrEditScope } from "./hr-edit-scope";
 import { hrHoldLive, releaseStaleHold } from "./hr-approval-approvers";
 
 /** The form's own Date line — the same day as `form_instances.form_date`. */
@@ -89,7 +90,6 @@ export interface InstanceRow {
   followedUpBy: string | null;
   finalizedAt: string | null;
   exportedAt: string | null;
-  archivedAt: string | null;
   revisesInstanceId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -145,7 +145,6 @@ function mapInstance(row: Record<string, unknown>): InstanceRow {
     followedUpBy: (row.followed_up_by as string | null) ?? null,
     finalizedAt: (row.finalized_at as string | null) ?? null,
     exportedAt: (row.exported_at as string | null) ?? null,
-    archivedAt: (row.archived_at as string | null) ?? null,
     revisesInstanceId: (row.revises_instance_id as string | null) ?? null,
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
@@ -180,9 +179,6 @@ async function recordEvent(
 }
 
 /* -------------------------------------------------------------- reading --- */
-
-/** Which shelf of the monitoring list to read. */
-export type InstanceView = "active" | "archived" | "all";
 
 /**
  * ============================================================================
@@ -254,7 +250,6 @@ export interface InstanceListFilter {
 }
 
 export async function listInstances(
-  view: InstanceView = "active",
   limit = 200,
   filter?: InstanceListFilter,
 ): Promise<InstanceRow[]> {
@@ -296,10 +291,7 @@ export async function listInstances(
         `hr_approval_state.is.null,hr_approval_state.eq.approved,created_by.eq."${hideAwaitingHrFor}",hr_approval_senders.cs.{"${hideAwaitingHrFor}"}`,
       );
     }
-    // `archived_at` is presentation, not status — see the migration. The active
-    // list is the default because it is what somebody opening the screen wants.
-    if (view === "active") return query.is("archived_at", null);
-    if (view === "archived") return query.not("archived_at", "is", null);
+    // No archived shelf (Pau, 23 Nov 2026): a form is Draft or Finalized, and every one is listed.
     return query;
   }
 
@@ -727,7 +719,7 @@ async function writeValues(
    * HR's edit of a form waiting for them goes through the one function the value guard lets past the hold
    * (migration 20261123002000); every other writer is refused there while the form is pending.
    */
-  const { error } = options.viaHrApproval
+  const { error } = options.viaHrApproval || inHrEditScope(instanceId)
     ? await supabase.rpc("form_hr_approval_write_values", {
         p_instance_id: instanceId,
         p_rows: rows.map(({ field_key, value, checked, filled_by, provenance: rowProvenance }) => ({
@@ -781,7 +773,7 @@ export async function applyStatedFacts(
   allowedKeys?: ReadonlySet<string>,
 ): Promise<string[]> {
   const loaded = await loadInstance(instanceId);
-  if (!loaded || !editableDraft(loaded.instance)) return [];
+  if (!loaded || !editableDraftNow(loaded.instance)) return [];
 
   const selected = selectStatedFacts({
     document: parseFormDocument(loaded.version.document),
@@ -808,10 +800,11 @@ export async function saveInstanceValues(
   options: {
     readonly via?: "chat";
     /**
-     * HR editing a form that waits for them (`hr-approval.ts`): written through `form_hr_approval_write_values`, the
-     * one path the database lets past the hold. Only the route that has checked the actor is an approver sets it.
+     * HR, or the form's creator or a sender, editing a form that waits for HR (`mayEditWhileWithHr`): written through
+     * `form_hr_approval_write_values`, the one path the database lets past the hold. Only the route that has checked
+     * the actor may edit it sets it.
      */
-    readonly asHrApprover?: boolean;
+    readonly pastHrHold?: boolean;
     /**
      * HR editing a form that is with them in any state (pending, sent back, rejected) that is not their own: the edit
      * is recorded in the approval history only, never the general one (owner, 23 Nov 2026: no leaks). The route sets
@@ -829,7 +822,8 @@ export async function saveInstanceValues(
   if (loaded.instance.status !== "draft") {
     throw new Error("This form is finalized. Create a revision to change it.");
   }
-  const hrEdit = options.asHrApprover === true && heldForHr(loaded.instance.hrApprovalState);
+  // The card's checked edit (`pastHrHold`), or the chat's, inside its scope for this form (`hr-edit-scope.ts`).
+  const hrEdit = (options.pastHrHold === true || inHrEditScope(instanceId)) && heldForHr(loaded.instance.hrApprovalState);
   if (heldForHr(loaded.instance.hrApprovalState) && !hrEdit) {
     // Held only while the hold is live; otherwise (flag off, no approver left) the form goes back to a plain draft.
     if (await hrHoldLive()) throw new HeldForHrError();
@@ -886,6 +880,17 @@ export async function saveInstanceValues(
    * HR read: the form's general history is served to every reader once it is approved, and naming HR there would tell
    * them it went through HR (owner, 23 Nov 2026).
    */
+  /*
+   * A SENT-BACK FORM THE MANAGER EDITS IS THEIR REPLY (owner, 24 Nov 2026: "yeh" to editing alone counting): recorded
+   * in the approval history, and HR is told, whichever path saved it. Only a real change counts.
+   */
+  if (
+    loaded.instance.hrApprovalState === "changes_requested" &&
+    options.hrHistoryOnly !== true &&
+    (Object.keys(changedValues).length > 0 || Object.keys(changedChecked).length > 0)
+  ) {
+    await (await import("./hr-approval")).recordSentBackEdit(loaded.instance, actor);
+  }
   if (!hrEdit && options.hrHistoryOnly !== true) {
     await recordEvent(instanceId, "edited", actor, {
       fields: Object.keys(result.values).length,
@@ -1083,7 +1088,7 @@ export class UnverifiedPolicyError extends Error {
 export class HeldForHrError extends Error {
   readonly code = HELD_FOR_HR;
   constructor() {
-    super("This form is waiting for HR approval. You can change it again if HR sends it back.");
+    super("This form is waiting for HR approval. The person who started it, whoever sent it, or HR can change it on the form itself; HR sees the changes.");
     this.name = "HeldForHrError";
   }
 }
@@ -1115,7 +1120,7 @@ export interface FinalizeOptions {
 
 /**
  * WHAT FINALIZE CHECKS BEFORE IT FREEZES ANYTHING: required fields, and an unverified policy the manager has not
- * acknowledged. Shared with "Finalize and send to HR for approval" (`hr-approval.ts`), so a form sent to HR has passed exactly
+ * acknowledged. Shared with "Finalize and send for approval" (`hr-approval.ts`), so a form sent to HR has passed exactly
  * what Finalize would have asked of it, while the manager can still fix it.
  */
 export function finalizePreflight(before: LoadedInstance, options: FinalizeOptions = {}): { unverified: string[] } {
@@ -1526,7 +1531,7 @@ export function variantsOf(version: TemplateVersionRow) {
   return parseFormVariants(version.variants);
 }
 
-/* ------------------------------------------------- removing and archiving --- */
+/* ------------------------------------------------------------- removing --- */
 
 /**
  * THE MARKER THAT MAKES A RECORD IDENTIFIABLY SYNTHETIC.
@@ -1553,7 +1558,7 @@ export class InstanceProtectedError extends Error {}
  *
  * ONLY A FORM THAT WAS NEVER FINALIZED. A finalized form is a signed HR
  * document; destroying one silently is the thing this function exists to
- * refuse. Callers that want it gone from the list use `archiveInstance`.
+ * refuse. There is no archive (Pau, 23 Nov 2026): a finalized form stays on file.
  *
  * The values and events go by CASCADE rather than by three deletes here — the
  * foreign keys declare it, so there is no ordering to get wrong and no window
@@ -1574,7 +1579,7 @@ export async function deleteInstance(id: string, by?: DeletionActor): Promise<In
   const instance = mapInstance(row);
   if (instance.status !== "draft") {
     throw new InstanceProtectedError(
-      `This form is ${instance.status}, so it cannot be deleted. Archive it instead — that hides it from the active list and keeps the record.`,
+      `This form is ${instance.status}, so it cannot be deleted. Finalized forms are kept on file.`,
     );
   }
 
@@ -1617,36 +1622,6 @@ async function stampDeletion(ids: readonly string[], by: DeletionActor | undefin
     })
     .in("id", [...ids]);
   if (error) console.error("forms: the deletion stamp was not written; the delete is recorded without its user", { reason: error.message, via: by.via });
-}
-
-/**
- * Hides a form from the active list without changing what it says.
- *
- * Works on any status, and deliberately does NOT touch `status`, values, or
- * `finalized_at`. See the migration for why archiving is a separate column
- * rather than a fourth status.
- */
-export async function archiveInstance(
-  id: string,
-  actor: string,
-  archived: boolean,
-): Promise<InstanceRow> {
-  const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("form_instances")
-    .update({ archived_at: archived ? new Date().toISOString() : null })
-    .eq("id", id)
-    .select("id")
-    .maybeSingle();
-  if (error) throw new Error(`Could not ${archived ? "archive" : "restore"} that form: ${error.message}`);
-  if (!data) throw new Error("That form no longer exists.");
-
-  // Archiving is a decision somebody made, so it joins the form's own history.
-  await recordEvent(id, archived ? "archived" : "unarchived", actor);
-
-  const loaded = await loadInstance(id);
-  if (!loaded) throw new Error("That form vanished while being archived.");
-  return loaded.instance;
 }
 
 export interface DemoSweep {
@@ -1761,11 +1736,6 @@ export async function setFollowUpDate(
   }
 
   const before = await readInstance(id);
-  if (before.archivedAt) {
-    throw new FollowUpError(
-      "This form is archived. Restore it before scheduling a follow-up.",
-    );
-  }
   if (before.followedUpAt) {
     throw new FollowUpError(
       "This follow-up is already marked complete. Reopen it before changing the date.",
@@ -1903,7 +1873,6 @@ export async function listOutstandingFollowUps(
       .select("*")
       .not("follow_up_date", "is", null)
       .is("followed_up_at", null)
-      .is("archived_at", null)
       .order("follow_up_date", { ascending: true })
       .limit(limit);
 

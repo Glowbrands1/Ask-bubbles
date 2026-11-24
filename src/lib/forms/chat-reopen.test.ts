@@ -69,7 +69,7 @@ vi.mock("./instance-scope", () => ({
  * has a `loadInstance` that returns the form as saved (`saved-form-instances`).
  */
 vi.mock("./instances", async () => (await import("@/test/forms/saved-form-instances")).savedFormInstances({
-  listInstances: async (_view: string, _limit: number, filter: unknown) => {
+  listInstances: async (_limit: number, filter: unknown) => {
     state.listed += 1;
     state.filters.push(filter);
     return state.rows;

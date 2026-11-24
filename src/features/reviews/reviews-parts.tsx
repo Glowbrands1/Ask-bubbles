@@ -344,7 +344,7 @@ export function FilterBar({ children }: { children: ReactNode }) {
 }
 
 /** The column heads of the ranking, drawn above its rows (desktop; rows label their own figures on a phone). */
-export function RankingHead() {
+export function RankingHead({ figure = "Month to date" }: { figure?: string } = {}) {
   return (
     <div
       aria-hidden
@@ -356,7 +356,7 @@ export function RankingHead() {
       <span className="text-center">Rank</span>
       <span>Store</span>
       <span className="text-right">This week</span>
-      <span className="text-right">Month to date</span>
+      <span className="text-right">{figure}</span>
       <span className="text-right">Target</span>
       <span>Progress toward target</span>
       <span>Status</span>

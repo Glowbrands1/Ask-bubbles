@@ -3,7 +3,7 @@ import "server-only";
 import { offeredInChooser } from "@/lib/forms/chooser";
 import { supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { type TemplateSummary } from "@/lib/forms/repository";
-import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
+import { activePermissionMatrix, hasPermission } from "@/lib/permissions";
 import type { ChatFormSelection } from "@/types";
 
 import type { ChatActor } from "./form-proposal";
@@ -26,7 +26,7 @@ const PRIMARY_TEMPLATE_KEY = "coaching";
 function offeredForms(summaries: readonly TemplateSummary[], actor: ChatActor): TemplateSummary[] {
   return summaries
     .filter((summary) => summary.active && summary.currentVersion?.status === "published")
-    .filter((summary) => Boolean(actor.role) && hasPermission(DEFAULT_PERMISSION_MATRIX, actor.role!, summary.requiredPermission as Parameters<typeof hasPermission>[2]))
+    .filter((summary) => Boolean(actor.role) && hasPermission(activePermissionMatrix(), actor.role!, summary.requiredPermission as Parameters<typeof hasPermission>[2]))
     .filter((summary) => offeredInChooser(summary.key));
 }
 

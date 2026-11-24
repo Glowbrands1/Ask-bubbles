@@ -13,6 +13,8 @@ vi.mock("@/components/brand-mark", () => ({ BuffCitySoapLogo: () => null }));
 
 import { closedMonthContext, goalContext, type GoalRow } from "@/lib/google-reviews/goals";
 import type { StoreSummary } from "@/lib/google-reviews/views";
+import { windowGoalData } from "@/lib/google-reviews/leaderboard-window";
+import type { MonthlyProgress } from "@/lib/google-reviews/monthly-progress";
 import type { ReviewsData } from "./load";
 import { ReviewsDashboard } from "./reviews-dashboard";
 
@@ -201,13 +203,76 @@ describe("the leaderboard month picker", () => {
   const early = { baselineReviewTime: "2026-08-01T00:00:00Z" };
   const rows = [goalRow("1", { ...early, qualifyingMonthToDate: 10 }), goalRow("2", { ...early, qualifyingMonthToDate: 4 }), goalRow("3", { baselineReviewTime: "2026-10-01T05:00:00Z", qualifyingMonthToDate: 0 })];
 
-  it("offers the current month and twelve before it, and keeps the chosen month selected", () => {
+  /*
+   * Was "Month", 13 options. Changed on purpose (Pau, 23 Nov 2026: "pls do in
+   * bubbles too but pls add the per month for both like September october
+   * november"): the control is Period, and L3, L6 and YTD sit between the
+   * current month and the twelve months before it.
+   */
+  it("offers the current month, L3, L6, YTD and the twelve months before, and keeps the chosen month selected", () => {
     const d = { ...data(rows), month: "2026-09", goals: { context: closedMonthContext("2026-09"), rows } };
     render(<ReviewsDashboard tab="leaderboard" status="not_connected" data={d} />);
-    const select = screen.getByRole("combobox", { name: "Month" }) as HTMLSelectElement;
-    expect(select.options).toHaveLength(13);
-    expect(select.options[0]!.textContent).toMatch(/\(current\)/);
+    const select = screen.getByRole("combobox", { name: "Period" }) as HTMLSelectElement;
+    const labels = [...select.options].map((o) => o.textContent ?? "");
+    expect(labels).toHaveLength(16);
+    expect(labels[0]).toMatch(/\(current\)/);
+    expect(labels.slice(1, 4)).toEqual(["L3 · last 3 full months", "L6 · last 6 full months", "YTD · year to date"]);
+    expect(labels.slice(4).every((l) => /^[A-Z][a-z]+ \d{4}$/.test(l))).toBe(true);
     expect(select.value).toBe("2026-09");
+  });
+
+  /* Pau, 23 Nov 2026: "...and make sure it syncs in the data below". */
+  describe("L3, L6 and YTD", () => {
+    const live = [
+      goalRow("1", { ...early, qualifyingMonthToDate: 2 }),
+      goalRow("2", { ...early, qualifyingMonthToDate: 9 }),
+      goalRow("3", { ...early, qualifyingMonthToDate: 5 }),
+      goalRow("4", { baselineReviewId: null, baselineReviewTime: null, qualifyingMonthToDate: 0 }),
+    ];
+    const monthly: MonthlyProgress = {
+      months: ["2026-08", "2026-09", "2026-10", "2026-11"],
+      currentMonth: "2026-11",
+      l3Months: ["2026-08", "2026-09", "2026-10"],
+      l6Months: ["2026-08", "2026-09", "2026-10"],
+      ytdMonths: ["2026-08", "2026-09", "2026-10", "2026-11"],
+      rows: [
+        { storeCode: "1", displayName: "Store 1", monthlyTarget: 10, counting: true, months: [11, 10, 12, 2], beforeCounting: [false, false, false, false], l3: 33, l6: 33, ytd: 35 },
+        { storeCode: "2", displayName: "Store 2", monthlyTarget: 10, counting: true, months: [5, 6, 7, 9], beforeCounting: [false, false, false, false], l3: 18, l6: 18, ytd: 27 },
+        { storeCode: "3", displayName: "Store 3", monthlyTarget: 10, counting: true, months: [8, 9, 10, 5], beforeCounting: [false, false, false, false], l3: 27, l6: 27, ytd: 32 },
+        { storeCode: "4", displayName: "Store 4", monthlyTarget: 10, counting: false, months: [0, 0, 0, 0], beforeCounting: [true, true, true, true], l3: 0, l6: 0, ytd: 0 },
+      ],
+    };
+    const board = (period: "l3" | "ytd") => {
+      const w = windowGoalData({ context: goalContext("2026-11-23"), rows: live }, monthly, period);
+      return { ...data(live), month: period, windowMonths: w.months, goals: { context: w.context, rows: w.rows } };
+    };
+
+    it("ranks the rows below by L3 against target × 3, with Below goal instead of a pace", () => {
+      render(<ReviewsDashboard tab="leaderboard" status="not_connected" data={board("l3")} />);
+      expect((screen.getByRole("combobox", { name: "Period" }) as HTMLSelectElement).value).toBe("l3");
+      expect(screen.getByText(/L3 · last 3 full months · Aug – Oct 2026/)).toBeTruthy();
+      const items = [...document.querySelectorAll("ol > li")].map((li) => li.textContent ?? "");
+      expect(items[0]).toContain("Store 1");
+      expect(items[0]).toContain("33 / 30");
+      expect(items[0]).toContain("Goal met");
+      expect(items[1]).toContain("Store 3");
+      expect(items[1]).toContain("27 / 30");
+      expect(items[1]).toContain("Below goal");
+      expect(items[2]).toContain("Store 2");
+      expect(items[3]).toContain("Store 4");
+      expect(items.join(" ")).not.toMatch(/On pace|Behind pace|Goal missed/);
+      expect(screen.getByText(/1 of 3/)).toBeTruthy();
+    });
+
+    it("ranks by YTD against target × the months so far", () => {
+      render(<ReviewsDashboard tab="leaderboard" status="not_connected" data={board("ytd")} />);
+      const items = [...document.querySelectorAll("ol > li")].map((li) => li.textContent ?? "");
+      expect(items[0]).toContain("Store 1");
+      expect(items[0]).toContain("35 / 40");
+      expect(items[1]).toContain("Store 3");
+      expect(items[2]).toContain("Store 2");
+      expect(items[2]).toContain("27 / 40");
+    });
   });
 
   it("shows a closed month as a final result: met / missed / not counted, with no pace mark and no weekly figures", () => {

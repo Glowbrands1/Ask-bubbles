@@ -9,6 +9,11 @@ import {
 } from "@/lib/google-reviews/goals";
 import type { MonthlyProgress } from "@/lib/google-reviews/monthly-progress";
 import {
+  isLeaderboardWindow,
+  windowGoalData,
+  type LeaderboardWindow,
+} from "@/lib/google-reviews/leaderboard-window";
+import {
   PAGE_SIZE,
   parseReviewQuery,
   readGoalData,
@@ -43,8 +48,13 @@ export interface ReviewsData {
    * only). Null when it could not be read; absent when not loaded.
    */
   monthly?: MonthlyProgress | null;
-  /** The month the leaderboard shows (`yyyy-mm`, Central). Absent or the current month: the live month. */
+  /**
+   * The period the leaderboard shows: a month (`yyyy-mm`, Central), or `l3`,
+   * `l6` or `ytd`. Absent or the current month: the live month.
+   */
   month?: string;
+  /** Set when `month` is L3, L6 or YTD: the months that window covers, oldest first. */
+  windowMonths?: string[];
 }
 
 /** How many months back the leaderboard's month picker reaches. */
@@ -58,13 +68,17 @@ export function monthOptions(now: Date = new Date()): string[] {
   return out;
 }
 
-/** Never trusts a query string: anything not offered by the picker is the current month. */
+/**
+ * Never trusts a query string: anything not offered by the picker is the
+ * current month. The picker offers the months and L3, L6 and YTD.
+ */
 export function parseMonth(
   params: Record<string, string | string[] | undefined>,
   now: Date = new Date(),
 ): string {
   const raw = Array.isArray(params.month) ? params.month[0] : params.month;
   const options = monthOptions(now);
+  if (isLeaderboardWindow(raw)) return raw;
   return raw && options.includes(raw) ? raw : options[0]!;
 }
 
@@ -115,16 +129,21 @@ export async function loadReviewsData(
         ? "week"
         : "month";
     const overview = !params.tab || params.tab === "overview";
-    const [trend, page, goals, monthly] = await Promise.all([
+    // L3 / L6 / YTD on the leaderboard: the current goal rows, re-read as the Month by month table's totals.
+    const window: LeaderboardWindow | null = isLeaderboardWindow(month) ? month : null;
+    const [trend, page, liveGoals, monthly] = await Promise.all([
       readPeriodTrend(period, query.store),
       withList ? readReviewPage(query) : Promise.resolve(null),
-      (month === monthOptions()[0]
+      (window || month === monthOptions()[0]
         ? readGoalData()
         : readGoalDataForMonth(month)
       ).catch(() => null),
       // Its own failure is its own: the rest of the page still renders.
-      overview ? readMonthlyProgress().catch(() => null) : Promise.resolve(undefined),
+      overview || window ? readMonthlyProgress().catch(() => null) : Promise.resolve(undefined),
     ]);
+    // A window whose month-by-month figures could not be read shows nothing rather than every store on 0.
+    const windowed = window && liveGoals && monthly ? windowGoalData(liveGoals, monthly, window) : null;
+    const goals = window ? (windowed ? { context: windowed.context, rows: windowed.rows } : null) : liveGoals;
     // Weekly is the latest year of weeks; monthly is every month held.
     return {
       query,
@@ -136,7 +155,8 @@ export async function loadReviewsData(
       rank,
       goalFilter: parseGoalFilter(params),
       month,
-      monthly,
+      monthly: overview ? monthly : undefined,
+      ...(windowed ? { windowMonths: windowed.months } : {}),
     };
   } catch {
     return null;

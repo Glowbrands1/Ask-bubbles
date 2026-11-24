@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Bell } from "lucide-react";
 
@@ -46,17 +47,19 @@ export function NotificationBell({
   // Removed locally at once (× or Clear all), so the list and the badge change before the server answers.
   const [goneHere, setGoneHere] = useState<Set<string> | "all">(new Set());
   const [, start] = useTransition();
-  const isRead = (n: AppNotification) => !!n.readAt || readHere === "all" || readHere.has(n.id);
-  const isGone = (n: AppNotification) => goneHere === "all" || goneHere.has(n.id);
+  // A pinned one (HR's "waiting for your approval" while the form still waits) is never read or removed from here: it
+  // stays for every approver until HR approves, rejects or sends the form back (owner, 24 Nov 2026).
+  const isRead = (n: AppNotification) => !n.pinned && (!!n.readAt || readHere === "all" || readHere.has(n.id));
+  const isGone = (n: AppNotification) => !n.pinned && (goneHere === "all" || goneHere.has(n.id));
   const items = data.items.filter((n) => !isGone(n));
-  // Unread that this panel read or removed come off the server's count straight away.
+  // Unread that this panel read or removed come off the server's count straight away; pinned ones stay counted.
   const unread =
     readHere === "all" || goneHere === "all"
-      ? 0
-      : Math.max(0, data.unread - data.items.filter((n) => !n.readAt && (readHere.has(n.id) || goneHere.has(n.id))).length);
+      ? data.items.filter((n) => n.pinned).length
+      : Math.max(0, data.unread - data.items.filter((n) => !n.pinned && !n.readAt && (readHere.has(n.id) || goneHere.has(n.id))).length);
 
   function openOne(n: AppNotification) {
-    if (!isRead(n)) {
+    if (!n.pinned && !isRead(n)) {
       setReadHere((prev) => (prev === "all" ? prev : new Set(prev).add(n.id)));
       start(async () => {
         await markNotificationsReadAction([n.id]);
@@ -76,8 +79,9 @@ export function NotificationBell({
     });
   }
 
-  /** The × on a row: removes that one from this person's list; never opens it. */
+  /** The × on a row: removes that one from this person's list; never opens it. A pinned row has no ×. */
   function dismissOne(id: string) {
+    if (data.items.find((n) => n.id === id)?.pinned) return;
     setGoneHere((prev) => (prev === "all" ? prev : new Set(prev).add(id)));
     start(async () => {
       await dismissNotificationsAction([id]);
@@ -92,8 +96,21 @@ export function NotificationBell({
     });
   }
 
-  const label = unread ? `Notifications, ${unread} unread` : "Notifications";
-  const badge = unread ? (
+  /*
+   * FORMS STILL WAITING FOR HR KEEP THE BADGE (Pau, 24 Nov 2026, on the Forms Register showing "Pending HR approval (2)"
+   * under an empty bar: "can u please not remove the notification in the bar on the left side if there are still
+   * pending inside"). Opening, reading or removing a notification does not decide the form, so the badge shows the
+   * larger of the unread count and the forms still needing this approver; only deciding them takes it away.
+   */
+  const waitingHr = Math.max(0, data.waitingHr ?? 0);
+  const count = Math.max(unread, waitingHr);
+  const waitingWords = `${waitingHr} ${waitingHr === 1 ? "form" : "forms"} waiting for your approval`;
+  const label = unread
+    ? `Notifications, ${unread} unread${waitingHr ? `, ${waitingWords}` : ""}`
+    : waitingHr
+      ? `Notifications, ${waitingWords}`
+      : "Notifications";
+  const badge = count ? (
     <span
       aria-hidden
       className={cn(
@@ -101,7 +118,7 @@ export function NotificationBell({
         variant === "bar" || collapsed ? "absolute -top-0.5 -right-0.5" : "ml-auto",
       )}
     >
-      {unread > 9 ? "9+" : unread}
+      {count > 9 ? "9+" : count}
     </span>
   ) : null;
 
@@ -145,7 +162,7 @@ export function NotificationBell({
         className="w-[min(22rem,calc(100vw-1.5rem))] p-0"
       >
         <NotificationsPanel
-          rows={items.map((n) => ({ id: n.id, title: n.title, body: n.body, meta: timeAgo(n.createdAt), read: isRead(n) }))}
+          rows={items.map((n) => ({ id: n.id, title: n.title, body: n.body, meta: timeAgo(n.createdAt), read: isRead(n), pinned: n.pinned === true }))}
           unread={unread}
           onOpen={(id) => {
             const n = items.find((item) => item.id === id);
@@ -154,6 +171,20 @@ export function NotificationBell({
           onDismiss={dismissOne}
           onClearAll={clearAll}
           onMarkAllRead={readAll}
+          footer={
+            waitingHr ? (
+              <Link
+                href="/forms/monitoring?view=hr"
+                onClick={() => {
+                  setOpen(false);
+                  onNavigate?.();
+                }}
+                className="text-xs font-semibold text-foreground underline-offset-4 hover:underline"
+              >
+                {waitingHr === 1 ? "1 form still needs your decision" : `${waitingHr} forms still need your decision`} →
+              </Link>
+            ) : undefined
+          }
         />
       </PopoverContent>
     </Popover>

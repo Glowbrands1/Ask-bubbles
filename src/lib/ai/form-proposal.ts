@@ -148,7 +148,7 @@ import {
   suggestedTemplateKeys,
 } from "@/lib/forms/form-opportunity";
 import { type TemplateSummary } from "@/lib/forms/repository";
-import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
+import { activePermissionMatrix, hasPermission } from "@/lib/permissions";
 import type {
   AccessScope,
   ChatFormChoice,
@@ -448,8 +448,7 @@ function isCreatable(summary: TemplateSummary): boolean {
 
 function permits(actor: ChatActor, summary: TemplateSummary): boolean {
   if (!actor.role) return false;
-  return hasPermission(
-    DEFAULT_PERMISSION_MATRIX,
+  return hasPermission(activePermissionMatrix(),
     actor.role,
     summary.requiredPermission as Permission,
   );

@@ -6,7 +6,7 @@ import { envFlag } from "@/lib/config/chat-quality-flags";
  * ============================================================================
  *
  * Owner request, 23 Nov 2026: every form except the Coaching Form waits for HR
- * after the manager presses "Finalize and send to HR for approval". HR approves (the
+ * after the manager presses "Finalize and send for approval". HR approves (the
  * form is then finalized exactly as before), rejects, or sends it back for
  * changes, each with a note, and may edit it meanwhile.
  *
@@ -67,6 +67,13 @@ export function templateRoutesToHr(requiredPermission: string | null | undefined
 export function awaitingHr(state: HrApprovalState | null | undefined): boolean {
   return state === "pending" || state === "changes_requested" || state === "rejected";
 }
+
+/**
+ * What the chat says when it is asked to change a form that is waiting for HR (owner, 24 Nov 2026: "the chat should say
+ * "waiting for HR approval" instead of a general save error"). The chat never writes a held form; the form itself does.
+ */
+export const WAITING_FOR_HR_CHAT_REPLY =
+  "This form is waiting for HR approval, so I didn't change it from chat. You can still edit it on the form itself, and HR will see the updated version.";
 
 /** Only `pending` freezes the form for its creator; sent back or rejected, they may change it and send it again. */
 export function heldForHr(state: HrApprovalState | null | undefined): boolean {
@@ -159,7 +166,13 @@ export function approvableFromSentBack(
     if (step.action === "changes_requested") sentBackAt = index;
   });
   if (sentBackAt < 0) return false;
-  return steps.slice(sentBackAt + 1).some((step) => step.action === "commented" && isCreatorOrSender({ id: step.actor }, instance));
+  /*
+   * THE MANAGER'S REPLY is a note OR an edit by the creator or a sender after HR's latest send-back (owner, 24 Nov
+   * 2026, asked "Do you want editing alone to count as a reply too?": "yeh"). HR's own notes and edits never count.
+   */
+  return steps
+    .slice(sentBackAt + 1)
+    .some((step) => (step.action === "commented" || step.action === "edited") && isCreatorOrSender({ id: step.actor }, instance));
 }
 
 export function hrStage(state: HrApprovalState, managerReplied: boolean): HrStage {
