@@ -49,7 +49,7 @@ import {
 } from "./instances";
 import { NO_PRIOR_ACTION, POLICY_MANUAL_SIGNED_KEY, PRIOR_ACTIONS_KEY } from "./prior-actions";
 import { takeReaderFoundNothing } from "./reader-found-nothing";
-import { editableDraft } from "./hr-approval-rules";
+import { editableDraftNow } from "./hr-edit-scope";
 import { spokenDates } from "./relative-date";
 import { draftableCheckboxGroups, draftableFields, type DraftValues } from "./responsibility";
 import { copiedContent } from "./same-form-copy";
@@ -513,7 +513,7 @@ export async function writeFormEdits(instanceId: string, ops: readonly FormEditO
   /* 1. load */
   const loaded = rules.loaded ?? (await loadInstance(instanceId));
   // A form waiting for HR approval is not the chat's to change: refused as a finalized one is.
-  if (!loaded || !editableDraft(loaded.instance)) return refusedAll(keysOfOps.map((key) => ({ key, reason: "not_draft" })));
+  if (!loaded || !editableDraftNow(loaded.instance)) return refusedAll(keysOfOps.map((key) => ({ key, reason: "not_draft" })));
   const snapshot = snapshotOf(loaded);
   const before: FormDraft = snapshot.draft;
 
@@ -957,7 +957,7 @@ export async function statedWrite(
 ): Promise<string[]> {
   // As `applyStatedFacts` writes them: only into an empty line. A filled line is kept, not refused.
   const loaded = context.loaded ?? (await loadInstance(instanceId));
-  if (!loaded || !editableDraft(loaded.instance)) return [];
+  if (!loaded || !editableDraftNow(loaded.instance)) return [];
   const filled = new Set(
     loaded.values.filter((row) => (row.value ?? "").trim() !== "" || row.checked.length > 0).map((row) => row.fieldKey),
   );
