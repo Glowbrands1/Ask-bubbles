@@ -316,3 +316,29 @@ describe("marking a notification unread so it stays", () => {
     expect(screen.queryByRole("button", { name: /Mark as unread/ })).toBeNull();
   });
 });
+
+/*
+ * Port from Ask Sunny. Pau, 24 Nov 2026, told the bar counted only this app's forms and not the other app's approvals
+ * tab: "fix". The badge adds the forms waiting in the other app, and the panel links to that tab.
+ */
+describe("the other app's waiting forms on the bar (Pau, 24 Nov 2026: \"fix\")", () => {
+  const read: BellData = { unread: 0, items: [{ ...data.items[0]!, readAt: new Date().toISOString() }] };
+
+  it("keeps the badge when only the other app has forms waiting, and links to its tab", () => {
+    render(<NotificationBell data={{ ...read, waitingSiblingHr: { app: "Other App", count: 2 } }} />);
+    const bar = screen.getByRole("button", { name: "Notifications, 2 forms waiting for your approval" });
+    expect(bar.textContent).toBe("2");
+    fireEvent.click(bar);
+    expect(screen.getByRole("link", { name: /2 in Other App need your decision/ }).getAttribute("href")).toBe("/forms/monitoring?view=hr&app=sibling");
+    expect(screen.queryByRole("link", { name: /forms? still needs? your decision/ })).toBeNull();
+  });
+
+  it("adds both apps' forms, with a link to each tab", () => {
+    render(<NotificationBell data={{ ...read, waitingHr: 2, waitingSiblingHr: { app: "Other App", count: 1 } }} />);
+    const bar = screen.getByRole("button", { name: "Notifications, 3 forms waiting for your approval" });
+    expect(bar.textContent).toBe("3");
+    fireEvent.click(bar);
+    expect(screen.getByRole("link", { name: /2 forms still need your decision/ }).getAttribute("href")).toBe("/forms/monitoring?view=hr");
+    expect(screen.getByRole("link", { name: /1 in Other App needs your decision/ }).getAttribute("href")).toBe("/forms/monitoring?view=hr&app=sibling");
+  });
+});
