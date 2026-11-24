@@ -167,3 +167,41 @@ describe("removing notifications from the bell", () => {
     expect(screen.queryByRole("button", { name: "Clear all" })).toBeNull();
   });
 });
+
+/*
+ * Port from Ask Sunny. Pau, 24 Nov 2026, on the forms page showing "Pending HR approval (2)" while the bar had no badge:
+ * "for form monitoring can u please not remove the notification in the bar on the left side if there are still pending
+ * inside". Reading or removing a notification does not decide the form, so the badge stays until the forms are decided.
+ */
+describe("\"can u please not remove the notification in the bar on the left side if there are still pending inside\" (Pau, 24 Nov 2026)", () => {
+  const readButWaiting: BellData = { unread: 0, waitingHr: 2, items: [{ ...data.items[0]!, readAt: new Date().toISOString() }] };
+
+  it("keeps the badge on the rail bar when every notification is read but 2 forms still wait for HR", () => {
+    render(<TooltipProvider><NotificationBell data={readButWaiting} variant="rail" /></TooltipProvider>);
+    expect(screen.getByRole("button", { name: "Notifications, 2 forms waiting for your approval" }).textContent).toContain("2");
+  });
+
+  it("keeps it after Clear all, and links to the pending tab", async () => {
+    render(<NotificationBell data={readButWaiting} variant="rail" />);
+    fireEvent.click(screen.getByRole("button", { name: /^Notifications/ }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Clear all" }));
+    });
+    expect(screen.getByRole("button", { name: "Notifications, 2 forms waiting for your approval" }).textContent).toContain("2");
+    expect(screen.getByRole("link", { name: /2 forms still need your decision/ }).getAttribute("href")).toBe("/forms/monitoring?view=hr");
+  });
+
+  it("keeps it after Mark all as read, showing the larger of unread and waiting", async () => {
+    render(<NotificationBell data={{ ...data, waitingHr: 1 }} />);
+    fireEvent.click(screen.getByRole("button", { name: "Notifications, 2 unread, 1 form waiting for your approval" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Mark all as read" }));
+    });
+    expect(screen.getByRole("button", { name: "Notifications, 1 form waiting for your approval" }).textContent).toBe("1");
+  });
+
+  it("drops the badge once nothing is unread and nothing is waiting", () => {
+    render(<NotificationBell data={{ ...readButWaiting, waitingHr: 0 }} />);
+    expect(screen.getByRole("button", { name: "Notifications" }).textContent).toBe("");
+  });
+});
