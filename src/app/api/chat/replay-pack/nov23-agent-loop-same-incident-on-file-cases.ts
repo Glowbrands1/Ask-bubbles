@@ -23,13 +23,16 @@ const ON_1120 = "create a corrective action for Corliss Abernath, she was a no c
 const SEPARATE = "this is a separate incident, she no-showed her second shift that day too";
 
 /** Corliss's Corrective Action for 11/18 on file: finalized 11/19 (or a draft). */
-function onFile(t: ReplayContext, status: "finalized" | "draft"): void {
+function onFile(t: ReplayContext, state: "finalized" | "draft" | "with_hr"): void {
+  const status = state === "finalized" ? "finalized" : "draft";
   const ids = t.templateIds!("dpoa");
   (t.forms() as Record<string, unknown>[]).push({
     id: "ca-corliss-1118", ...ids, variant_key: null, employee_role: null, location_id: WEST_DODGE.primaryAreaId, location_name: "Omaha, West Dodge Rd",
-    created_by: "another-manager", created_by_role: "location_manager", source: "ask_sunny", status, follow_up_date: null, archived_at: null,
+    /* A form waiting for HR is read only by its creator and HR, so that one is this manager's own (the owner's case: she sent it). */
+    created_by: state === "with_hr" ? "qa-manager" : "another-manager", created_by_role: "location_manager", source: "ask_sunny", status, follow_up_date: null, archived_at: null,
     revises_instance_id: null, template_key: "dpoa", template_name: "Corrective Action Form", employee_name: "Corliss Abernath", form_date: "2026-11-18",
     created_at: "2026-11-18T22:00:00Z", updated_at: "2026-11-19T16:00:00Z", ...(status === "finalized" ? { finalized_at: "2026-11-19T16:00:00Z" } : {}),
+    ...(state === "with_hr" ? { hr_approval_state: "pending" } : {}),
   });
   t.typeOnForm("ca-corliss-1118", { observation: "Corliss was a no call no show for her shift on 11/18/26." });
 }
@@ -59,7 +62,7 @@ const model = (date: string) =>
     };
   });
 
-async function chat(t: ReplayContext, first: string, date: string, status: "finalized" | "draft" = "finalized") {
+async function chat(t: ReplayContext, first: string, date: string, status: "finalized" | "draft" | "with_hr" = "finalized") {
   vi.setSystemTime(new Date("2026-11-23T18:00:00Z"));
   t.directory([...LOOP_STAFF, CORLISS]);
   t.as("location_manager", WEST_DODGE);
@@ -91,6 +94,17 @@ export const NOV23_AGENT_LOOP_SAME_INCIDENT_ON_FILE_CASES: ReplayCase[] = [
       const { thread, reply } = await chat(t, ON_1118, "2026-11-18", "draft");
       expect(thread.proposal ?? null, reply.content).toBeNull();
       expect(reply.content).toContain("already has a Corrective Action for 11/18 (a draft)");
+    },
+  },
+  {
+    id: "nov24-same-incident-with-hr-on-file-is-said",
+    title: "Port from Ask Sunny (owner, 24 Nov 2026): the manager's own CA for 11/18 is waiting for HR approval: the reply says Corliss already has one for 11/18 (waiting for HR approval) and asks; never calls it filed or finalized",
+    report: "Owner, 24 Nov 2026 (Ask Sunny): a manager starting a new form for the same person should see the one she already sent to HR",
+    status: "fixed",
+    async run(t) {
+      const { thread, reply } = await chat(t, ON_1118, "2026-11-18", "with_hr");
+      expect(thread.proposal ?? null, reply.content).toBeNull();
+      expect(reply.content).toContain("already has a Corrective Action for 11/18 (waiting for HR approval). Do you want to open that one, or is this a separate incident?");
     },
   },
   {
