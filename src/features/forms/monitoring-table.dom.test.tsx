@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import * as React from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { MonitoringTable, type MonitoredForm } from "./monitoring-table";
@@ -617,5 +617,139 @@ describe("the row menu \"…\" opens with something in it", () => {
     await userEvent.click(rowFor("Done One").ui.getByRole("button", { name: "More actions for Done One" }));
     const items = await screen.findAllByRole("menuitem");
     expect(items.map((item) => item.textContent)).toEqual(["Reopen follow-up"]);
+  });
+});
+
+/* ------------------------------------------------ select several drafts --- */
+
+/*
+ * Pau, 24 Nov 2026: "can u just create a multi click button and delete inside
+ * both apps so we can easily delete the ones we dont want". Each delete is the
+ * existing per-form DELETE, so the server's rules (store scope, HR withdrawal,
+ * the deletion record) are unchanged.
+ */
+describe("can u just create a multi click button and delete so we can easily delete the ones we dont want", () => {
+  const drafts = () => [
+    form({ id: "a", employeeName: "Draft A", status: "draft", finalizedAt: null }),
+    form({ id: "b", employeeName: "Draft B", status: "draft", finalizedAt: null }),
+    form({ id: "c", employeeName: "Draft C", status: "draft", finalizedAt: null }),
+    form({ id: "f", employeeName: "Filed One" }),
+  ];
+  const tick = (name: string) =>
+    userEvent.click(rowFor(name).ui.getByRole("checkbox", { name: new RegExp(name) }));
+  const deletes = () => calls.list.filter((call) => call.method === "DELETE").map((call) => call.url);
+
+  it("select one: a bar says 1 selected, and Delete selected removes just that draft", async () => {
+    table(drafts());
+    expect(screen.queryByText(/selected$/)).toBeNull();
+    await tick("Draft B");
+    expect(screen.getByText("1 selected")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Delete selected" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.getByText("Draft B", { exact: false })).toBeTruthy();
+    expect(dialog.getByText(/removed for good/i)).toBeTruthy();
+    expect(calls.list).toHaveLength(0);
+    await userEvent.click(dialog.getByRole("button", { name: /^delete 1$/i }));
+    await waitFor(() => expect(navigated.refreshes).toBe(1));
+    expect(deletes()).toEqual(["/api/forms/instances/b"]);
+    expect(screen.getByText("Deleted 1 draft.")).toBeTruthy();
+    expect(screen.queryByText("1 selected")).toBeNull();
+  });
+
+  it("select all: the header box ticks every draft shown, is tri-state, and clears", async () => {
+    table(drafts());
+    const header = screen.getByRole("checkbox", { name: /select all drafts/i }) as HTMLInputElement;
+    await tick("Draft A");
+    expect(header.indeterminate).toBe(true);
+    await userEvent.click(header);
+    expect(screen.getByText("3 selected")).toBeTruthy();
+    expect(header.checked).toBe(true);
+    await userEvent.click(header);
+    expect(screen.queryByText(/\d selected/)).toBeNull();
+    await userEvent.click(header);
+    await userEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(screen.queryByText(/\d selected/)).toBeNull();
+  });
+
+  it("shift-click selects the range between two drafts", async () => {
+    table(drafts());
+    await tick("Draft A");
+    fireEvent.click(rowFor("Draft C").ui.getByRole("checkbox"), { shiftKey: true });
+    expect(screen.getByText("3 selected")).toBeTruthy();
+  });
+
+  it("a finalized form has no checkbox", () => {
+    table(drafts());
+    expect(rowFor("Filed One").ui.queryByRole("checkbox")).toBeNull();
+    expect(rowFor("Draft A").ui.getByRole("checkbox")).toBeTruthy();
+  });
+
+  it("nobody without delete rights gets any checkbox", () => {
+    mockSession.value = {
+      role: "location_manager",
+      user: { name: "QA" },
+      can: (permission: Permission) => permission === "create_coaching_form",
+      demoMode: false,
+    };
+    table(drafts());
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+  });
+
+  it("sends one DELETE per id", async () => {
+    table(drafts());
+    await userEvent.click(screen.getByRole("checkbox", { name: /select all drafts/i }));
+    await userEvent.click(screen.getByRole("button", { name: "Delete selected" }));
+    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: /^delete 3$/i }));
+    await waitFor(() => expect(deletes()).toHaveLength(3));
+    expect([...deletes()].sort()).toEqual([
+      "/api/forms/instances/a",
+      "/api/forms/instances/b",
+      "/api/forms/instances/c",
+    ]);
+  });
+
+  it("reports a partial failure and keeps the failed draft selected", async () => {
+    const ok = globalThis.fetch;
+    vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).endsWith("/b")) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ error: "this form is finalized, so it cannot be deleted" }), {
+            status: 409,
+            headers: { "content-type": "application/json" },
+          }),
+        );
+      }
+      return (ok as typeof fetch)(input, init);
+    });
+    try {
+      table(drafts());
+      await userEvent.click(screen.getByRole("checkbox", { name: /select all drafts/i }));
+      await userEvent.click(screen.getByRole("button", { name: "Delete selected" }));
+      await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: /^delete 3$/i }));
+      expect(
+        await screen.findByText(/Deleted 2\. 1 could not be deleted: this form is finalized/),
+      ).toBeTruthy();
+      expect(screen.getByText("1 selected")).toBeTruthy();
+      expect((rowFor("Draft B").ui.getByRole("checkbox") as HTMLInputElement).checked).toBe(true);
+    } finally {
+      vi.stubGlobal("fetch", ok);
+    }
+  });
+
+  it("clears the selection when the filter changes", async () => {
+    const view = table(drafts());
+    await tick("Draft A");
+    expect(screen.getByText("1 selected")).toBeTruthy();
+    view.rerender(
+      <MonitoringTable
+        forms={drafts()}
+        notice={null}
+        followUp="drafted"
+        today={TODAY}
+        attention={NO_ATTENTION}
+        demo={{ deletable: 0, protected: 0 }}
+      />,
+    );
+    await waitFor(() => expect(screen.queryByText("1 selected")).toBeNull());
   });
 });

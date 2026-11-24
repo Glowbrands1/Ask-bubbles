@@ -190,6 +190,13 @@ export function MonitoringTable({
   const [sweeping, setSweeping] = React.useState(false);
   /** The row whose empty date box is being filled in, after Start tracking. */
   const [starting, setStarting] = React.useState<string | null>(null);
+  /** Drafts ticked for a bulk delete (ids), the last one ticked (for shift-click), and the dialog/progress. */
+  const [selected, setSelected] = React.useState<Set<string>>(() => new Set());
+  const [anchor, setAnchor] = React.useState<string | null>(null);
+  const [bulkConfirming, setBulkConfirming] = React.useState(false);
+  const [bulkProgress, setBulkProgress] = React.useState<{ done: number; total: number } | null>(
+    null,
+  );
   const { role, user, can, demoMode } = useSession();
   const router = useRouter();
 
@@ -348,6 +355,95 @@ export function MonitoringTable({
 
   const banner = attentionSentence(attention);
 
+  /*
+   * BULK DELETE. A row can be ticked only when the per-row Delete would be
+   * offered: a draft, and the viewer may manage form records. The server still
+   * decides each one (DELETE /api/forms/instances/{id}), so store scoping, HR
+   * approval withdrawal and the deletion record are exactly as for one delete.
+   */
+  const deletable = shown.filter((form) => mayManage && form.status === "draft");
+  const deletableIds = deletable.map((form) => form.id);
+  const selectedShown = deletable.filter((form) => selected.has(form.id));
+  const allTicked = deletable.length > 0 && selectedShown.length === deletable.length;
+  const someTicked = selectedShown.length > 0 && !allTicked;
+  const headerBox = React.useRef<HTMLInputElement>(null);
+  React.useEffect(() => {
+    if (headerBox.current) headerBox.current.indeterminate = someTicked;
+  }, [someTicked]);
+
+  // A different view is a different list: a tick must never follow a row off screen.
+  const viewKey = `${templateName}|${followUp}`;
+  const [selectedView, setSelectedView] = React.useState(viewKey);
+  if (selectedView !== viewKey) {
+    setSelectedView(viewKey);
+    setSelected(new Set());
+    setAnchor(null);
+  }
+
+  function toggleRow(id: string, shift: boolean) {
+    setSelected((current) => {
+      const next = new Set(current);
+      const turnOn = !current.has(id);
+      const from = shift && anchor ? deletableIds.indexOf(anchor) : -1;
+      const to = deletableIds.indexOf(id);
+      if (from >= 0 && to >= 0) {
+        const [lo, hi] = from < to ? [from, to] : [to, from];
+        for (const rangeId of deletableIds.slice(lo, hi + 1)) {
+          if (turnOn) next.add(rangeId);
+          else next.delete(rangeId);
+        }
+      } else if (turnOn) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+    setAnchor(id);
+  }
+
+  function toggleAll() {
+    setSelected(allTicked ? new Set() : new Set(deletableIds));
+    setAnchor(null);
+  }
+
+  async function deleteSelected() {
+    const targets = selectedShown;
+    setBusy("bulk");
+    setProblem(null);
+    setMessage(null);
+    setBulkProgress({ done: 0, total: targets.length });
+    const failed: { form: MonitoredForm; reason: string }[] = [];
+    let done = 0;
+    let next = 0;
+    // Three at a time: quick for a clean-up, gentle on the server.
+    const worker = async () => {
+      while (next < targets.length) {
+        const form = targets[next++];
+        try {
+          await call(`/api/forms/instances/${form.id}`, { method: "DELETE" });
+        } catch (error) {
+          failed.push({ form, reason: (error as Error).message });
+        }
+        done += 1;
+        setBulkProgress({ done, total: targets.length });
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(3, targets.length) }, worker));
+
+    const deletedCount = targets.length - failed.length;
+    const failedIds = new Set(failed.map((item) => item.form.id));
+    setSelected((current) => new Set([...current].filter((id) => failedIds.has(id))));
+    setAnchor(null);
+    if (failed.length === 0) {
+      setMessage(`Deleted ${deletedCount} draft${deletedCount === 1 ? "" : "s"}.`);
+    } else {
+      const reasons = [...new Set(failed.map((item) => item.reason))].join("; ");
+      setProblem(`Deleted ${deletedCount}. ${failed.length} could not be deleted: ${reasons}`);
+    }
+    setBulkProgress(null);
+    setBulkConfirming(false);
+    setBusy(null);
+    router.refresh();
+  }
+
   const emptyMessage =
     followUp !== "all"
       ? `Nothing is ${FOLLOW_UP_LABEL[followUp as FollowUpState].toLowerCase()}.`
@@ -460,6 +556,31 @@ export function MonitoringTable({
         </CardContent>
       </Card>
 
+      {selectedShown.length > 0 ? (
+        <div
+          role="region"
+          aria-label="Selected drafts"
+          className="sticky top-2 z-20 flex flex-wrap items-center gap-3 rounded-[var(--radius-xs)] border border-border-strong bg-surface px-4 py-2 shadow-md"
+        >
+          <p className="text-[13px] font-medium text-foreground">
+            {selectedShown.length} selected
+          </p>
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="ghost" onClick={() => setSelected(new Set())} disabled={busy === "bulk"}>
+              Clear
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => setBulkConfirming(true)}
+              disabled={busy === "bulk"}
+            >
+              <Trash2 />
+              Delete selected
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       {shown.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center text-[13px] text-muted-foreground">
@@ -478,6 +599,22 @@ export function MonitoringTable({
               <table className="w-full min-w-[900px] border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-border">
+                    {mayManage ? (
+                      <th className="w-11 px-1 py-0 text-left">
+                        {deletable.length > 0 ? (
+                          <label className="flex size-11 cursor-pointer items-center justify-center">
+                            <input
+                              ref={headerBox}
+                              type="checkbox"
+                              aria-label="Select all drafts that can be deleted"
+                              checked={allTicked}
+                              onChange={toggleAll}
+                              className="size-5 cursor-pointer accent-[var(--foreground)]"
+                            />
+                          </label>
+                        ) : null}
+                      </th>
+                    ) : null}
                     {[
                       "Employee",
                       "Form",
@@ -509,6 +646,22 @@ export function MonitoringTable({
 
                     return (
                       <tr key={form.id} className="border-b border-border last:border-0">
+                        {mayManage ? (
+                          <td className="w-11 px-1 py-0">
+                            {form.status === "draft" ? (
+                              <label className="flex size-11 cursor-pointer items-center justify-center">
+                                <input
+                                  type="checkbox"
+                                  aria-label={`Select ${form.employeeName}'s ${form.templateShortName} draft`}
+                                  checked={selected.has(form.id)}
+                                  onChange={() => undefined}
+                                  onClick={(event) => toggleRow(form.id, event.shiftKey)}
+                                  className="size-5 cursor-pointer accent-[var(--foreground)]"
+                                />
+                              </label>
+                            ) : null}
+                          </td>
+                        ) : null}
                         <td className="px-2.5 py-2 whitespace-nowrap text-foreground">
                           {form.employeeName}
                         </td>
@@ -747,6 +900,44 @@ export function MonitoringTable({
             </DialogActions>
           </DialogContent>
         ) : null}
+      </Dialog>
+
+      {/* BULK DELETE: the same confirmation, for several drafts at once. */}
+      <Dialog
+        open={bulkConfirming}
+        onOpenChange={(open) => {
+          if (!open && busy !== "bulk") setBulkConfirming(false);
+        }}
+      >
+        <DialogContent
+          title={`Delete ${selectedShown.length} draft${selectedShown.length === 1 ? "" : "s"}?`}
+          description="Drafts are removed for good. A deletion record is kept."
+        >
+          <ul className="space-y-1 text-[13px] text-foreground">
+            {selectedShown.slice(0, 5).map((form) => (
+              <li key={form.id}>
+                {form.employeeName} <span className="text-muted-foreground">· {form.templateShortName}</span>
+              </li>
+            ))}
+            {selectedShown.length > 5 ? (
+              <li className="text-muted-foreground">and {selectedShown.length - 5} more</li>
+            ) : null}
+          </ul>
+          {bulkProgress ? (
+            <p role="status" className="text-[13px] text-muted-foreground">
+              Deleting {bulkProgress.done} of {bulkProgress.total}…
+            </p>
+          ) : null}
+          <DialogActions>
+            <Button variant="ghost" onClick={() => setBulkConfirming(false)} disabled={busy === "bulk"}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={deleteSelected} disabled={busy === "bulk"}>
+              {busy === "bulk" ? <Loader2 className="animate-spin" /> : <Trash2 />}
+              Delete {selectedShown.length}
+            </Button>
+          </DialogActions>
+        </DialogContent>
       </Dialog>
 
       {/*
