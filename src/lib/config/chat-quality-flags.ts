@@ -6117,3 +6117,14 @@ export function priorFormsUpToTodayEnabled(): boolean {
 export function typedEmployeeEveryCardEnabled(): boolean {
   return envFlag("TYPED_EMPLOYEE_EVERY_CARD_ENABLED");
 }
+
+/**
+ * ADMIN_CARD_ASKS_SALON (port from Ask Sunny; its QA, 24 Nov 2026, live as an Admin; default off; same flag in both
+ * apps): an admin's card for a person Woven lists at one store silently took that store though their form on file in the
+ * Forms Register is at another. With the flag on, a store taken from Woven while this person's forms on file are at
+ * another store is not taken: the card asks which, naming both. (An admin's card with no store already asks here.)
+ * Stores named in the request still win; non-admins are unchanged. Off, as before.
+ */
+export function adminCardAsksSalonEnabled(): boolean {
+  return envFlag("ADMIN_CARD_ASKS_SALON_ENABLED");
+}

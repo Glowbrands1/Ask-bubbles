@@ -53,6 +53,7 @@ import {
   retrievalRecallEnabled,
   priorFormsUpToTodayEnabled,
   typedEmployeeEveryCardEnabled,
+  adminCardAsksSalonEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { typedEmployeeName } from "@/lib/forms/typed-employee-name";
 import { formDateGiven } from "@/lib/forms/incident-dates";
@@ -3561,6 +3562,24 @@ async function exitFormsOnFile(context: ToolContext, name: string, exitKey: stri
     .map((row) => ({ status: row.status, date: mdy(row.formDate), store: row.locationName }));
 }
 
+/**
+ * ADMIN_CARD_ASKS_SALON_ENABLED (port from Ask Sunny; its QA, 24 Nov 2026): the stores this person's forms on file are
+ * at, as the Forms Register lists them for this login (any form, not a revised one), each once.
+ */
+async function formsOnFileStores(context: ToolContext, name: string): Promise<{ id: string; name: string }[]> {
+  const actor = await chatFormsActor(context.actor).catch(() => null);
+  if (!actor) return [];
+  const nameWords = candidateNameWords(name);
+  if (nameWords.length === 0) return [];
+  const rows = visibleInstances(actor, await listInstances(200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }).catch(() => []));
+  const found = new Map<string, string>();
+  for (const row of rows) {
+    if (row.status === "revised" || !row.locationId || !samePerson(row.employeeName, name)) continue;
+    if (!found.has(row.locationId)) found.set(row.locationId, rosterSalonName(row.locationId) ?? row.locationName ?? row.locationId);
+  }
+  return [...found].map(([id, label]) => ({ id, name: label }));
+}
+
 async function exitCardTicks(isExit: boolean, termination: boolean, requestWords: string, today: string, exitHow: string | null = null): Promise<{ exit_ticks?: string[]; exit_unset?: string[]; keys?: string[] }> {
   /*
    * Ported from the sibling app: its QA's live L6 (22 Nov 2026): a termination's reply said "Filed as" twice:
@@ -6060,7 +6079,40 @@ export async function proposeForm(
    */
   let whichSalon = false;
   const globalAsk = await import("./places");
-  if (noStoreStated && !card.locationId) {
+  /*
+   * ADMIN_CARD_ASKS_SALON_ENABLED (port from Ask Sunny; its QA, 24 Nov 2026, live as an Admin): a store from Woven that
+   * differs from this person's forms on file is not taken: the card asks which store, naming both.
+   */
+  const adminAsks = adminCardAsksSalonEnabled() && context.actor.role === "admin" && context.actor.scope?.level === "global";
+  let wovenAndForms: { woven: string; forms_on_file: string[]; ask_exactly: string } | null = null;
+  const wovenDiffersFromForms = async (wovenId: string): Promise<typeof wovenAndForms> => {
+    if (!adminAsks || !card.employeeName) return null;
+    const elsewhere = (await formsOnFileStores(context, employee.name)).filter((store) => store.id !== wovenId);
+    if (elsewhere.length === 0) return null;
+    const woven = rosterSalonName(wovenId) ?? wovenId;
+    const first = (replyNameFor(card.employeeName, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null).split(" ")[0]) || card.employeeName;
+    const onFile = elsewhere.map((store) => `**${store.name}**`);
+    const list = onFile.length === 1 ? onFile[0]! : `${onFile.slice(0, -1).join(", ")} and ${onFile[onFile.length - 1]!}`;
+    return {
+      woven,
+      forms_on_file: elsewhere.map((store) => store.name),
+      ask_exactly: `Which ${locationWord()} is this about? ${staffSystem()} lists ${first} at **${woven}**, and ${first}'s forms on file in the ${appConfig().formsPageName} are at ${list}. The card is ready — choose the ${locationWord()} before you create the draft, so it is not filed with no ${locationWord()}.`,
+    };
+  };
+  const askWhichStore = () => {
+    Object.assign(card, { locationId: null, locationName: null, locationResolution: "needs_selection", authorizedLocationIds: appConfig().locations().map((salon) => salon.id), status: "ready", supportsInlineDraft: card.supportsInlineDraft !== false });
+    salonFromWoven = null;
+    const askedBefore = context.history.some((turn) => turn.role === "assistant" && new RegExp(`which ${locationWord()} is this about`, "i").test(String(turn.content ?? "")));
+    if (askedBefore) wovenAndForms = null;
+  };
+  /* The card's store came from the person's Woven stores (the proposal builder's one employee store), not the manager's words. */
+  if (adminAsks && card.locationId && employee.id && !typedSalon && turnSalonIds.length === 0 && !globalAsk.salonIdNamedIn(requestWords) && employee.salonIds.includes(card.locationId)) {
+    wovenAndForms = await wovenDiffersFromForms(card.locationId);
+    if (wovenAndForms) askWhichStore();
+  }
+  if (wovenAndForms) {
+    /* Asked below with which_store_woven_and_forms. */
+  } else if (noStoreStated && !card.locationId) {
     Object.assign(card, { locationId: null, locationResolution: "not_applicable", status: card.status === "needs_location" ? "ready" : card.status, noStoreStated: true as const });
   } else if (!card.locationId && card.employeeName && context.actor.scope?.level === "global" && !globalAsk.globalNonAdminNeedsSalon(context.actor.role, context.actor.scope)) {
     /*
@@ -6079,7 +6131,9 @@ export async function proposeForm(
       : offRosterName
         ? ((await inactiveMatchRow(context.actor.scope, employee.name))?.locationIds ?? []).filter((id) => allStores.includes(id))
         : [];
-    if (theirs.length === 1) {
+    wovenAndForms = theirs.length === 1 && employee.id ? await wovenDiffersFromForms(theirs[0]!) : null;
+    if (wovenAndForms) askWhichStore();
+    else if (theirs.length === 1) {
       Object.assign(card, { locationId: theirs[0], locationName: rosterSalonName(theirs[0]!) ?? card.locationName, locationResolution: "resolved", authorizedLocationIds: [theirs[0]], status: card.status === "needs_location" ? "ready" : card.status });
       salonFromWoven = rosterSalonName(theirs[0]!) ?? theirs[0]!;
     } else {
@@ -6604,6 +6658,7 @@ export async function proposeForm(
     /* Pau's job-title rule (via QA, 23 Nov 2026): the manager's instructed title; the card and the saved form use it. */
     ...(jobTitleInstructed ? { job_title_as_you_said: card.employeeRole } : {}),
     ...(whichSalon ? { which_store: true } : {}),
+    ...(wovenAndForms ? { which_store_woven_and_forms: wovenAndForms } : {}),
     ...(terminationStated ? { termination_stated: { approval: stated.TERMINATION_APPROVAL_LINE, plan_closing: stated.TERMINATION_PLAN_SENTENCE } } : {}),
     /*
      * Batch G2 (item 3, QA's live run part 2: the hedge line was missing on 5 of 7): the manager's words name a
