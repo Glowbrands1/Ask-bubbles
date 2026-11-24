@@ -24,7 +24,9 @@ import { formatBusinessTime } from "@/lib/business-date";
  *                               2026: "Manager Replied to changes. then view then
  *                               approve"; QA: HR may still need more changes); a
  *                               note box
- *   the creator                 the state, how long it has waited, and every note
+ *   the creator, a sender       the state, how long it has waited, and every note; while it
+ *                               waits, a note that HR approves it before it is final and that
+ *                               their edits reach HR (owner, 24 Nov 2026)
  */
 
 export interface HrApprovalPanelView {
@@ -144,9 +146,12 @@ export function HrApprovalPanel({
           HR approval is not running right now, so this form is yours again: you can change it and finalize it.
         </p>
       ) : view.state === "pending" && !view.canDecide ? (
-        <p className="mt-2 text-xs text-muted-foreground">
-          HR is reviewing this form. It is finalized when they approve it, and you will see their answer in the bell.
-        </p>
+        <div className="mt-2" data-testid="hr-sent-note">
+          <Notice tone="accent" title="Sent to HR for approval">
+            This form will be approved by HR before it is final, and you will get a notification when HR decides.
+            {view.canEdit ? " You can still edit it: save your changes and HR sees the updated version." : ""}
+          </Notice>
+        </div>
       ) : null}
       {approveOnly ? (
         <p className="mt-2 text-xs text-muted-foreground">
@@ -155,7 +160,7 @@ export function HrApprovalPanel({
       ) : view.state === "changes_requested" || view.state === "rejected" ? (
         !view.canDecide ? (
           <p className="mt-2 text-xs text-muted-foreground">
-            Make the changes on the form, save, then press Finalize and send to HR for approval again.
+            Make the changes on the form, save, then press Finalize and send for approval again.
           </p>
         ) : null
       ) : null}

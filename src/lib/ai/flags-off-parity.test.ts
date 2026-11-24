@@ -212,7 +212,7 @@ const ALLOWED_UI = [
   // the viewer's own notifications only. The DM L10 bell (src/features/l10/, listed above) shows the same panel (Pau:
   // "for dm meeting make this UI same with bubble"), with its out-of-app Settings link removed.
   // HR APPROVAL OF FORMS (owner request, 23 Nov 2026, both apps), behind FORMS_HR_APPROVAL_ENABLED (off): the form card's
-  // "Finalize and send to HR for approval" and HR's approval panel, the Forms Register's Pending HR approval tab and "Your
+  // "Finalize and send for approval" and HR's approval panel, the Forms Register's Pending HR approval tab and "Your
   // forms with HR" list, the Overview card, and the HR review page. Off, none of them renders and Finalize is as before.
   "src/features/forms/hr-approval-lists.tsx",
   "src/features/forms/hr-approval-panel.tsx",
