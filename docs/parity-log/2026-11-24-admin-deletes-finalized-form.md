@@ -1,6 +1,6 @@
-# Administrators may delete a finalized form (Ask Bubbles only, for now)
+# Administrators may delete a finalized form (ported to Ask Sunny)
 
-**Date:** 24 Nov 2026. **Status:** Bubbles-only until Pau decides for Ask Sunny.
+**Date:** 24 Nov 2026. **Status:** ported to Ask Sunny the same day, at Pau's ask (Ask Sunny PR 1320).
 
 **Report.** Pau, with a screenshot of the Bubbles Forms Register: "why cant delete?
 in bubbles — fix and merge". The row was a finalized Corrective Action ("v4 ·
@@ -28,11 +28,7 @@ finalized form**; nobody else.
   finalized-values guard does not stop it because the form is already gone when the
   cascade runs (checked on Postgres 16).
 
-**Why Ask Sunny is not changed in this pull request.** Ask Sunny has the same rule
-(`src/lib/forms/instances.ts` refuses a non-draft; the Register offers Delete on
-drafts only). The decision was asked and answered for Bubbles, and it loosens
-protection of signed HR documents, so it is not carried across without Pau saying
-so for Sunny. To port: the same three changes (`allowFinalized` on
-`deleteInstance`, the route's role check, the Register's menu and warning) with
-the name mapping store ↔ salon, Forms Register ↔ Form Monitoring, and the same
-tests with invented names.
+**Ask Sunny.** It had the same draft-only rule. Pau asked for the same there after
+this merged, so it was ported with the name mapping Forms Register ↔ Form Monitoring
+(Ask Sunny PR 1320, `docs/parity-log/2026-11-24-admin-deletes-finalized-form.md`
+there), with its own replay case on `read_form_deletions` and invented test names.

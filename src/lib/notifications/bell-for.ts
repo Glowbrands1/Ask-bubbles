@@ -21,12 +21,17 @@ import type { BellData } from "./types";
 export async function bellFor(
   identity: { email?: string | null } | null,
   waitingHr: () => Promise<number | null> = async () => null,
+  waitingSiblingHr: () => Promise<{ app: string; count: number } | null> = async () => null,
 ): Promise<BellData | null> {
   try {
     const email = identity?.email?.trim().toLowerCase();
     if (!email) return null;
-    const [data, waiting] = await Promise.all([listNotifications(email), waitingHr()]);
-    return waiting ? { ...data, waitingHr: waiting } : data;
+    const [data, waiting, sibling] = await Promise.all([listNotifications(email), waitingHr(), waitingSiblingHr().catch(() => null)]);
+    return {
+      ...data,
+      ...(waiting ? { waitingHr: waiting } : {}),
+      ...(sibling && sibling.count > 0 ? { waitingSiblingHr: sibling } : {}),
+    };
   } catch {
     return null;
   }
