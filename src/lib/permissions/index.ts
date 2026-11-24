@@ -61,7 +61,7 @@ export const PERMISSION_LABEL: Record<Permission, string> = {
   create_employment_change_form: "Create demotion and transfer forms",
   view_form_monitoring: "View the forms register",
   manage_form_templates: "Manage form templates",
-  manage_form_records: "Delete and archive filed forms",
+  manage_form_records: "Delete filed forms",
   view_reports: "View reports",
   view_ai_usage: "View AI usage & spend",
   view_analytics: "View adoption analytics",
