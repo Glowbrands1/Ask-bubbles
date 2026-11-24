@@ -179,7 +179,7 @@ export async function reopenRequestedForm(input: {
       visible = visibleInstances(
         actor,
         // PRIVATE_CREATOR_FORMS: over-read, then trim to the page; off, 200 itself.
-        await listInstances("active", privateAwareLimit(200), words.length > 0 ? { ...filter, employeeNameWords: words } : filter),
+        await listInstances(privateAwareLimit(200), words.length > 0 ? { ...filter, employeeNameWords: words } : filter),
       ).slice(0, 200);
     } catch {
       return null;
@@ -202,7 +202,7 @@ export async function reopenRequestedForm(input: {
       let all: InstanceRow[] = [];
       try {
         const actor = await authorizeForms(input.request, "view_form_monitoring");
-        all = visibleInstances(actor, await listInstances("active", privateAwareLimit(200), instanceListFilterFor(actor))).slice(0, 200);
+        all = visibleInstances(actor, await listInstances(privateAwareLimit(200), instanceListFilterFor(actor))).slice(0, 200);
       } catch {
         all = [];
       }

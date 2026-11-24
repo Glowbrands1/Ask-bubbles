@@ -22,7 +22,6 @@ import {
   InstanceProtectedError,
   listInstances,
   loadInstance,
-  type InstanceView,
 } from "@/lib/forms/instances";
 import { instanceListFilterFor, visibleInstances } from "@/lib/forms/instance-scope";
 import { authorizeLocation } from "@/lib/forms/location-scope";
@@ -119,11 +118,6 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
     const actor = await authorizeForms(request, "view_form_monitoring");
-    const { searchParams } = new URL(request.url);
-
-    const requested = searchParams.get("view");
-    const view: InstanceView =
-      requested === "archived" || requested === "all" ? requested : "active";
 
     /*
      * ==========================================================================
@@ -159,20 +153,18 @@ export async function GET(request: Request) {
     // PRIVATE_CREATOR_FORMS: over-read, then trim to the default page of 200; off, as before.
     const instances = visibleInstances(
       actor,
-      await listInstances(view, privateCreatorsActive() ? privateAwareLimit(200) : undefined, instanceListFilterFor(actor)),
+      await listInstances(privateCreatorsActive() ? privateAwareLimit(200) : undefined, instanceListFilterFor(actor)),
     ).slice(0, 200);
 
     // The sweep's shape is returned alongside so the screen can say "Delete 5
     // demo forms" with a real number rather than counting what it happens to
-    // be showing — the active list is filtered, and a count taken from it
-    // would be wrong the moment somebody switches to Archived.
+    // be showing — the list is capped, and a count taken from it could be short.
     //
     // Scoped by the same rule: a count of forms the caller may not see would
     // offer a "Delete 5" that removed nothing, and would leak how many exist.
     const sweep = await findDemoInstances();
     return NextResponse.json({
       instances,
-      view,
       demo: {
         deletable: visibleInstances(actor, sweep.deletable).length,
         protected: visibleInstances(actor, sweep.protected).length,
@@ -840,7 +832,7 @@ function incidentText(conversation: unknown, employeeName: string): string {
  *
  * A finalized demo form is not swept. The rule about signed documents does not
  * bend because the document happens to be synthetic — those are reported and
- * left for archiving.
+ * left on file.
  */
 export async function DELETE(request: Request) {
   try {

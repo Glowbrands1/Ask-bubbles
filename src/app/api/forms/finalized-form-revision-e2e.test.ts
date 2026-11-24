@@ -666,45 +666,6 @@ describe("a form on file is found under the current Forms visibility", () => {
   });
 });
 
-describe("an archived revision draft (QA's audit item 17a, 10 Nov 2026)", () => {
-  /* `findOpenRevision` handed back a revision draft an administrator had archived. REVISION_ARCHIVED_NOT_OPEN_ENABLED. */
-  async function archivedRevisionDraft() {
-    const original = await finalizedExit();
-    const draft = (await act(original, { action: "revise" })).id;
-    // Archiving is `manage_form_records`, an administrator's permission.
-    state.role = "admin";
-    state.scope = { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] };
-    const archived = await instanceRoute.PUT(
-      new Request(`https://app.test/api/forms/instances/${draft}`, { method: "PUT", body: JSON.stringify({ archived: true }) }),
-      { params: Promise.resolve({ id: draft }) },
-    );
-    expect(archived.status).toBe(200);
-    expect(store.form_instances.find((row: Record<string, unknown>) => row.id === draft)?.archived_at).toBeTruthy();
-    return { original, draft };
-  }
-
-  it("flag off (production today): the archived revision draft is still the one reopened", async () => {
-    vi.stubEnv("REVISION_ARCHIVED_NOT_OPEN_ENABLED", "");
-    const { original, draft } = await archivedRevisionDraft();
-    expect((await act(original, { action: "revise" })).id).toBe(draft);
-    vi.unstubAllEnvs();
-  });
-
-  // Pau's forms/instances.ts lines are in ("ok revision archived", 10 Nov 2026), so this holds now.
-  it("REVISION_ARCHIVED_NOT_OPEN_ENABLED with the narrowed index: an archived draft is not reused; asking again opens a new revision", async () => {
-    vi.stubEnv("REVISION_ARCHIVED_NOT_OPEN_ENABLED", "true");
-    state.indexSkipsArchived = true;
-    try {
-      const { original, draft } = await archivedRevisionDraft();
-      const next = (await act(original, { action: "revise" })).id;
-      expect(next).not.toBe(draft);
-      expect(statusOf(next)).toBe("draft");
-      expect(store.form_instances.find((row: Record<string, unknown>) => row.id === next)?.revises_instance_id).toBe(original);
-      // Asked again while the new one is open: the new one back, not the archived one.
-      expect((await act(original, { action: "revise" })).id).toBe(next);
-    } finally {
-      state.indexSkipsArchived = false;
-      vi.unstubAllEnvs();
-    }
-  });
-});
+// Pau, 23 Nov 2026: forms are no longer archived (Draft/Finalized only), so "an archived revision draft" cannot be made
+// through the API any more (no PUT { archived }); the archived-draft revision cases that archived one through it are gone.
+// `findOpenRevision`'s REVISION_ARCHIVED_NOT_OPEN filter and the index model above stay for rows archived before the migration.

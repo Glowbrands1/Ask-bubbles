@@ -517,7 +517,6 @@ function describeRow(row: InstanceRow, today: string, viewerId?: string | null):
   if (state === "open" || state === "overdue" || state === "followed_up") {
     parts.push(`follow-up: ${FOLLOW_UP_LABEL[state]}`);
   }
-  if (row.archivedAt) parts.push("archived");
   /*
    * HR APPROVAL. A form HR has not approved reaches this list only for its creator, its sender and HR
    * (`hiddenWhileAwaitingHr`), so its state is said here. "Approved by HR" is said only to its creator and sender: everybody else reads an
@@ -588,7 +587,7 @@ function countsSection(counted: { counts: FormCounts; listed: number; of: number
     `- ${person.employee}: ${person.total} — ${person.by_form.map((form) => `${form.form} ${form.total} (${form.by_date.map((day) => `${day.date ?? "no date"}: ${day.count}, ${statuses(day.statuses)}`).join("; ")})`).join("; ")}`,
   );
   return [
-    `COUNTS (code counted every form the read found: ${counted.counts.total}${counted.complete ? "" : ", the first rows of a read that stopped at its limit"}). Copy these numbers exactly. Never count or add up the rows yourself, and never put one person's forms under another person's name. Mark an archived form "(archived)". Archived drafts are left out unless the question asked for archived forms.`,
+    `COUNTS (code counted every form the read found: ${counted.counts.total}${counted.complete ? "" : ", the first rows of a read that stopped at its limit"}). Copy these numbers exactly. Never count or add up the rows yourself, and never put one person's forms under another person's name. A form is draft or finalized (a replaced one is revised): name no other status.`,
     ...lines,
     ...(counted.of > counted.listed ? [`${counted.listed} of these ${counted.of} forms are listed above; say how many are not shown.`] : []),
   ].join("\n");
@@ -782,8 +781,6 @@ export async function loadFormRecords(input: {
     const kind = input.kind ?? (input.narrowFromQuestion ? formKindFromText(input.question) : null);
     const narrowed = range || kind ? { range, kind, limit: NARROWED_LIMIT } : null;
     const counting = formsOnFileCountsEnabled();
-    /* FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, f081): an archived draft is left out unless the question asks for archived forms. */
-    const keep = (row: InstanceRow) => !counting || /\barchiv/i.test(input.question) || !(row.archivedAt && row.status === "draft");
     const narrowFilter = {
       ...(range ? { formDateFrom: range.from, formDateTo: range.to } : {}),
       ...(kind ? { templateNameWords: kind.templateNameWords } : {}),
@@ -803,9 +800,9 @@ export async function loadFormRecords(input: {
       const asked = privateAwareLimit(counting ? COUNTED_READ_LIMIT : MATCH_LIMIT);
       // An accented question also reads the old letter pieces, so a name stored with its accent is still read.
       const readWords = [...new Set([...words, ...accentedNamePieces(nameSource).filter((word) => !narrowing || !RANGE_WORDS.has(word))])];
-      const read = await listInstances("all", asked, { ...filter, ...narrowFilter, employeeNameWords: readWords });
+      const read = await listInstances(asked, { ...filter, ...narrowFilter, employeeNameWords: readWords });
       // Item 28: a Coaching kind never keeps a Follow-Up Coaching Form (`ofKind`).
-      const found = ofKind(visibleInstances(formsActor, read), kind).filter(keep);
+      const found = ofKind(visibleInstances(formsActor, read), kind);
       const split = splitRecordDrafts(input.question, found.slice(0, MATCH_LIMIT));
       const matches = matchRowsToQuestion(split.onFile, words, nameSource);
       const drafts = matchRowsToQuestion(split.notOnFile, words, nameSource);
@@ -823,12 +820,11 @@ export async function loadFormRecords(input: {
     }
 
     if (narrowed && !(words.length > 0 && looksLikeItNamesSomebody(nameSource))) {
-      // Archived forms count: "who got a CA this month" asks what was filed, not what is on the active shelf.
-      // FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, f081): archived FINALIZED forms still count; archived drafts are left out.
+      // Every form on file counts, as the Forms Register shows them (no archive: Pau, 23 Nov 2026).
       const asked = privateAwareLimit(counting ? COUNTED_READ_LIMIT : NARROWED_LIMIT);
-      const read = await listInstances("all", asked, { ...filter, ...narrowFilter });
+      const read = await listInstances(asked, { ...filter, ...narrowFilter });
       // Item 28: a Coaching kind never keeps a Follow-Up Coaching Form (`ofKind`).
-      const found = ofKind(visibleInstances(formsActor, read), kind).filter(keep);
+      const found = ofKind(visibleInstances(formsActor, read), kind);
       const listed = counting
         ? [...found].sort((a, b) => (b.formDate ?? "").localeCompare(a.formDate ?? "") || a.employeeName.localeCompare(b.employeeName)).slice(0, NARROWED_LIMIT)
         : found.slice(0, NARROWED_LIMIT);
@@ -843,7 +839,7 @@ export async function loadFormRecords(input: {
 
     const recentSplit = splitRecordDrafts(
       input.question,
-      visibleInstances(formsActor, await listInstances("active", privateAwareLimit(RECENT_LIMIT), filter)).slice(0, RECENT_LIMIT),
+      visibleInstances(formsActor, await listInstances(privateAwareLimit(RECENT_LIMIT), filter)).slice(0, RECENT_LIMIT),
     );
     const recent = recentSplit.onFile;
     /*
