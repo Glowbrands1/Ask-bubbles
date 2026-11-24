@@ -7259,9 +7259,10 @@ export async function editForm(
      * HARD GUARD, WAITING FOR HR (owner, 24 Nov 2026: "the chat should say "waiting for HR approval" instead of a general
      * save error"): a form sent for HR approval is frozen to the chat's writer (`editableDraft`), so the edit is refused
      * here, before anything is written, with the words the card uses: it is waiting for HR approval, and it is changed on
-     * the form itself, where HR sees the update. Never a generic save failure.
+     * the form itself, where HR sees the update. Never a generic save failure. An edit the WAITING FOR HR step above let
+     * through (the creator, a sender or HR, inside `withHrEditScope`; #1130) is not refused here: it is saved.
      */
-    if (loaded.instance.status === "draft" && heldForHr(loaded.instance.hrApprovalState ?? null)) {
+    if (loaded.instance.status === "draft" && heldForHr(loaded.instance.hrApprovalState ?? null) && !(await import("@/lib/forms/hr-edit-scope")).inHrEditScope(id)) {
       const note = "Tell the manager exactly this: the form is waiting for HR approval, so it was not changed from chat; they can change it on the form itself and HR sees the updated version. Never call it a save error.";
       return { reason_code: "waiting_for_hr_approval", error: WAITING_FOR_HR_CHAT_REPLY, nothing_written: true, note };
     }
