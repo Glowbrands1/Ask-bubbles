@@ -37,6 +37,7 @@ import { replyWithShortName } from "@/lib/forms/short-name";
 import { agentLoopRules, agentLoopSystem } from "./prompt";
 import { generatedId, identifiedTurns, messageIdTag, withoutMessageIdTags } from "./evidence";
 import { agentLoopStepLimit } from "./switch";
+import { adviceNotForm, onlyAsksWho } from "./advice-not-form";
 import { progressStatus } from "./progress";
 import {
   appHelp,
@@ -1536,6 +1537,16 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
           const again = await handBack("[app check] Your reply speaks of \"the manager\" in the third person: that is your own reasoning, not an answer. The manager reads this reply: write to them as \"you\", say only what was done or what you need, and never explain your reasoning. Then write your reply to the manager again.");
           if (again) text = again;
           if (speaksOfTheManager(text)) text = withoutManagerReasoning(text) || text;
+        }
+        /*
+         * Port of Ask Sunny (QA, 24 Nov 2026, live, Standard mode, twice): "Coach a leader on running better follow-up
+         * conversations" got only "Who is this Coaching Form for?". propose_form refuses a card for such a turn
+         * (advice_not_form); a reply that still only asks who a form is for, on a turn that asked for advice and no form
+         * (`adviceNotForm`, the manager's words), goes back once to be answered.
+         */
+        if (stoppedAt === "reply" && !effects.proposal && onlyAsksWho(text) && adviceNotForm(input.question, input.history)) {
+          const again = await handBack("[app check] The manager asked for advice, not a form, and your reply only asks who a form is for. Answer the question itself now: practical steps, a short checklist, a sample script or role-play where it helps, citing the manual where a policy applies. Never ask who a form is for; you may offer the form in one closing line.");
+          if (again && !onlyAsksWho(again)) text = again;
         }
       }
     });
