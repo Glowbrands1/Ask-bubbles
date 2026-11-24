@@ -16,6 +16,7 @@ import { isoDate, monthDayToIso, readDates, sameDate, withoutDates, type ReadDat
 import { storePhraseLeftInAccount } from "./store-phrase";
 import { shownAccount, unaskedAccountChange } from "./account-kept";
 import { earlierPriorDates, priorDateLine, priorStepDates } from "./prior-step-dates";
+import type { FormsActor } from "@/lib/forms/access";
 import { candidateNameWords, chatFormsActor, formDateRangeFromInput, formKindFromText, ofKind } from "@/lib/forms/chat-form-records";
 import { formsOnFileSameDay, sameDayOnFileQuestion, type SameDayOnFile } from "@/lib/forms/same-incident";
 import { CURRENT_MESSAGE_ID, holdsPhrase, identifiedTurns, readEvidence, verifyEvidence, withoutMessageIdTags, type IdentifiedTurn } from "./evidence";
@@ -6860,18 +6861,41 @@ export async function editForm(
   }
   /*
    * WAITING FOR HR (owner, 23 Nov 2026: "can the AI edit a form that's been sent back for changes?"). A form HR sent back
-   * or rejected is the manager's to change, so the edit goes on as usual. One waiting for HR is frozen until HR decides:
-   * refused here with the reason, so the reply says HR has it, instead of each field's bare "not_draft". After the
-   * privacy gates above, so it never tells somebody the form exists.
+   * or rejected is the manager's to change, so the edit goes on as usual. One waiting for HR may be changed by its
+   * creator, anyone who sent it, and HR, as on the card (`mayEditWhileWithHr`; owner, 24 Nov 2026, asked "Should I let
+   * chat edits work there too, like edits on the form?": "sure"). Their edit runs inside the scope that lets the writers
+   * past the hold for this one form (`hr-edit-scope.ts`), and is recorded in the approval history with HR told, as the
+   * card's Save does (`recordHrEdit`). Anybody else is refused with the reason. After the privacy gates above, so it never
+   * tells somebody the form exists.
    */
   {
     const { heldForHr } = await import("@/lib/forms/hr-approval-rules");
-    const held = await (await import("@/lib/forms/instances")).loadInstance(id).catch(() => null);
-    if (held && held.instance.status === "draft" && heldForHr(held.instance.hrApprovalState) && (await (await import("@/lib/forms/hr-approval-approvers")).hrHoldLive())) {
-      return {
-        reason_code: "held_for_hr",
-        error: "This form is waiting for HR approval, so nobody but HR can change it until HR approves it or sends it back. Nothing was written. Tell the manager it is with HR, and that they can add a note for HR on the form.",
-      };
+    const instances = await import("@/lib/forms/instances");
+    const held = await instances.loadInstance(id).catch(() => null);
+    const scoped = await import("@/lib/forms/hr-edit-scope");
+    if (
+      held &&
+      held.instance.status === "draft" &&
+      heldForHr(held.instance.hrApprovalState) &&
+      !scoped.inHrEditScope(id) &&
+      (await (await import("@/lib/forms/hr-approval-approvers")).hrHoldLive())
+    ) {
+      const approvals = await import("@/lib/forms/hr-approval");
+      const hrApprover = await (await import("@/lib/forms/hr-approval-approvers")).resolveHrApprover(context.actor.subject);
+      const formsActor = { id: context.actor.subject, role: context.actor.role, verified: context.actor.verified, scope: context.actor.scope, visibility: context.actor.scope, hrApprover } as unknown as FormsActor;
+      if (!approvals.mayEditWhileWithHr(formsActor, held.instance)) {
+        return {
+          reason_code: "held_for_hr",
+          error: "This form is waiting for HR approval, so only the manager who made it, whoever sent it, and HR can change it until HR decides. Nothing was written. Tell the manager it is with HR.",
+        };
+      }
+      const valuesBefore = JSON.stringify(held.values.map((row) => [row.fieldKey, row.value, row.checked]));
+      const result = await scoped.withHrEditScope(id, () => editForm(context, effects, input));
+      const after = await instances.loadInstance(id).catch(() => null);
+      if (after && JSON.stringify(after.values.map((row) => [row.fieldKey, row.value, row.checked])) !== valuesBefore) {
+        await approvals.recordHrEdit(id, formsActor);
+      }
+      return result;
     }
   }
   const values: Record<string, string> = {};

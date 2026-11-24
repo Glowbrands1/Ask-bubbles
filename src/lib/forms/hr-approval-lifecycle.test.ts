@@ -325,6 +325,28 @@ describe("the manager's note reaches HR's bell", () => {
  * "colene sent to marissa, marissa replied and it shows … 'sent back for changes' still. it should be Manager Replied
  * to changes. then view then approve." And the tab read "Pending HR approval (0)" while the row was listed.
  */
+/*
+ * THE CHAT'S EDIT OF A WAITING FORM (owner, 24 Nov 2026, asked "Should I let chat edits work there too, like edits on
+ * the form?": "sure"). The agent loop's edit_form checks the person may edit it, then writes inside `withHrEditScope`
+ * for that one form. The scope lets that form's writes past the hold; nothing outside it, and no other form.
+ */
+describe("the chat's edit of a form waiting for HR", () => {
+  it("inside the scope for that form the save goes past the hold; outside it, or for another form, it is refused", async () => {
+    const { withHrEditScope } = await import("./hr-edit-scope");
+    const waiting = await policyReview();
+    await sendForHrApproval(waiting.id, manager, null, ACK);
+    const other = await policyReview();
+    await sendForHrApproval(other.id, manager, null, ACK);
+
+    await expect(saveInstanceValues(waiting.id, { values: { form_date: "2026-11-20" }, checked: {} }, CREATOR, { via: "chat" })).rejects.toBeInstanceOf(HeldForHrError);
+    await withHrEditScope(waiting.id, () => saveInstanceValues(waiting.id, { values: { form_date: "2026-11-20" }, checked: {} }, CREATOR, { via: "chat" }));
+    expect((await loadInstance(waiting.id))!.instance).toMatchObject({ formDate: "2026-11-20", hrApprovalState: "pending" });
+    await expect(
+      withHrEditScope(waiting.id, () => saveInstanceValues(other.id, { values: { form_date: "2026-11-20" }, checked: {} }, CREATOR, { via: "chat" })),
+    ).rejects.toBeInstanceOf(HeldForHrError);
+  });
+});
+
 describe("manager replied to changes", () => {
   async function sentBack() {
     const instance = await policyReview();

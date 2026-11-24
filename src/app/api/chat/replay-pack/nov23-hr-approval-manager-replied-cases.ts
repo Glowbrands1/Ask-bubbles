@@ -190,10 +190,46 @@ export const NOV23_HR_APPROVAL_MANAGER_REPLIED_CASES: ReplayCase[] = [
       expect(t.values(form.id).observation ?? "", "the sent-back form was not changed").toContain("arrived at 9:20");
     },
   },
+  /*
+   * CHANGED ON PURPOSE (24 Nov 2026). This case used to assert that edit_form refuses a form waiting for HR. Since #1126
+   * the creator and its senders may change it on the card, and HR sees the updated version. Asked "Should I let chat
+   * edits work there too, like edits on the form?", the owner answered "sure". Now the creator's chat edit saves; the
+   * refusal is kept for anybody else (the control below).
+   */
   {
-    id: "nov23-hr-approval-edit-form-refused-while-hr-has-it",
-    title: 'the manager, on a form waiting for HR: "add to the observation that she arrived at 9:20": edit_form is refused and says HR has it; nothing changes',
-    report: REPORT,
+    id: "nov24-hr-approval-edit-form-saves-while-hr-has-it",
+    title:
+      'the manager who made it, on a form waiting for HR: "add to the observation that she arrived at 9:20": edit_form saves it, the form stays with HR, HR is told, and the edit is in the approval history',
+    report: 'Owner, 24 Nov 2026, asked "Should I let chat edits work there too, like edits on the form?": "sure"',
+    status: "fixed",
+    fixFlags: FLAGS,
+    async run(t) {
+      if (skip(t)) return;
+      const form = await corrective(t);
+      form.row.hr_approval_state = "pending";
+      form.row.hr_approval_requested_at = "2026-11-23T15:00:00Z";
+      hrApprover(t);
+      t.addRows!("form_hr_approval_events", [{ instance_id: form.id, action: "submitted", actor: form.creator, note: null, created_at: "2026-11-23T15:00:00Z" }]);
+      const before = t.values(form.id).observation ?? "";
+      const model = loopStandIn((view: LoopView): LoopDecision =>
+        lastResult(view, "edit_form") ? { text: "Added it; HR sees the updated form." } : { tool: "edit_form", input: { instance_id: form.id, values: { observation: `${before}\nRosalind Tetherby arrived at 9:20.` } } },
+      );
+      t.loopModel!(model);
+      await form.thread.say("add to the observation that she arrived at 9:20");
+      const output = model.views.flatMap((view) => view.results.filter((result) => result.tool === "edit_form")).at(-1)?.output as Record<string, unknown> | undefined;
+      expect(output?.error, `edit_form refused the creator's edit:\n${JSON.stringify(output)}`).toBeUndefined();
+      expect(t.values(form.id).observation ?? "", "the waiting form was not changed").toContain("arrived at 9:20");
+      expect(form.row.hr_approval_state, "the chat edit took the form away from HR").toBe("pending");
+      const events = (t.rows?.("form_hr_approval_events") ?? []).filter((row) => row.instance_id === form.id).map((row) => [row.action, row.actor]);
+      expect(events, "the edit is not in the approval history").toContainEqual(["edited", form.creator]);
+      const told = (t.rows?.("app_notifications") ?? []).filter((bell) => bell.kind === "form_hr_approval_updated");
+      expect(told.map((bell) => [bell.recipient_email, bell.title])).toEqual([["hr.corwin@example.com", "A form waiting for your approval was updated"]]);
+    },
+  },
+  {
+    id: "nov24-hr-approval-edit-form-other-manager-changes-nothing",
+    title: 'control: another manager at the same store, on that form waiting for HR: "add to the observation that she arrived at 9:20": nothing changes',
+    report: 'Owner, 24 Nov 2026: only the manager who made it, whoever sent it, and HR change a form while HR has it',
     status: "fixed",
     fixFlags: FLAGS,
     async run(t) {
@@ -203,14 +239,15 @@ export const NOV23_HR_APPROVAL_MANAGER_REPLIED_CASES: ReplayCase[] = [
       form.row.hr_approval_requested_at = "2026-11-23T15:00:00Z";
       hrApprover(t);
       const before = t.values(form.id).observation ?? "";
+      t.as("location_manager", WEST_DODGE, "lm-other-tansy-brook");
       const model = loopStandIn((view: LoopView): LoopDecision =>
-        lastResult(view, "edit_form") ? { text: "That form is with HR right now." } : { tool: "edit_form", input: { instance_id: form.id, values: { observation: `${before}\nRosalind Tetherby arrived at 9:20.` } } },
+        lastResult(view, "edit_form") ? { text: "I can't change that one." } : { tool: "edit_form", input: { instance_id: form.id, values: { observation: `${before}\nRosalind Tetherby arrived at 9:20.` } } },
       );
       t.loopModel!(model);
-      await form.thread.say("add to the observation that she arrived at 9:20");
+      await t.thread().say("add to the observation that she arrived at 9:20");
       const output = model.views.flatMap((view) => view.results.filter((result) => result.tool === "edit_form")).at(-1)?.output as Record<string, unknown> | undefined;
-      expect(String(output?.error ?? ""), `edit_form did not refuse:\n${JSON.stringify(output)}`).toMatch(/HR/);
-      expect(t.values(form.id).observation ?? "", "a form waiting for HR was changed").toBe(before);
+      expect(output?.error, `edit_form wrote another manager's waiting form:\n${JSON.stringify(output)}`).toBeDefined();
+      expect(t.values(form.id).observation ?? "", "a form waiting for HR was changed by somebody else").toBe(before);
     },
   },
 ];
