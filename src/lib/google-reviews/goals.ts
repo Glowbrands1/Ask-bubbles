@@ -69,6 +69,11 @@ export interface GoalContext {
   closed?: boolean;
   /** The instant the NEXT month opens in Central (the exclusive end of a closed month). */
   monthEndInstant?: string;
+  /**
+   * Set only on the leaderboard's L3 / L6 / YTD view (`leaderboard-window.ts`):
+   * the figures are that window's totals, so a store short of them is "Below goal".
+   */
+  window?: "l3" | "l6" | "ytd";
 }
 
 export function goalContext(today: string): GoalContext {
@@ -166,6 +171,8 @@ export function isPartialMonth(row: Pick<GoalRow, "baselineReviewId" | "baseline
 
 export function goalStatus(row: GoalRow, context: GoalContext): GoalStatus {
   if (!isCounting(row)) return "not_counting";
+  // An L3 / L6 / YTD window has no pace and no partial month: its total already covers the months before counting.
+  if (context.window) return row.qualifyingMonthToDate >= row.monthlyTarget ? "met" : "missed";
   // A month that has ended before counting began is no verdict at all, never "missed".
   if (context.closed && context.monthEndInstant && new Date(countingSince(row)!).getTime() >= new Date(context.monthEndInstant).getTime()) return "before_counting";
   if (row.qualifyingMonthToDate >= row.monthlyTarget) return "met";

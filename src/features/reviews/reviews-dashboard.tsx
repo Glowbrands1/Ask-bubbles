@@ -58,6 +58,7 @@ import {
 } from "./reviews-parts";
 import { MonthlyTable } from "./reviews-monthly";
 import { centralToday } from "@/lib/google-reviews/goals";
+import { leaderboardWindowLabel } from "@/lib/google-reviews/leaderboard-window";
 import { ReviewsTabNav } from "./reviews-tab-nav";
 import type { ReviewsTab } from "./reviews-tabs";
 
@@ -434,6 +435,13 @@ function LeaderboardView({
       : "not_configured"
     : status;
   const closed = g?.context.closed === true;
+  // L3 / L6 / YTD (ported from the sibling app, 23 Nov 2026): the Month by month table's totals against target × months.
+  const period = g?.context.window ?? null;
+  const periodMonths = data?.windowMonths ?? [];
+  const periodSpan =
+    periodMonths.length > 0
+      ? `${shortMonth(periodMonths[0]!, periodMonths[0]!.slice(0, 4) !== periodMonths[periodMonths.length - 1]!.slice(0, 4))} – ${shortMonth(periodMonths[periodMonths.length - 1]!, true)}${period === "ytd" ? ", to date" : ""}`
+      : "";
   const daysLeft = g
     ? g.context.daysInMonth - Number(g.context.today.slice(8, 10))
     : 0;
@@ -445,8 +453,9 @@ function LeaderboardView({
     <>
       <SectionRule label="Store leaderboard" className="mt-1" />
       <p className={SECTION_NOTE}>
-        Ranked by qualifying reviews this month against each store&rsquo;s goal;
-        stores on the same count share a rank.
+        {period
+          ? `Ranked by qualifying reviews over ${leaderboardWindowLabel(period)}, against each store's monthly goal for each month it covers; stores on the same count share a rank.`
+          : "Ranked by qualifying reviews this month against each store’s goal; stores on the same count share a rank."}
       </p>
       <SyncedNote stores={data?.stores} />
 
@@ -454,7 +463,9 @@ function LeaderboardView({
         <div className="px-5 py-4">
           <p className="eyebrow">
             {g
-              ? closed
+              ? period
+                ? `${leaderboardWindowLabel(period)} · ${periodSpan}`
+                : closed
                 ? `${monthName(g.context.monthStart.slice(0, 7))} · month closed`
                 : `${monthLabel(g.context.monthStart)} · day ${g.context.daysElapsed + 1} of ${g.context.daysInMonth}`
               : "Month to date"}
@@ -466,8 +477,13 @@ function LeaderboardView({
                   {g.summary.atGoal} of {g.summary.counting}
                 </span>
                 <span className="text-[12px] text-muted-foreground">
-                  stores {closed ? "reached" : "have reached"} their target ·{" "}
-                  {closed
+                  stores {period ? "have reached" : closed ? "reached" : "have reached"} their{" "}
+                  {period ? `target × ${periodMonths.length} month${periodMonths.length === 1 ? "" : "s"}` : "target"} ·{" "}
+                  {period
+                    ? period === "ytd"
+                      ? "year to date"
+                      : "full months"
+                    : closed
                     ? "final result"
                     : `${daysLeft} day${daysLeft === 1 ? "" : "s"} left`}{" "}
                   · {g.summary.qualifyingMonthToDate} of{" "}
@@ -544,7 +560,7 @@ function LeaderboardView({
           </>
         }
       >
-        <RankingHead />
+        <RankingHead figure={period ? period.toUpperCase() : undefined} />
         <DataArea status={goal}>
           {g ? (
             <Leaderboard
@@ -560,7 +576,9 @@ function LeaderboardView({
           the bar stops at full width and the overage is shown separately. A
           store without a review baseline isn&rsquo;t ranked and shows gray
           &ldquo;Not tracking&rdquo;, not zero.
-          {closed
+          {period
+            ? ` ${leaderboardWindowLabel(period)} covers ${periodSpan}: each store's figure is its total in the Month by month table on the Overview, against its monthly target for each month covered. Months before a store started counting show the 3–5★ reviews posted that month. There is no pace over a period, so a store short of its total shows “Below goal”.`
+            : closed
             ? " This month has ended, so each store shows its final count with the same rules as the live month; weekly figures only exist for the current month. A month that closed before a store's counting began shows gray “Not counted”."
             : ""}
           {pm ? ` ${pm}` : ""}
@@ -568,6 +586,12 @@ function LeaderboardView({
       </Panel>
     </>
   );
+}
+
+const SHORT_MONTH = (withYear: boolean) =>
+  new Intl.DateTimeFormat("en-US", { month: "short", ...(withYear ? { year: "numeric" } : {}), timeZone: "UTC" });
+function shortMonth(month: string, withYear: boolean): string {
+  return SHORT_MONTH(withYear).format(new Date(`${month}-01T00:00:00Z`));
 }
 
 const MONTH_NAME = new Intl.DateTimeFormat("en-US", {

@@ -251,6 +251,11 @@ const ALLOWED_UI = [
   // it is a data correction, identical for every store whose number is its code.
   "src/features/reviews/reviews-data.tsx",
   "src/features/admin/google-reviews/google-reviews-screen.tsx",
+  // STORE LEADERBOARD PERIOD (Pau, 23 Nov 2026: "pls do in bubbles too but pls add the per month for both like September
+  // october november"): the Reviews page's leaderboard picker offers L3, L6 and YTD beside the months, and the board's
+  // header and column follow it. Reviews page only, unflagged like the store-number fix above: no chat or form behaviour.
+  "src/features/reviews/reviews-dashboard.tsx",
+  "src/features/reviews/reviews-parts.tsx",
   "src/features/chat/message-bubble.tsx",
   "src/features/chat/composer.tsx",
   "src/features/chat/inline-form.tsx",
