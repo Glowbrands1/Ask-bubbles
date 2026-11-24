@@ -64,7 +64,7 @@ export const NOV24_FORM_DATE_IS_TODAY_CASES: ReplayCase[] = [
     id: "nov24-form-date-is-today-late-september-11",
     title: `"create a corrective action for <name>, she was late to work on September 11, 2026" — dated today, and the CA finalized 09/12 is listed`,
     report: REPORT,
-    status: { open: "the form is dated 09/11/2026, the incident, so the Corrective Action finalized on 09/12/2026 is left off its history" },
+    status: "fixed", // FORM_DATE_IS_TODAY_ENABLED is on in production (Pau, 24 Nov 2026)
     fixFlags: [FLAG],
     async run(t: T) {
       const { formDate, prior } = await lateOnSeptember11(t);
@@ -76,7 +76,7 @@ export const NOV24_FORM_DATE_IS_TODAY_CASES: ReplayCase[] = [
     id: "nov24-form-date-is-today-late-september-11-agent-loop",
     title: `the same through the agent loop: the card carries no incident date (Create dates it today), and the CA finalized 09/12 is offered as history`,
     report: REPORT,
-    status: { open: "the card is dated 09/11/2026, the incident, so the Corrective Action finalized on 09/12/2026 is never offered" },
+    status: "fixed", // FORM_DATE_IS_TODAY_ENABLED is on in production (Pau, 24 Nov 2026)
     fixFlags: [FLAG],
     async run(t: T) {
       vi.setSystemTime(new Date(`${TODAY}T17:00:00Z`));
