@@ -4,7 +4,7 @@ import { passwordResetHelp } from "./app-help";
 import { formatBreakdown, planReportBreakdown, type BreakdownRow } from "./report-breakdown";
 import { reportBreakdownEnabled } from "@/lib/config/chat-quality-flags";
 import { readStoreSummaries } from "@/lib/google-reviews/views";
-import { hasPermission, DEFAULT_PERMISSION_MATRIX } from "@/lib/permissions";
+import { hasPermission, activePermissionMatrix } from "@/lib/permissions";
 import type { Role } from "@/types";
 
 /**
@@ -47,7 +47,7 @@ export async function loadChatDataBlock(input: {
 }): Promise<ChatDataAddition> {
   if (!input.enabled) return EMPTY;
   const help = passwordResetHelp(input.question);
-  const allowed = input.role !== null && hasPermission(DEFAULT_PERMISSION_MATRIX, input.role, "view_reports");
+  const allowed = input.role !== null && hasPermission(activePermissionMatrix(), input.role, "view_reports");
   if (!allowed || !WANTS_DATA.test(input.question)) return { help, data: null };
   if (input.reviewsHandled && /\breviews?\b/i.test(input.question)) return { help, data: null };
 

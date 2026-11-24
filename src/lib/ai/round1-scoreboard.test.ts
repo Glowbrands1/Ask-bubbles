@@ -111,7 +111,6 @@ function record(status: InstanceRow["status"]): InstanceRow {
     followedUpBy: null,
     finalizedAt: status === "finalized" ? "2026-10-02T00:00:00.000Z" : null,
     exportedAt: null,
-    archivedAt: null,
     revisesInstanceId: null,
     createdAt: "2026-10-01T00:00:00.000Z",
     updatedAt: "2026-10-01T00:00:00.000Z",

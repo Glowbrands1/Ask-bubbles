@@ -19,3 +19,5 @@ Tests: `hr-approval-lifecycle.test.ts` ("an archived form is out of HR's queue":
 fail before and pass after. The test fake (`src/test/fake-supabase.ts`) now models `upsert(..., { ignoreDuplicates:
 true })` as Postgres does (an existing row left alone, only new rows returned), which the reminder's once-a-day check
 reads.
+
+**Superseded (Pau, 23 Nov 2026, archiving removed):** Bubbles has no archived forms any more, so the archived-form half of this entry is moot here; its archived replay/test cases were removed on purpose.

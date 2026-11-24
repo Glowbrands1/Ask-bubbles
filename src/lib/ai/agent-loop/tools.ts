@@ -10,7 +10,7 @@ import { saysAmountUnknown } from "@/lib/ai/amount-unknown-ack";
 
 import { randomUUID } from "node:crypto";
 
-import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
+import { activePermissionMatrix, hasPermission } from "@/lib/permissions";
 import { businessToday, formatBusinessTime } from "@/lib/business-date";
 import { appConfig } from "./app-config";
 import { isoDate, monthDayToIso, readDates, sameDate, withoutDates, type ReadDate } from "./dates";
@@ -1907,7 +1907,7 @@ function positionKey(text: string): string {
 
 export async function listStaffTool(context: ToolContext, effects: ToolEffects, input: { store?: unknown; position?: unknown }): Promise<ToolResult> {
   const scope = context.actor.scope;
-  if (!["create_coaching_form", "create_corrective_action"].some((permission) => hasPermission(DEFAULT_PERMISSION_MATRIX, context.actor.role, permission as never))) {
+  if (!["create_coaching_form", "create_corrective_action"].some((permission) => hasPermission(activePermissionMatrix(), context.actor.role, permission as never))) {
     return { reason_code: "scope", error: "This role cannot list the staff. Say so." };
   }
   /* Pau's decision 7 (this app): a district or region login lists the staff of any of its stores. */
@@ -1980,7 +1980,7 @@ export async function listStaffTool(context: ToolContext, effects: ToolEffects, 
 const PERIOD_LIST_LIMIT = 100;
 /*
  * QA's f081 (20 Nov 2026): "list ca for the month" read the newest 100 forms by created_at and said "The list stops at
- * 100", where the month had more (every salon, archived included). The month is read up to 1000 rows (PostgREST's page),
+ * 100", where the month had more (every store). The month is read up to 1000 rows (PostgREST's page),
  * counted by code over all of them, and up to 100 are listed; past 1000 it says the counts are of the first 1000 read.
  */
 const PERIOD_READ_LIMIT = 1000;
@@ -2005,22 +2005,16 @@ function notListedDays(rest: readonly { formDate: string | null }[]): { date: st
 }
 
 /*
- * QA's f081 (20 Nov 2026, from production's data: every archived form with a real name is finalized; archived drafts are
- * test drafts): a finalized form counts and is listed whether or not it is archived (marked archived), as "who got a CA"
- * asks what was filed; an archived DRAFT is left out unless the manager asks for archived forms (include_archived).
+ * No archived forms (Pau, 23 Nov 2026: "the archived should not be acknowledged as a form, all just should be finalized or
+ * drafted"). Every form the manager may see is counted and listed under its own status, as the Forms Register shows it.
  */
-function onFileKept(input: { include_archived?: unknown }) {
-  const all = input.include_archived === true;
-  return <T extends { archivedAt: string | null; status: string }>(row: T) => all || !(row.archivedAt && row.status === "draft");
-}
-const ARCHIVED_NOTE = "Finalized forms are included whether or not archived (each archived one marked archived: say \"(archived)\"); archived drafts are left out unless the manager asks for archived forms (include_archived).";
 
 /*
  * "WHO GOT A CA THIS MONTH?" (the owner, 18 Nov 2026, on the sibling app: "why capped at 20"). With no employee, a form
  * kind or a period lists every such form this manager may see, read by form date and form name in the query (not the
  * newest rows filtered after), and says whether the list is complete or stopped at its cap.
  */
-async function findFormsInPeriod(context: ToolContext, input: { form?: unknown; date_from?: unknown; date_to?: unknown; forms_on_file_evidence?: unknown; include_archived?: unknown }): Promise<ToolResult> {
+async function findFormsInPeriod(context: ToolContext, input: { form?: unknown; date_from?: unknown; date_to?: unknown; forms_on_file_evidence?: unknown }): Promise<ToolResult> {
   const asked = formsOnFileAsked(context, input.forms_on_file_evidence);
   if (!asked.ok) return privacyRefusal(asked.reason, undefined, context);
   const today = context.today || businessToday();
@@ -2031,13 +2025,13 @@ async function findFormsInPeriod(context: ToolContext, input: { form?: unknown; 
   if (actor === undefined) return { reason_code: "read_failed", error: `${appConfig().formsPageName} could not be read just now. Say so; do not say there are no forms.` };
   if (actor === null) return { reason_code: "scope", error: `This manager's role cannot view ${appConfig().formsPageName}, so past forms cannot be listed.` };
   try {
-    const read = await listInstances("all", PERIOD_READ_LIMIT, {
+    const read = await listInstances(PERIOD_READ_LIMIT, {
       ...instanceListFilterFor(actor),
       ...(range ? { formDateFrom: range.from, formDateTo: range.to } : {}),
       ...(kind ? { templateNameWords: kind.templateNameWords } : {}),
     });
     /* QA's code audit (item 28): a Coaching kind never keeps a Follow-Up Coaching Form (`ofKind`). */
-    const visible = ofKind(visibleInstances(actor, read), kind).filter(onFileKept(input));
+    const visible = ofKind(visibleInstances(actor, read), kind);
     /* f081: listed by form date (newest first), then employee; counted over every visible row, never only the listed ones. */
     const sorted = [...visible].sort((a, b) => (b.formDate ?? "").localeCompare(a.formDate ?? "") || a.employeeName.localeCompare(b.employeeName));
     const rows = wholeDays(sorted, PERIOD_LIST_LIMIT);
@@ -2058,11 +2052,9 @@ async function findFormsInPeriod(context: ToolContext, input: { form?: unknown; 
         status: row.status,
         form_date: row.formDate,
         store: salonLabel(row.locationId, row.locationName) ?? `no ${locationWord()}`,
-        ...(row.archivedAt ? { archived: true } : {}),
       })),
       complete,
       counts,
-      archived: input.include_archived === true ? "every archived form included, each marked archived" : ARCHIVED_NOTE,
       ...(visible.length > rows.length ? { listed: rows.length, of: visible.length, not_listed_days: notListed } : {}),
       note: `${complete ? "Every such form this manager can see, read by form date: never say the list is capped or that some may be missing." : `More than ${PERIOD_READ_LIMIT} forms match: the counts are of the first ${PERIOD_READ_LIMIT} read. Say so, and that ${appConfig().formsPageName} has the full list.`} Numbers come only from counts (total, by_person, by_form, by_date): copy them, never count or add rows yourself, and never put one person's forms under another's name.${visible.length > rows.length ? ` ${rows.length} of ${visible.length} forms are listed; say how many are not shown. The list stops at the end of a day: the days in not_listed_days are given as counts only, so never write rows for them, and the number you say is shown is ${rows.length}.` : ""} A draft is not on file.`,
     };
@@ -2085,7 +2077,7 @@ async function findFormsInPeriod(context: ToolContext, input: { form?: unknown; 
  */
 const TOPIC_LIST_LIMIT = 25;
 
-async function findFormsByTopic(context: ToolContext, input: { form?: unknown; date_from?: unknown; date_to?: unknown; about?: unknown; forms_on_file_evidence?: unknown; include_archived?: unknown }): Promise<ToolResult> {
+async function findFormsByTopic(context: ToolContext, input: { form?: unknown; date_from?: unknown; date_to?: unknown; about?: unknown; forms_on_file_evidence?: unknown }): Promise<ToolResult> {
   const asked = formsOnFileAsked(context, input.forms_on_file_evidence);
   if (!asked.ok) return privacyRefusal(asked.reason, undefined, context);
   const search = await import("@/lib/forms/form-topic-search");
@@ -2098,13 +2090,13 @@ async function findFormsByTopic(context: ToolContext, input: { form?: unknown; d
   if (actor === undefined) return { reason_code: "read_failed", error: `${appConfig().formsPageName} could not be read just now. Say so; do not say there are no forms.` };
   if (actor === null) return { reason_code: "scope", error: `This manager's role cannot view ${appConfig().formsPageName}, so past forms cannot be searched.` };
   try {
-    const read = await listInstances("all", PERIOD_READ_LIMIT, {
+    const read = await listInstances(PERIOD_READ_LIMIT, {
       ...instanceListFilterFor(actor),
       ...(range ? { formDateFrom: range.from, formDateTo: range.to } : {}),
       ...(kind ? { templateNameWords: kind.templateNameWords } : {}),
     });
     /* Exactly the forms this manager may see in the forms page: never wider (the saved text is read for these ids only). */
-    const visible = ofKind(visibleInstances(actor, read), kind).filter(onFileKept(input));
+    const visible = ofKind(visibleInstances(actor, read), kind);
     const saved = await search.readFormTopicText(visible.map((row) => row.id));
     const matched = visible
       .filter((row) => search.matchesTopic(saved.get(row.id)?.text ?? "", topic))
@@ -2134,7 +2126,6 @@ async function findFormsByTopic(context: ToolContext, input: { form?: unknown; d
           store: salonLabel(row.locationId, row.locationName) ?? `no ${locationWord()}`,
           policy: text?.policy ?? (text?.offense.length ? text.offense.join(", ") : null),
           level: text?.level ?? null,
-          ...(row.archivedAt ? { archived: true } : {}),
         };
       }),
       counts,
@@ -2148,7 +2139,7 @@ async function findFormsByTopic(context: ToolContext, input: { form?: unknown; d
   }
 }
 
-export async function findPastForms(context: ToolContext, input: { employee_name?: unknown; form?: unknown; date?: unknown; date_from?: unknown; date_to?: unknown; about?: unknown; forms_on_file_evidence?: unknown; open?: unknown; include_archived?: unknown }, effects?: ToolEffects): Promise<ToolResult> {
+export async function findPastForms(context: ToolContext, input: { employee_name?: unknown; form?: unknown; date?: unknown; date_from?: unknown; date_to?: unknown; about?: unknown; forms_on_file_evidence?: unknown; open?: unknown }, effects?: ToolEffects): Promise<ToolResult> {
   const typed = typeof input.employee_name === "string" ? input.employee_name.trim() : "";
   /* FORM_TOPIC_SEARCH_ENABLED (port of the sibling app's #1266): a topic with no employee searches every visible form's saved text. */
   const topicAsked = typed === "" && input.open !== true && typeof input.about === "string" && input.about.trim() !== "";
@@ -2200,8 +2191,7 @@ export async function findPastForms(context: ToolContext, input: { employee_name
      * whole words of its employee's name (`wholeNameWords`: the full name, the first name or the last name), the same
      * person by `samePerson`, or one roster holder's other name (aliases).
      */
-    let rows = visibleInstances(actor, await listInstances("all", 200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }))
-      .filter(onFileKept(input))
+    let rows = visibleInstances(actor, await listInstances(200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }))
       .filter((row) => samePerson(row.employeeName, typed) || wholeNameWords(row.employeeName, typed) || nameThenStartOfNext(row.employeeName, typed) || (aliases.length > 0 && sameRosterPerson(row.employeeName, typed, people)));
     /*
      * Item 27: the typed name fits forms of more than one person ("Sato": Ann Sato and Maryann Sato) and is nobody's full name
@@ -2219,7 +2209,7 @@ export async function findPastForms(context: ToolContext, input: { employee_name
      */
     if (rows.length === 0) {
       const { closelySpelledEmployee } = await import("@/lib/forms/reopen-close-spelling");
-      const visible = visibleInstances(actor, await listInstances("all", 200, instanceListFilterFor(actor)));
+      const visible = visibleInstances(actor, await listInstances(200, instanceListFilterFor(actor)));
       const fits = [...new Set(visible.map((row) => row.employeeName))].filter((name) => closelySpelledEmployee(typed, [name]) === name);
       if (fits.length > 1) return { forms: [], close_names: fits.slice(0, 5), note: "Several people on file have a name close to that spelling. Ask which one, by name." };
       /*
@@ -2344,7 +2334,6 @@ export async function findPastForms(context: ToolContext, input: { employee_name
         store: salonLabel(row.locationId, row.locationName) ?? `no ${locationWord()}`,
         ...(levelText(row.id) ? { level: levelText(row.id) } : {}),
         choice: choices.get(row)!,
-        ...(row.archivedAt ? { archived: true } : {}),
       }));
     /* "Draw me up a coaching document … she already has one" (the live re-run's sun-late-date): none on file is no reason to stop. */
     if (forms.length === 0) {
@@ -2418,7 +2407,6 @@ export async function findPastForms(context: ToolContext, input: { employee_name
       /* QA's f081: counted by code over every form found (not only the 20 listed); the reply copies the numbers. */
       counts: countFormsOnFile(rows),
       count_note: "Numbers come only from counts (total, by_form, by_date): copy them, never count or add rows yourself, and never put another person's forms under this name.",
-      archived: input.include_archived === true ? "every archived form included, each marked archived" : ARCHIVED_NOTE,
       /* Never a silent cut ("why capped at 20", 18 Nov 2026): more than the 20 listed are on file for this person. */
       ...(rows.length > forms.length ? { more_on_file: rows.length - forms.length, more_note: `${rows.length - forms.length} more forms are on file for this person than listed; say so, or narrow by form or dates.` } : {}),
       ...(withdrawn ? { card_withdrawn: `The ${withdrawn} card proposed earlier this turn was withdrawn: the manager asked to open a form on file, not to make one.` } : {}),
@@ -3225,8 +3213,8 @@ export interface PriorOnFile {
  * QA's live re-run (23 Nov 2026, U09 on 9340334): for an incident on 11/1 the card's Prior actions listed ten forms on file
  * dated 11/10–11/17, all AFTER the incident. A form on file is a prior action only when it is dated before this card's
  * incident date (`before`: the date this proposal gives, else that of this person's card proposed earlier this turn or on
- * screen, as a re-proposal often gives none); with no incident date at all, on or before today, as before. Only finalized forms count (an archived
- * draft is a test draft, as find_past_forms reads it; a draft is never a prior step).
+ * screen, as a re-proposal often gives none); with no incident date at all, on or before today, as before. Only finalized forms count (a draft
+ * is never a prior step).
  */
 async function finalizedPriorsOnFile(context: ToolContext, person: RosterEmployee, roster: readonly RosterEmployee[], today: string, before: string | null = null): Promise<PriorOnFile[]> {
   const actor = await chatFormsActor(context.actor).catch(() => undefined);
@@ -3237,13 +3225,12 @@ async function finalizedPriorsOnFile(context: ToolContext, person: RosterEmploye
   const nameWords = [...new Set(names.flatMap(candidateNameWords))];
   /*
    * WHICH FORMS ARE THIS PERSON'S ON FILE (QA, 23 Nov 2026; the sibling app's live chat behind Pau's review, where two
-   * ARCHIVED Written CAs were read as the person's; #1089 offers forms on file, so here they would be offered). An
-   * archived form is not on file (the "active" read leaves it out). A form filed under the first name alone IS this
+   * archived Written CAs were read as the person's; archiving has since been removed, 24 Nov 2026). A form filed under the first name alone IS this
    * person's (Pau: "its right"), except when someone else with that first name is at the form's store (Pau: "there might
    * be other Paulynes in store, or Kim or Mary"): another roster person there, or a former employee with a form there
    * under a fuller name. Then it is not attributed to either. A form with no store recorded is checked against everyone.
    */
-  const listed = visibleInstances(actor, await listInstances("active", 200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }).catch(() => []));
+  const listed = visibleInstances(actor, await listInstances(200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }).catch(() => []));
   const firstNameShared = (row: (typeof listed)[number]) => {
     const word = row.employeeName.trim();
     if (word.split(/\s+/).length !== 1) return false;
@@ -3254,7 +3241,7 @@ async function finalizedPriorsOnFile(context: ToolContext, person: RosterEmploye
     return otherOnRoster || formerThere;
   };
   const rows = listed
-    .filter((row) => row.status === "finalized" && !row.archivedAt && kinds.has(row.templateKey) && (row.formDate ?? "") <= today && (!before || (row.formDate ?? "") < before))
+    .filter((row) => row.status === "finalized" && kinds.has(row.templateKey) && (row.formDate ?? "") <= today && (!before || (row.formDate ?? "") < before))
     .filter((row) => !firstNameShared(row) && (names.some((full) => samePerson(full, row.employeeName)) || sameRosterPerson(row.employeeName, displayName(person), roster)))
     .sort((a, b) => (a.formDate ?? "").localeCompare(b.formDate ?? "") || a.createdAt.localeCompare(b.createdAt))
     .slice(-10);
@@ -3431,7 +3418,7 @@ async function editAskedFormsOnFile(context: ToolContext, effects: ToolEffects, 
   if (!actor) return null;
   const names = fullNamesOf(person);
   const nameWords = [...new Set(names.flatMap(candidateNameWords))];
-  const onFile = visibleInstances(actor, await listInstances("all", 200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }).catch(() => []))
+  const onFile = visibleInstances(actor, await listInstances(200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }).catch(() => []))
     .filter((row) => row.templateKey === template.key && (names.some((full) => samePerson(full, row.employeeName)) || sameRosterPerson(row.employeeName, displayName(person), roster)));
   if (onFile.length === 0) return null;
   const cardForm = shown.templateName ?? "card";
@@ -3561,10 +3548,10 @@ async function exitFormsOnFile(context: ToolContext, name: string, exitKey: stri
   if (!actor) return [];
   const nameWords = candidateNameWords(name);
   if (nameWords.length === 0) return [];
-  const rows = visibleInstances(actor, await listInstances("all", 200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }).catch(() => []));
+  const rows = visibleInstances(actor, await listInstances(200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }).catch(() => []));
   const mdy = (iso: string) => (/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso) ? `${iso.slice(5, 7)}/${iso.slice(8, 10)}/${iso.slice(0, 4)}` : iso);
   return rows
-    .filter((row) => row.templateKey === exitKey && row.status !== "revised" && !row.archivedAt && samePerson(row.employeeName, name))
+    .filter((row) => row.templateKey === exitKey && row.status !== "revised" && samePerson(row.employeeName, name))
     .slice(0, 5)
     .map((row) => ({ status: row.status, date: mdy(row.formDate), store: row.locationName }));
 }
@@ -3934,7 +3921,7 @@ async function creatableTemplates(role: Role): Promise<TemplateSummary[]> {
    * never offered nor proposed. `listTemplateSummaries` already leaves it out; checked here too, so the loop never
    * depends on one list for it.
    */
-  return rows.filter((row) => !isHiddenTemplate(row.key) && row.active && row.currentVersion && hasPermission(DEFAULT_PERMISSION_MATRIX, role, row.requiredPermission as never));
+  return rows.filter((row) => !isHiddenTemplate(row.key) && row.active && row.currentVersion && hasPermission(activePermissionMatrix(), role, row.requiredPermission as never));
 }
 
 /** The templates this manager may create, for the system prompt. Empty when they cannot be read. */

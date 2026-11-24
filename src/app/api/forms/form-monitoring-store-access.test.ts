@@ -54,7 +54,6 @@ const row = (id: string, createdBy = "someone-else") => ({
   followedUpBy: null,
   finalizedAt: null,
   exportedAt: null,
-  archivedAt: null,
   revisesInstanceId: null,
   createdAt: "2026-09-07T12:00:00Z",
   updatedAt: "2026-09-07T12:00:00Z",
@@ -193,7 +192,6 @@ async function load(options: Options) {
         ? { instance: rowFor(id), version: { id: "v", document: { paper: "letter", blocks: [] }, variants: [] }, values: [], events: [] }
         : null,
     listInstances: async (
-      _view: string,
       _limit: number | undefined,
       filter?: { locationIds?: string[]; ownNullLocationCreatedBy?: string; ownCreatedBy?: string },
     ) => {
@@ -553,7 +551,7 @@ describe("the server pages (Form Monitoring, Overview, rail badge) apply the sam
         // privateAwareLimit(50), which is 50 itself with the flag off; the scope arguments are unchanged.
         expect(source, file).toMatch(/listOutstandingFollowUps\((?:50|privateAwareLimit\(50\)), [\w.]+, access\.ownCreatedBy\)/);
       }
-      expect(source, file).not.toMatch(/listInstances\(view satisfies InstanceView\)/);
+      expect(source, file).not.toMatch(/listInstances\(\)/);
     }
   });
   it("the all-store list is data, not code: no user id is hardcoded in the visibility module", () => {

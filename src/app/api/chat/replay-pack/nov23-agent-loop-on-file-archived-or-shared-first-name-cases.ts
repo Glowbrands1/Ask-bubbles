@@ -67,8 +67,9 @@ const offerCase = (id: string, title: string, onFile: { name: string; archived: 
 });
 
 export const NOV23_AGENT_LOOP_ON_FILE_ARCHIVED_OR_SHARED_FIRST_NAME_CASES: ReplayCase[] = [
-  offerCase("nov23-on-file-archived-first-name-not-offered", "As live in the sibling app: an ARCHIVED finalized Written CA (09/10) under the first name alone (\"Briony\"): never offered", { name: "Briony", archived: true }, undefined, false),
-  offerCase("nov23-on-file-archived-full-name-not-offered", "An ARCHIVED finalized Written CA (09/10) under the full name: not on file, never offered", { name: "Briony Kask", archived: true }, undefined, false),
+  // REMOVED ON PURPOSE (Pau, 23 Nov 2026, archiving removed): the two cases here for an ARCHIVED form under the first name and
+  // under the full name asserted that an archived form is never on file. A form is only Draft or Finalized now, so there is no
+  // archived form to leave out; the shared-first-name cases below still hold.
   offerCase("nov23-on-file-shared-first-name-at-store-not-attributed", "Pau (23 Nov 2026): an active finalized Written CA under \"Briony\" alone while another Briony is at the form's store: attributed to neither, never offered", { name: "Briony", archived: false }, [BRIONY, OTHER_BRIONY], false),
   offerCase("nov23-on-file-first-name-other-store-still-counts", "Pau (23 Nov 2026): another Briony at a DIFFERENT store does not matter: the form under \"Briony\" is offered", { name: "Briony", archived: false }, [BRIONY, BRIONY_ELSEWHERE], true),
   offerCase("nov23-on-file-control-unique-first-name-offered", "Pau (23 Nov 2026), control: an active finalized Written CA under \"Briony\" alone, no other Briony at the store: offered", { name: "Briony", archived: false }, undefined, true),

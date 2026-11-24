@@ -21,3 +21,5 @@ first name, and a full name.
 
 **The sibling app:** fixed in the same session, with the rest of the fix for its live bug (prior actions only from the
 manager's own words, and "as you said" only with prior_actions_evidence; the port of #1089). See its PR.
+
+**Superseded (Pau, 23 Nov 2026, archiving removed):** Bubbles has no archived forms any more, so the archived-form half of this entry is moot here; its archived replay/test cases were removed on purpose.

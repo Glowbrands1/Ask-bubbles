@@ -256,6 +256,10 @@ const ALLOWED_UI = [
   // header and column follow it. Reviews page only, unflagged like the store-number fix above: no chat or form behaviour.
   "src/features/reviews/reviews-dashboard.tsx",
   "src/features/reviews/reviews-parts.tsx",
+  // PERMISSIONS MATRIX SAVED TO THE DATABASE (Pau, 23 Nov 2026, both apps; port from Ask Sunny 8376613): the admin
+  // Permissions matrix screen saves its overrides through PUT /api/admin/permissions instead of showing a read-only
+  // policy. Admin screen only; no chat or form behaviour changes.
+  "src/features/admin/permissions-matrix.tsx",
   "src/features/chat/message-bubble.tsx",
   "src/features/chat/composer.tsx",
   "src/features/chat/inline-form.tsx",
@@ -299,21 +303,10 @@ const ALLOWED_UI = [
  * The user (Pau) approved, via QA on 25 Oct 2026, the forms list's Edit and
  * History mount for form revisions in both apps: exactly these two added
  * lines in monitoring-table.tsx, rendering nothing with
- * NEXT_PUBLIC_FORM_REVISIONS_ENABLED off. Any other change to the file fails.
+ * NEXT_PUBLIC_FORM_REVISIONS_ENABLED off (and, 29 Oct 2026, the row menu "…" shows only when it has an item). The file is
+ * since held to the revision mount and to no archiving: see the check in the test below.
  */
 const MONITORING_TABLE = "src/features/forms/monitoring-table.tsx";
-const MONITORING_MOUNT = [
-  '+import { RegisterRowActions } from "@/form-revisions/register-row-actions";',
-  "+                            <RegisterRowActions form={form} />",
-  /*
-   * Pau approved, via QA on 29 Oct 2026, both apps, no flag: the row menu
-   * "…" shows only when it has an item. A role that may track but not manage
-   * got an empty menu on a row that is not followed up ("wanted to delete
-   * some form but the ... is not showing when clicked").
-   */
-  "-                            {mayManage || mayTrack ? (",
-  "+                            {mayManage || (form.followedUpAt && mayTrack) ? (",
-];
 
 /*
  * NEXT_PUBLIC_INVITED_SIGNIN_ACCEPTS_ENABLED (QA approved 28 Oct 2026, both
@@ -466,7 +459,14 @@ describe("new flags default off", () => {
         .filter((block) => block.trim().length > 0 && !ALLOWED_UI.some((file) => block.includes(file)) && !block.includes(MONITORING_TABLE) && !block.includes(SIGN_IN_FORM))
         .join("");
       expect(unexpected).toBe("");
-      expect(changedLines(diff(uiBase, [MONITORING_TABLE])).filter((line) => !MONITORING_MOUNT.includes(line))).toEqual([]);
+      // CHANGED ON PURPOSE (Pau, 23 Nov 2026, archiving removed; port from Ask Sunny 8376613 and daf6fc8): forms are
+      // Draft or Finalized only, so monitoring-table.tsx loses its Archived shelf and Archive / Restore actions and
+      // gains the select-several-drafts bulk delete. That is hundreds of lines, so the file is no longer held to the two
+      // mount lines above; instead the check below still requires the revision mount to be there and the file to say
+      // nothing about archiving, so the Edit / History mount (NEXT_PUBLIC_FORM_REVISIONS_ENABLED) is not lost.
+      const table = readFileSync(MONITORING_TABLE, "utf8");
+      expect(table).toContain("<RegisterRowActions form={form} />");
+      expect(table).not.toMatch(/ArchiveRestore|archivedAt|kind: "archive"/);
       expect(
         changedLines(diff(uiBase, [SIGN_IN_FORM])).filter((line) => !SIGN_IN_ACCEPT.includes(line) && !isAddedCommentOrBlank(line)),
       ).toEqual([]);

@@ -6003,8 +6003,8 @@ export function formsOnFileDateRangeEnabled(): boolean {
  * count wrong, a different person's form folded into another's, totals that did not add up. With the flag, the block
  * carries counts built by code (per person as filed, per form, per date with statuses, and a total;
  * `forms/forms-on-file-counts.ts`) for the model to copy; a period is read up to 1000 rows and counted over all of them,
- * with up to 100 listed; and an archived DRAFT is left out unless the question asks for archived forms (finalized forms
- * count archived or not, marked archived). Off, as before.
+ * with up to 100 listed; and there is no archived form (Pau, 23 Nov 2026): every form counts under its own status,
+ * draft or finalized. Off, as before.
  */
 export function formsOnFileCountsEnabled(): boolean {
   return envFlag("FORMS_ON_FILE_COUNTS_ENABLED");
