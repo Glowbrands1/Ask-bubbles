@@ -155,7 +155,7 @@ interface LoadedInstance {
   cardChangeAmount?: boolean;
   /**
    * HR APPROVAL (FORMS_HR_APPROVAL_ENABLED): the approval panel, sent by the server only to the form's creator and HR.
-   * `finalizeToHr`: this reader's Finalize sends the form to HR instead ("Finalize and send to HR for approval").
+   * `finalizeToHr`: this reader's Finalize sends the form to HR instead ("Finalize and send for approval").
    */
   hrApproval?: HrApprovalPanelView;
   finalizeToHr?: boolean;
@@ -288,7 +288,7 @@ export function InlineForm({
    * the manager is never asked twice.
    */
   const [confirmingFinalize, setConfirmingFinalize] = React.useState(false);
-  /** The optional "Note to HR" typed beside "Finalize and send to HR for approval"; sent with it, cleared once sent. */
+  /** The optional "Note to HR" typed beside "Finalize and send for approval"; sent with it, cleared once sent. */
   const [hrNote, setHrNote] = React.useState("");
 
   const call = React.useCallback(
@@ -1023,7 +1023,7 @@ export function InlineForm({
                 {action.kind === "busy" && action.what === "finalize" ? (
                   <Loader2 className="animate-spin" />
                 ) : null}
-                {toHr ? "Finalize and send to HR for approval" : "Finalize"}
+                {toHr ? "Finalize and send for approval" : "Finalize"}
               </Button>
               <span className="text-xs text-subtle-foreground">
                 {toHr
