@@ -35,7 +35,7 @@ vi.mock("@/lib/supabase/server", () => ({ getSupabaseAdmin: () => fakeSupabase(s
 
 const { ensureTemplateLibrary } = await import("./repository");
 const { createInstance, loadInstance, saveInstanceValues, finalizeInstance, HeldForHrError } = await import("./instances");
-const { sendForHrApproval, decideHrApproval, commentOnHrApproval, hrApprovalViewFor, finalizeGoesToHr, listHrQueue, listMyFormsWithHr, readHrApprovalsFor, recordHrEdit, hrQueueSummary, HrApprovalError } =
+const { sendForHrApproval, decideHrApproval, commentOnHrApproval, hrApprovalViewFor, finalizeGoesToHr, listHrQueue, listMyFormsWithHr, readHrApprovalsFor, recordHrEdit, hrQueueSummary, HrApprovalError, listHrApproved } =
   await import("./hr-approval");
 
 const CREATOR = "lm-thistle";
@@ -330,6 +330,35 @@ describe("the manager's note reaches HR's bell", () => {
  * the form?": "sure"). The agent loop's edit_form checks the person may edit it, then writes inside `withHrEditScope`
  * for that one form. The scope lets that form's writes past the hold; nothing outside it, and no other form.
  */
+/*
+ * HR'S APPROVED TAB (owner, 24 Nov 2026: "a separate tab (not a link) for HR to see which forms she approved already").
+ */
+describe("the forms HR approved", () => {
+  it("HR's Approved list: newest first, who approved it (\"You\" for this approver), HR only, archived left out", async () => {
+    const first = await policyReview();
+    await sendForHrApproval(first.id, manager, null, ACK);
+    await decideHrApproval(first.id, hr, "approve", null);
+    const second = await policyReview();
+    await sendForHrApproval(second.id, manager, null, ACK);
+    await decideHrApproval(second.id, hr, "approve", null);
+    const waiting = await policyReview();
+    await sendForHrApproval(waiting.id, manager, null, ACK);
+
+    const rows = await listHrApproved(hr);
+    expect(rows.map((row) => row.id).sort()).toEqual([first.id, second.id].sort());
+    expect(rows[0]).toMatchObject({ createdByName: "Thistle", approvedByName: "You" });
+    expect(rows[0]!.line).toMatch(/for Juniper Calloway at Invented Store$/);
+    expect(await listHrApproved(manager), "a manager read HR's Approved list").toEqual([]);
+
+    const row = store.form_instances!.find((candidate) => (candidate as { id: string }).id === first.id) as Record<string, unknown>;
+    row.archived_at = "2026-11-24T00:00:00Z";
+    expect((await listHrApproved(hr)).map((approved) => approved.id)).toEqual([second.id]);
+    // The AI's read for HR carries the same list.
+    const read = await readHrApprovalsFor(HR, true);
+    expect(read.kind === "hr" && read.approved.map((approved) => approved.id)).toEqual([second.id]);
+  });
+});
+
 describe("the chat's edit of a form waiting for HR", () => {
   it("inside the scope for that form the save goes past the hold; outside it, or for another form, it is refused", async () => {
     const { withHrEditScope } = await import("./hr-edit-scope");
@@ -355,14 +384,22 @@ describe("manager replied to changes", () => {
     return instance;
   }
 
-  it("sent back: not HR's turn; the count leaves it out and HR may not approve yet", async () => {
+  /*
+   * CHANGED ON PURPOSE (owner, 24 Nov 2026): "check if HR approver has tha button to actually approve the form after goin
+   * gback and forth with manager ... can u keep the button "approve" there always". HR's Approve used to wait for the
+   * manager's reply; now it is there on every sent-back form. The count still leaves out a form waiting on the manager.
+   */
+  it("sent back: the count leaves it out until the manager replies, but HR's Approve is always there", async () => {
     const instance = await sentBack();
     const [row] = await listHrQueue(hr);
     expect(row).toMatchObject({ id: instance.id, managerReplied: false });
     expect(await hrQueueSummary(hr)).toEqual({ pending: 0, overdue: 0 });
     const view = await hrApprovalViewFor(hr, (await loadInstance(instance.id))!.instance);
-    expect(view).toMatchObject({ stage: "changes_requested", label: "Sent back by HR for changes", canApproveSentBack: false });
-    await expect(decideHrApproval(instance.id, hr, "approve", null)).rejects.toThrow(/sent back for changes. It can be approved or sent back again once the manager replies/);
+    expect(view).toMatchObject({ stage: "changes_requested", label: "Sent back by HR for changes", canApproveSentBack: true });
+    // Only HR: the manager's own view of the same form has no Approve.
+    expect(await hrApprovalViewFor(manager, (await loadInstance(instance.id))!.instance)).toMatchObject({ canApproveSentBack: false, canDecide: false });
+    const approved = await decideHrApproval(instance.id, hr, "approve", null);
+    expect(approved).toMatchObject({ status: "finalized", hrApprovalState: "approved" });
   });
 
   it("the manager's reply: HR's row reads \"Manager replied to changes\" and counts in Pending HR approval", async () => {
@@ -407,7 +444,7 @@ describe("manager replied to changes", () => {
     await saveInstanceValues(instance.id, { values: { form_date: stored }, checked: {} }, CREATOR);
     await recordHrEdit(instance.id, hr);
     expect((await listHrQueue(hr))[0]).toMatchObject({ id: instance.id, managerReplied: false });
-    await expect(decideHrApproval(instance.id, hr, "approve", null)).rejects.toThrow(/once the manager replies with a note, edits it, or sends it again/);
+    // (HR's Approve no longer waits for the reply: owner, 24 Nov 2026, "keep the button "approve" there always".)
   });
 
   it("HR's own note after sending it back is not the manager's reply", async () => {
@@ -458,8 +495,9 @@ describe("manager replied to changes", () => {
     expect((await listHrQueue(hr))[0]).toMatchObject({ id: instance.id, managerReplied: false });
     expect((await hrQueueSummary(hr))!.pending).toBe(0);
     expect(bells("thistle@example.com").filter((bell) => bell.title === "HR sent your form back for changes")).toHaveLength(2);
-    // Before the manager replies again, HR may not approve it.
-    await expect(decideHrApproval(instance.id, hr, "approve", null)).rejects.toThrow(/sent back for changes/);
+    // Changed on purpose (owner, 24 Nov 2026: "keep the button "approve" there always"): HR may approve it even before
+    // the manager replies again.
+    expect((await hrApprovalViewFor(hr, (await loadInstance(instance.id))!.instance))?.canApproveSentBack).toBe(true);
   });
 });
 

@@ -3297,9 +3297,9 @@ async function ownFormsWithHr(context: ToolContext, names: readonly string[]): P
   if (!actor || names.length === 0) return [];
   const { isCreatorOrSender } = await import("@/lib/forms/hr-approval-rules");
   const nameWords = [...new Set(names.flatMap(candidateNameWords))];
-  const listed = visibleInstances(actor, await listInstances("active", 200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }).catch(() => []));
+  const listed = visibleInstances(actor, await listInstances(200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }).catch(() => []));
   const rows = listed
-    .filter((row) => row.status === "draft" && !row.archivedAt && (row.hrApprovalState === "pending" || row.hrApprovalState === "changes_requested"))
+    .filter((row) => row.status === "draft" && (row.hrApprovalState === "pending" || row.hrApprovalState === "changes_requested"))
     .filter((row) => isCreatorOrSender({ id: context.actor.subject }, row) && names.some((full) => samePerson(full, row.employeeName)))
     .slice(0, 5);
   const { policyNamesFromViolated } = await import("@/lib/forms/ca-action-plan");

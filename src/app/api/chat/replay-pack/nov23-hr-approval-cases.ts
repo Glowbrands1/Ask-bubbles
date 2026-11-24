@@ -195,30 +195,36 @@ export const NOV23_HR_APPROVAL_CASES: ReplayCase[] = [
       expect(JSON.stringify(waiting[0])).toMatch(/Corrective Action Form for Peregrine Ashdown/);
     },
   },
+  /*
+   * CHANGED ON PURPOSE (24 Nov 2026). This case asserted that the chat refuses the manager's edit of the form they sent
+   * to HR ("waiting for HR approval", change it on the form). Asked which should happen when the manager who sent a form
+   * asks the chat to change it while it waits, the owner chose "Chat edits it": the creator, its senders and HR may, as
+   * on the form, and HR is told. The intent kept from "never a general save error": the chat saves it, the reply is no
+   * save failure, and the form stays with HR. (The refusal stays for anybody else: nov24-hr-approval-edit-form-other-manager-changes-nothing.)
+   */
   {
-    id: "nov24-hr-approval-chat-edit-of-a-waiting-form-says-waiting-for-hr",
+    id: "nov24-hr-approval-chat-edit-of-a-waiting-form-saves-never-a-save-error",
     title:
-      'owner: "the chat should say "waiting for HR approval" instead of a general save error": the manager asks the chat to change the form they sent to HR; edit_form writes nothing and says it is waiting for HR approval, to be changed on the form itself',
-    report: 'Owner, 24 Nov 2026: "In both apps, the chat should say "waiting for HR approval" instead of a general save error."',
+      'the manager asks the chat to change the form they sent to HR ("change the date on Peregrine\'s write up to 11/20"): edit_form saves it, never a general save error, and the form stays with HR',
+    report: 'Owner, 24 Nov 2026: "In both apps, the chat should say "waiting for HR approval" instead of a general save error."; then, of the creator\'s chat edit: "Chat edits it"',
     status: "fixed",
     fixFlags: FLAGS,
     async run(t) {
       if (!t.loopOn?.() || !hrApprovalEnabled()) return;
       const { id, thread } = await sentToHrIn(t);
-      const before = JSON.stringify(t.values(id));
+      // An active HR approver, as in production, so the hold is live.
+      t.addRows!("form_hr_approvers", [{ app_user_id: HR_ACCOUNT, revoked_at: null }]);
+      t.addRows!("app_users", [{ id: HR_ACCOUNT, email: "hr.wren@example.com", display_name: "Wren", status: "active" }]);
       const model = loopStandIn((view: LoopView): LoopDecision => {
         const edited = lastResult(view, "edit_form") as Record<string, unknown> | undefined;
-        return edited ? { text: String(edited.error ?? JSON.stringify(edited)) } : { tool: "edit_form", input: { instance_id: id, values: { form_date: "2026-11-20" } } };
+        return edited ? { text: edited.error ? String(edited.error) : "Changed the date; HR sees the updated form." } : { tool: "edit_form", input: { instance_id: id, values: { form_date: "2026-11-20" } } };
       });
       t.loopModel!(model);
       const reply = await thread.say("change the date on Peregrine's write up to 11/20");
       const result = lastResult(model.views.at(-1)!, "edit_form") as Record<string, unknown>;
-      expect(result?.reason_code, `edit_form did not say the form is waiting for HR:\n${JSON.stringify(result)}`).toBe("waiting_for_hr_approval");
-      expect(String(result.error)).toMatch(/waiting for HR approval/);
-      expect(String(result.error)).toMatch(/on the form itself/);
-      expect(reply.content).toMatch(/waiting for HR approval/);
+      expect(result?.error, `edit_form refused the creator's chat edit:\n${JSON.stringify(result)}`).toBeUndefined();
+      expect(t.values(id).form_date, "the chat did not change the form").toBe("2026-11-20");
       expect(reply.content, "a generic save failure reached the manager").not.toMatch(/couldn't save|could not be saved|not_draft/i);
-      expect(JSON.stringify(t.values(id)), "the chat wrote a form waiting for HR").toBe(before);
       const row = (t.rows?.("form_instances") ?? []).find((candidate) => candidate.id === id);
       expect(row?.hr_approval_state, "the form left HR").toBe("pending");
     },
