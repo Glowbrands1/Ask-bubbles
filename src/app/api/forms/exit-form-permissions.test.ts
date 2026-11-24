@@ -362,8 +362,11 @@ describe("the server pages apply the same rule", () => {
       // This deployment reads the family's permission from config
       // (`FORM_FAMILY_READ_PERMISSIONS`) rather than naming it on each page.
       // `visibleInstances` applies `withoutUnreadable` and the reader's store scope together.
-      expect(source, file).toMatch(/visibleInstances\(/);
+      // Changed on purpose (port from Ask Sunny, QA 24 Nov 2026): the rail and Home count the follow-up queue, which
+      // applies visibleInstances itself (asserted below).
+      expect(source, file).toMatch(/visibleInstances\(|readFollowUpQueue\(access/);
     }
+    expect(readFileSync("src/lib/forms/follow-up-queue.ts", "utf8")).toMatch(/visibleInstances\(options\.actor/);
     const { FORM_FAMILY_READ_PERMISSIONS } = await import("@/config/company/forms/categories");
     expect(FORM_FAMILY_READ_PERMISSIONS).toMatchObject({ exit: "create_exit_form" });
   });

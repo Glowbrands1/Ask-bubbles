@@ -9,13 +9,10 @@ import { PermissionGate } from "@/components/permission-gate";
 import { pageCan, requirePagePermission } from "@/lib/auth/page";
 import { supabaseSecretKeyConfigured } from "@/lib/config/server-env";
 import { businessToday } from "@/lib/business-date";
-import { attentionSummary, followUpState } from "@/lib/forms/follow-up";
-import { visibleInstances } from "@/lib/forms/instance-scope";
+import { followUpState } from "@/lib/forms/follow-up";
+import { readFollowUpQueue } from "@/lib/forms/follow-up-queue";
 import { pageFormsAccess } from "@/lib/forms/page-scope";
-import { listOutstandingFollowUps } from "@/lib/forms/instances";
-import { configuredExcludedNames, isProductionRecord } from "@/lib/forms/production-records";
 import { areaLabel } from "@/lib/locations";
-import { privateAwareLimit } from "@/lib/forms/private-creators";
 import { HrOverviewCard } from "@/features/forms/hr-approval-lists";
 import { hrQueueSummary } from "@/lib/forms/hr-approval";
 
@@ -49,25 +46,14 @@ export default async function HomePage() {
     try {
       const access = await pageFormsAccess(identity);
       const locationIds = access.locationIds;
-      const outstanding = access.noStore
-        ? []
-        : visibleInstances(
-            access.actor,
-            // PRIVATE_CREATOR_FORMS: over-read, then trim to the page of 50; off, 50 itself.
-            await listOutstandingFollowUps(privateAwareLimit(50), locationIds, access.ownCreatedBy),
-          ).slice(0, 50);
-
-      const excludedNames = configuredExcludedNames();
-      const production = outstanding.filter((instance) =>
-        isProductionRecord(
-          {
-            employeeName: instance.employeeName,
-            locationName: instance.locationName,
-            locationId: instance.locationId,
-          },
-          { excludedNames },
-        ),
-      );
+      /*
+       * THE ONE QUEUE (port from Ask Sunny; QA, 24 Nov 2026: 19 overdue on the Overview, 8 on the Overdue pill).
+       * `readFollowUpQueue` is what the rail, the Forms Register's banner and its pills count too: every outstanding
+       * follow-up this reader may open, read without a cap, with non-production records held back (they stay in the
+       * Forms Register). See `lib/forms/follow-up-queue.ts`.
+       */
+      const queue = await readFollowUpQueue(access, { today });
+      const production = queue.forms;
 
       const items: OverviewFollowUp[] = production.map((instance) => ({
         id: instance.id,
@@ -80,11 +66,11 @@ export default async function HomePage() {
 
       followUps = {
         ...followUps,
-        attention: attentionSummary(production, today),
+        attention: queue.attention,
         items,
         today,
         failure: null,
-        excluded: outstanding.length - production.length,
+        excluded: queue.excluded,
         scopeLabel:
           locationIds === null ? null : locationIds.length === 1 ? areaLabel(locationIds[0]) : null,
       };
