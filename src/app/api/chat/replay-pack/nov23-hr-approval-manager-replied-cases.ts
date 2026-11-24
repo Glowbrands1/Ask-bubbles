@@ -82,7 +82,49 @@ function readsHr(t: ReplayContext) {
 
 const skip = (t: ReplayContext) => !t.loopOn?.() || !hrApprovalEnabled();
 
+/** As `decideHrApproval(…, "send_back")` leaves it, with no reply yet. */
+function sentBackOnly(t: ReplayContext, form: { id: string; row: Record<string, unknown>; creator: string }) {
+  form.row.hr_approval_state = "changes_requested";
+  form.row.hr_approval_requested_at = "2026-11-20T15:00:00Z";
+  hrApprover(t);
+  t.addRows!("form_hr_approval_events", [
+    { instance_id: form.id, action: "submitted", actor: form.creator, note: null, created_at: "2026-11-20T15:00:00Z" },
+    { instance_id: form.id, action: "changes_requested", actor: HR_ACCOUNT, note: "Add the time she arrived.", created_at: "2026-11-20T18:00:00Z" },
+  ]);
+}
+
 export const NOV23_HR_APPROVAL_MANAGER_REPLIED_CASES: ReplayCase[] = [
+  {
+    id: "nov24-hr-approval-manager-edit-is-the-reply",
+    title:
+      'HR sent the form back; the manager changes it on the card without a note; HR: "what\'s waiting on me?": the form is waiting for HR, "manager replied to changes", and HR was told',
+    report:
+      'Owner, 24 Nov 2026, asked "Do you want editing alone to count as a reply too? Then HR would get Approve as soon as the manager changes anything on a sent-back form": "yeh"',
+    status: "fixed",
+    fixFlags: FLAGS,
+    async run(t) {
+      if (skip(t) || !t.saveOnCard) return;
+      const form = await corrective(t);
+      sentBackOnly(t, form);
+      // The store manager who created it saves a change on the card, through the real route; no note.
+      t.as("location_manager", WEST_DODGE);
+      await t.saveOnCard(form.id, { form_date: "2026-11-21" });
+      const told = (t.rows?.("app_notifications") ?? []).filter((bell) => bell.kind === "form_hr_approval_updated");
+      expect(told.map((bell) => [bell.recipient_email, bell.title]), "HR was not told the sent-back form was updated").toEqual([
+        ["hr.corwin@example.com", "A form you sent back was updated"],
+      ]);
+
+      t.as("district_manager", GLOBAL, HR_ACCOUNT);
+      const result = readsHr(t);
+      await t.thread().say("what's waiting on me?");
+      const output = result();
+      const waiting = output.waiting_for_you as Record<string, unknown>[];
+      expect(waiting, `the manager's edit did not put the form back with HR:\n${JSON.stringify(output)}`).toHaveLength(1);
+      expect(JSON.stringify(waiting[0])).toMatch(/Corrective Action Form for Rosalind Tetherby/);
+      expect(String(waiting[0]!.state)).toMatch(/^manager replied to changes/);
+      expect(output.sent_back_or_rejected).toEqual([]);
+    },
+  },
   {
     id: "nov23-hr-approval-manager-replied-is-waiting-for-hr",
     title: 'HR: "what\'s waiting on me?" after the manager replied to HR\'s changes: the form is waiting for HR, "manager replied to changes"',

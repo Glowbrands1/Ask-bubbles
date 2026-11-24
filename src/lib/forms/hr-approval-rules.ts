@@ -159,7 +159,13 @@ export function approvableFromSentBack(
     if (step.action === "changes_requested") sentBackAt = index;
   });
   if (sentBackAt < 0) return false;
-  return steps.slice(sentBackAt + 1).some((step) => step.action === "commented" && isCreatorOrSender({ id: step.actor }, instance));
+  /*
+   * THE MANAGER'S REPLY is a note OR an edit by the creator or a sender after HR's latest send-back (owner, 24 Nov
+   * 2026, asked "Do you want editing alone to count as a reply too?": "yeh"). HR's own notes and edits never count.
+   */
+  return steps
+    .slice(sentBackAt + 1)
+    .some((step) => (step.action === "commented" || step.action === "edited") && isCreatorOrSender({ id: step.actor }, instance));
 }
 
 export function hrStage(state: HrApprovalState, managerReplied: boolean): HrStage {
