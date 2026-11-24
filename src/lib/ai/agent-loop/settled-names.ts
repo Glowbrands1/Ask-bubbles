@@ -1,3 +1,4 @@
+import { appConfig } from "./app-config";
 import { personKey, readLoopRecords } from "./card-record";
 
 /**
@@ -62,4 +63,9 @@ export function turnsAfterCard<T extends { readonly id?: string; readonly role: 
   if (at < 0) return conversation;
   const reply = conversation.findIndex((turn, index) => index > at && turn.role === "assistant");
   return conversation.slice(reply > at ? reply + 1 : at + 1);
+}
+
+/** Pau's review (24 Nov 2026 PHT): the form kinds Create's same-incident check reads (the Corrective Action and the Coaching Form), by this app's keys. */
+export function sameIncidentKinds(): ReadonlySet<string> {
+  return new Set([appConfig().formKeys.corrective, appConfig().formKeys.coaching]);
 }

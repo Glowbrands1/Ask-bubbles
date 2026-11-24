@@ -329,8 +329,7 @@ export async function POST(request: Request) {
        * them) already has that form on file for the date the form will be saved with (a form filed since the card was made
        * counts), unless the manager said that date is a separate incident (the loop's record). The reply's own question.
        */
-      const { appConfig } = await import("@/lib/ai/agent-loop/app-config");
-      const sameDayKinds = new Set([appConfig().formKeys.corrective, appConfig().formKeys.coaching]);
+      const sameDayKinds = settledNames ? settledNames.sameIncidentKinds() : new Set<string>();
       const saveDate = isIsoCalendarDate(body.formDate) ? body.formDate : businessToday();
       if (settlement && sameDayKinds.has(body.templateKey) && settlement.sameIncidentChecked !== saveDate) {
         const [{ formsOnFileSameDay, sameDayOnFileQuestion }, { candidateNameWords }, { samePerson }] = await Promise.all([
