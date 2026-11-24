@@ -50,8 +50,10 @@ export default async function MeetingPage({ params, searchParams }: { params: Pr
     );
   }
   const m = opened.meeting;
-  // A Bloom-style meeting shows "Last meeting's summary"; a recap list that fails to load just leaves it empty.
+  // A Bloom-style meeting shows "Last meeting's summary". A recap list that fails to load leaves it empty, and the page
+  // says so ("Couldn't load the last meeting — refresh to try again") instead of looking like there is none (24 Nov 2026).
   const recaps = bloomStyle(key) ? await listRecaps(key) : null;
+  const loadProblems = recaps && !recaps.ok ? ["the last meeting"] : [];
   return (
     <L10Frame meetingKey={key}>
       <MeetingView
@@ -69,6 +71,7 @@ export default async function MeetingPage({ params, searchParams }: { params: Pr
         serverTime={new Date().getTime()}
         today={businessDate()}
         recaps={recaps?.ok ? recaps.recaps : []}
+        loadProblems={loadProblems}
       />
     </L10Frame>
   );

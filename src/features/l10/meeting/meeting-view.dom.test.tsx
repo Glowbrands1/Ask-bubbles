@@ -1204,3 +1204,17 @@ describe("Conclude: a signed-in person not on the meeting's people list can stil
     expect(saved(save)).toEqual(expect.arrayContaining([expect.objectContaining({ name: "Dana Fenn", rating: 7 }), expect.objectContaining({ name: "Bo Lark", rating: 8 })]));
   });
 });
+
+// 24 Nov 2026 (the owner: "yeah add"): a side load that failed (the last meeting's recaps, the owner names) used to look
+// like there was nothing. The page now says it could not load them, and the meeting itself still works.
+describe("a side load that failed is said, not shown as empty", () => {
+  it("names what did not load and asks for a refresh", () => {
+    render(<MeetingView info={info} initial={loaded()} save={vi.fn() as unknown as SaveFn} end={vi.fn() as unknown as EndFn} viewer={viewer} roster={roster} hubMeetingUrl={HUB} pollMs={0} debounceMs={0} today="2026-11-13" dateLabel="Fri, Nov 13" loadProblems={["the last meeting", "the owner names"]} />);
+    expect(screen.getByTestId("load-problems").textContent).toBe("Couldn’t load the last meeting or the owner names — refresh to try again.");
+    expect(screen.getByRole("button", { name: "Start meeting" })).toBeTruthy();
+  });
+  it("says nothing when everything loaded", () => {
+    renderView();
+    expect(screen.queryByTestId("load-problems")).toBeNull();
+  });
+});
