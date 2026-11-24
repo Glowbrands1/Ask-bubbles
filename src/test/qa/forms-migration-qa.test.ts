@@ -204,19 +204,21 @@ const FORMS: readonly QaForm[] = [
   { key: "follow-up-coaching", phrase: "Create a follow-up coaching form for Jordan Testperson on punctuality. I followed up today and she has improved.", creator: "location_manager", edits: ["original_topic", "original_expectation"], edit: "revision" },
   { key: "dpoa", phrase: "Create a corrective action for Jordan Testperson. She was 20 minutes late today.", creator: "location_manager", edits: ["observation", "action_plan"], edit: "payroll" }, // revision 7: no Other write-in line
   { key: "policy-review", phrase: "Create a policy review for Jordan Testperson about the dress code.", creator: "location_manager", edits: ["topic", "observation"], edit: "editor" },
-  { key: "sdit-epp", phrase: "Create an SDIT EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
-  { key: "tsd-epp", phrase: "Create a TSD EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
-  { key: "asd-sdit-epp", phrase: "Create an ASD-SDIT Performance EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
-  { key: "fttc-epp", phrase: "Create an FTTC Performance EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
-  { key: "dmit-epp-tsd", phrase: "Create a DMIT EPP TSD review for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
-  { key: "dmit-epp-dmit", phrase: "Create a DMIT EPP DMIT review for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
+  { key: "sdit-epp", phrase: "Create an SDIT EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor", hidden: true },
+  // Unhidden and renamed to Buff City Soap titles (Pau, 23 Nov 2026): the expectation changes on purpose.
+  { key: "tsd-epp", phrase: "Create a General Manager Performance EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
+  { key: "asd-sdit-epp", phrase: "Create an Assistant General Manager Development EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
+  { key: "fttc-epp", phrase: "Create a Team Member Performance EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
+  { key: "dmit-epp-tsd", phrase: "Create a DMIT EPP TSD review for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor", hidden: true },
+  { key: "dmit-epp-dmit", phrase: "Create a DMIT EPP DMIT review for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor", hidden: true },
   { key: "resignation-exit", phrase: "Create an exit form for Jordan Testperson. She gave two weeks notice on 9/1 and her last day was 9/15.", creator: "location_manager", edits: ["details", "details"], edit: "exit" },
   { key: "demotion", phrase: "Create a demotion form for Jordan Testperson, from manager to sales associate effective 10/12.", creator: "location_manager", edits: ["reason", "reason"], edit: "revision" },
   { key: "position-transfer", phrase: "Create a position transfer form for Jordan Testperson, transferring from store 12 to store 18.", creator: "location_manager", edits: ["reason", "reason"], edit: "revision" },
   { key: "prescreen-phone-interview", phrase: "Create a prescreen phone interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor" },
-  { key: "tanning-consultant-interview", phrase: "Create a tanning consultant interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor", hidden: true },
-  { key: "management-interview-round-1", phrase: "Create a first round management interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor", hidden: true },
-  { key: "management-interview-round-2", phrase: "Create a second round management interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor", hidden: true },
+  // Unhidden (Pau, 23 Nov 2026): the management interviews and the Team Member Interview Form are listed and created again.
+  { key: "tanning-consultant-interview", phrase: "Create a team member interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor" },
+  { key: "management-interview-round-1", phrase: "Create a first round management interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor" },
+  { key: "management-interview-round-2", phrase: "Create a second round management interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor" },
 ];
 
 /*
@@ -280,6 +282,69 @@ const neutral = (text: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
+/*
+ * Pau's Buff City Soap terms (23 Nov 2026): the approved changes' text, from → to, for one template. The PDF step reads
+ * the reference text through them, longest first, each as a whole phrase; the fixture is the one list of what changed.
+ */
+const BCS_TERMS_KEYS = new Set(["tsd-epp", "asd-sdit-epp", "fttc-epp", "tanning-consultant-interview", "management-interview-round-1", "management-interview-round-2"]);
+/** The words a change replaced, the words both sides share before and after them left out (the PDF prints its own quotes and dashes). */
+function changedWords(from: string, to: string): readonly [string, string] {
+  const a = from.split(" ");
+  const b = to.split(" ");
+  let head = 0;
+  while (head < a.length && head < b.length && a[head] === b[head]) head += 1;
+  let tail = 0;
+  while (tail < a.length - head && tail < b.length - head && a[a.length - 1 - tail] === b[b.length - 1 - tail]) tail += 1;
+  return [a.slice(head, a.length - tail).join(" "), b.slice(head, b.length - tail).join(" ")];
+}
+function withApprovedBcsTerms(key: string, text: string): string {
+  if (!BCS_TERMS_KEYS.has(key)) return text;
+  const pairs = (approved.changes as { sourceKey: string; from: unknown; to: unknown }[])
+    .filter((change) => change.sourceKey === key && typeof change.from === "string" && typeof change.to === "string" && change.from !== "")
+    // The PDF prints a curly apostrophe as a straight one (QA's printed-form review: Q8's "I’d", "you’ve").
+    .map((change) => changedWords(neutral((change.from as string).replace(/\u2019/g, "'")), neutral((change.to as string).replace(/\u2019/g, "'"))))
+    .filter(([from, to]) => from !== "" && from !== to)
+    .sort((a, b) => b[0].length - a[0].length);
+  return pairs.reduce((current, [from, to]) => current.replace(new RegExp(`(?<![A-Za-z0-9])${from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![A-Za-z0-9])`, "g"), to), text);
+}
+
+/** The fields whose responsibility an approved change moved off the AI (none today: the General Manager plan's KPI lines stay drafted, 23 Nov 2026). */
+function approvedNotDrafted(key: string, document: unknown): Set<string> {
+  const keys = new Set<string>();
+  for (const change of approved.changes as { sourceKey: string; path: string; from: unknown; to: unknown }[]) {
+    if (change.sourceKey !== key || !change.path.endsWith(".responsibility") || change.from !== "ai") continue;
+    const owner = change.path.replace(/^\.document/, "").replace(/\.responsibility$/, "");
+    const parts = [...owner.matchAll(/\.([A-Za-z_]+)|\[(\d+)\]/g)].map((m) => m[1] ?? Number(m[2]));
+    const field = parts.reduce<unknown>((cur, part) => (cur && typeof cur === "object" ? (cur as Record<string, unknown>)[part as string] : undefined), document) as { key?: string } | undefined;
+    if (field?.key) keys.add(field.key);
+  }
+  return keys;
+}
+
+/**
+ * The fields an approved change added (Pau, 23 Nov: BCS terms in the forms; the KB's "Domo Reporting Overview": Product
+ * Mix %, the sixth KPI on the General Manager plan, a new line at the end of each KPI row). Each comes with the key of
+ * the field it follows, so the reference's printed text can carry it in its place.
+ */
+function approvedAdded(key: string, document: unknown): { key: string; label: string; after: string }[] {
+  const added: { key: string; label: string; after: string }[] = [];
+  for (const change of approved.changes as { sourceKey: string; path: string; from: unknown; to: unknown }[]) {
+    const at = /^\.document\.blocks\[(\d+)\]\.fields\[(\d+)\]$/.exec(change.path);
+    if (change.sourceKey !== key || change.from !== null || !at) continue;
+    const to = change.to as { key: string; label: string };
+    const row = (document as { blocks: { fields?: { key: string }[] }[] }).blocks[Number(at[1])]!;
+    added.push({ key: to.key, label: to.label, after: row.fields![Number(at[2]) - 1]!.key });
+  }
+  return added;
+}
+function withApprovedAddedFields(key: string, document: unknown, text: string): string {
+  const sample = (field: string) => neutral(`Sample ${field.replace(/_/g, " ")}`);
+  return approvedAdded(key, document).reduce(
+    (current, field) => current.replace(sample(field.after), `${sample(field.after)} ${neutral(field.label)} ${sample(field.key)}`),
+    text,
+  );
+}
+
 /**
  * The hiring-form line retained verbatim for the business's review. "Sun Tan City Core Values" was the
  * other; its heading now reads "Core Values" (QA, 25 Oct 2026, QA-4), so it is no longer exempt.
@@ -319,8 +384,23 @@ function referenceDocument(key: string, raw: unknown): unknown {
   if (!Array.isArray(document.blocks)) return raw;
   return {
     ...document,
-    blocks: document.blocks.filter((block) => !(block.kind === "field" && block.field?.key === "payroll_deduct_amount")),
+    // Also set aside: revision 8's "List date of JBA policy manual signed by employee" (HR via Pau, 19 Nov 2026), a box the reference does not have.
+    blocks: document.blocks.filter(
+      (block) => !(block.kind === "field" && (block.field?.key === "payroll_deduct_amount" || block.field?.key === "policy_manual_signed")),
+    ),
   };
+}
+
+/**
+ * HR via Pau, 19 Nov 2026 (revision 8): the history line the reference prints carries the approved new label here. The
+ * new policy manual box is set aside with the document (`referenceDocument`); nothing else in the text moves.
+ */
+function withApprovedHistoryBoxes(key: string, text: string): string {
+  if (key !== "dpoa") return text;
+  return text.replace(
+    "List previously received coaching and/or corrective action with date signed",
+    "List previous coaching and corrective actions and include date signed by employee in past 90 days",
+  );
 }
 
 /** A document's shape: every block's kind and keys, nothing a branding change touches. */
@@ -578,13 +658,23 @@ beforeEach(async () => {
 /* ------------------------------------------------------------ the matrix --- */
 
 /*
- * HIDDEN IN THIS DEPLOYMENT (QA, 25 Oct 2026). The Tanning Consultant Interview
- * Form and both management interviews are the sibling company's own. Their
+ * HIDDEN IN THIS DEPLOYMENT (QA, 25 Oct 2026). Both management interviews are
+ * the sibling company's own. (So was the Tanning Consultant Interview Form,
+ * hidden with them; it was removed from the library and its key retired on
+ * 21 Nov 2026, Pau, so it is no longer in this matrix.) Their
  * rows, versions and content stay, and the content steps of this matrix (02,
  * 03, 10, 11, 14 …) still check them; but nothing lists them and nothing
  * creates a form from them, so the listing and creation steps check that
  * refusal instead of a created form. The
  * expectation changes on purpose; see `config/company/forms/hidden.ts`.
+ *
+ * The six EPP forms joined them on 21 Nov 2026 (Pau, via QA2): plans for roles Buff City Soap does not have, none ever
+ * saved here. Their listing and creation steps now check the refusal the same way.
+ *
+ * 23 Nov 2026 (Pau, via QA: "ok all ur picks"): the management interviews, the Team Member Interview Form (the restored
+ * consultant interview) and the Team Member, Assistant General Manager and General Manager Performance EPPs are
+ * unhidden under Buff City Soap titles, so the matrix checks them as created forms again. Only the in-training plans
+ * (SDIT, and the DMIT plan's two readings) stay hidden.
  */
 async function expectHidden(form: QaForm) {
   expect(isHiddenTemplate(form.key)).toBe(true);
@@ -659,10 +749,17 @@ describe.each(FORMS)("$key", (form) => {
   });
 
   it(`${form.key} · 03 all sections and fields are preserved`, () => {
+    // An approved change that moved a field off the AI (Pau, 23 Nov 2026: Goal / Result lines) is the manager's on the reference too.
+    const notDrafted = approvedNotDrafted(form.key, source.document);
     for (const variantKey of variantKeys) {
-      expect(skeleton(referenceDocument(form.key, seed.document), variantKey), String(variantKey)).toEqual(
-        skeleton(source.document, variantKey),
-      );
+      const reference = skeleton(source.document, variantKey);
+      // A field an approved change added (Product Mix %, 23 Nov 2026) is not on the reference: it is left out here.
+      const added = new Set(approvedAdded(form.key, seed.document).map((field) => field.key));
+      const ours = skeleton(referenceDocument(form.key, seed.document), variantKey);
+      expect({ ...ours, fields: ours.fields.filter((entry) => !added.has(entry[0] as string)) }, String(variantKey)).toEqual({
+        ...reference,
+        fields: reference.fields.map((entry) => (notDrafted.has(entry[0] as string) ? [entry[0], entry[1], "manager"] : entry)),
+      });
       if (form.key === "dpoa") {
         const fields = skeleton(seed.document, variantKey).fields;
         expect(fields).toContainEqual(["payroll_deduct_amount", "text", "manager"]);
@@ -674,14 +771,20 @@ describe.each(FORMS)("$key", (form) => {
   it(`${form.key} · 04 AI-fill chips map to the same fields, and the drafting writes them`, async () => {
     for (const variantKey of variantKeys) {
       const ours = draftableFields(parseFormDocument(seed.document), variantKey).map((field) => field.key);
-      expect(ours).toEqual(draftableFields(parseFormDocument(source.document), variantKey).map((field) => field.key));
+      // An approved change that moved a field off the AI (Pau, 23 Nov 2026: Goal / Result lines) leaves the reference's list too.
+      const notDrafted = approvedNotDrafted(form.key, source.document);
+      // A field an approved change added (Product Mix %, 23 Nov 2026) is drafted like the line before it.
+      const added = approvedAdded(form.key, seed.document);
+      const reference = draftableFields(parseFormDocument(source.document), variantKey).map((field) => field.key).filter((key) => !notDrafted.has(key));
+      expect(ours).toEqual(reference.flatMap((key) => [key, ...added.filter((field) => field.after === key).map((field) => field.key)]));
       // Only the AI fields accept a drafted value; everything else is refused.
       const document = parseFormDocument(seed.document);
       const everything = Object.fromEntries(fieldsForVariant(document, variantKey).map((field) => [field.key, "x"]));
       const enforced = enforceResponsibilities(document, variantKey, { values: everything, checked: {} });
       expect(Object.keys(enforced.values).sort()).toEqual([...ours].sort());
     }
-    if (form.edits.length === 0) return;
+    // A hidden form's fields are still checked above; nothing creates one, so the drafting half is checked by step 05's refusal (21 Nov 2026).
+    if (form.edits.length === 0 || form.hidden) return;
     const { id } = await createViaChat(form);
     const read = await values(id);
     expect(read[form.edits[0]!]?.value ?? "", "the drafted field was written").not.toBe("");
@@ -759,13 +862,16 @@ describe.each(FORMS)("$key", (form) => {
       expect(ours.pages, name).toBe(reference[name]!.pages);
       // An approved removal also removes the question, and the sample answer printed under it, from the reference text.
       // An approved option change (Corrective Action revision 7) prints the new labels in place of the old.
-      const referenceText = withApprovedOptionText(
+      const referenceText = withApprovedAddedFields(form.key, seed.document, withApprovedBcsTerms(form.key, withApprovedHistoryBoxes(
         form.key,
-        removedFieldReferenceText(form.key, neutral).reduce(
-          (text, removed) => text.split(removed).join(""),
-          neutral(reference[name]!.text),
-        ).replace(/\s+/g, " ").trim(),
-      );
+        withApprovedOptionText(
+          form.key,
+          removedFieldReferenceText(form.key, neutral).reduce(
+            (text, removed) => text.split(removed).join(""),
+            neutral(reference[name]!.text),
+          ).replace(/\s+/g, " ").trim(),
+        ),
+      )));
       expect(neutral(ours.text), name).toBe(referenceText);
       if (form.key === "dpoa") {
         const full = parseFormDocument(seed.document);
@@ -918,8 +1024,17 @@ describe.each(FORMS)("$key", (form) => {
 });
 
 describe("the matrix covers the whole migrated library", () => {
+  // Seventeen again (changed on purpose, Pau, 23 Nov 2026): the consultant interview removed on 21 Nov is back as Buff
+  // City Soap's Team Member Interview Form, under its old key, and is no longer retired.
   it("names all seventeen forms, once each", () => {
     expect(FORMS.map((form) => form.key).sort()).toEqual(MIGRATED_TEMPLATE_SEEDS.map((seed) => seed.key).sort());
     expect(FORMS).toHaveLength(17);
+  });
+
+  it("ships the Team Member Interview Form under its old key, not retired, with no tanning word", () => {
+    const seed = TEMPLATE_SEEDS.find((entry) => entry.key === "tanning-consultant-interview");
+    expect(seed?.name).toBe("Team Member Interview Form");
+    expect(RETIRED_TEMPLATE_KEYS).not.toContain("tanning-consultant-interview");
+    expect(JSON.stringify({ ...seed, key: undefined })).not.toMatch(/tanning/i);
   });
 });

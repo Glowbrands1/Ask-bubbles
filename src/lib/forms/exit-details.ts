@@ -1,4 +1,5 @@
 import { exitIntakeFixEnabled, exitShortcutWordsEnabled, exitStatedOnlyEnabled, exitTerminationStatedEnabled, fieldLabelNotAQuestionEnabled, resignMethodFollowupEnabled, exitTypoWordsEnabled } from "@/lib/config/chat-quality-flags";
+import { ADDRESS_LABEL, ADDRESS_THROUGH_ZIP, ADDRESS_TO_END } from "./address-spans";
 
 import { JOIN } from "./turn-join";
 import { editDistance } from "./typo-match";
@@ -315,9 +316,14 @@ function payrollDeduction(clause: string, sentence: string): Reading {
   // "payroll" alone is usually the department — "notify payroll".
   const match = /\b(?:payroll deduct(?:ed|ion|ions)?|deduct(?:ed|ing|s|ion|ions)?)\b/.exec(clause);
   if (!match) return undefined;
-  if (/\b(?:not|n't)\s+(?:be\s+)?(?:appl(?:y|ies|icable)|needed|required|necessary)\b|\bn\/a\b/.test(clause)) {
+  /*
+   * Ported from the sibling app (QA's production audit of an exit form, 20 Nov 2026): "payroll deduct no apply" was read
+   * as Yes. "no apply" / "no applicable" and "payroll deduct: no" / "payroll deduct no" answer No, as "not apply" did.
+   */
+  if (/\b(?:not|n't|no)\s+(?:be\s+)?(?:appl(?:y|ies|icable)|needed|required|necessary)\b|\bn\/a\b/.test(clause)) {
     return "no";
   }
+  if (/\bdeduct(?:ed|ion|ions)?\s*[:=-]?\s*no\b(?!\s+(?:more|longer|later)\b)/.test(clause)) return "no";
   return negatedAt(clause, match.index) ? "no" : "yes";
 }
 
@@ -521,8 +527,16 @@ const NEXT_FACT = String.raw`(?:she|he|they|her|his|their|last|returned|didn't|d
  * reason.
  */
 const FACT_START = String.raw`(?:store items?|(?:salon|store) key|(?:her|his|their|the) keys?\s+(?:was|were|returned|not)|items?\s+(?:were\s+|was\s+)?(?:not\s+)?returned|keys?\s+(?:was\s+|were\s+)?(?:not\s+)?returned|(?:no\s+)?payroll|(?:not\s+|in)?eligible for re-?hire|re-?hire\b|last day|min(?:imum|\.)?\s*wage)`;
+/*
+ * WORDS TO THE APP END A REASON (QA's live re-test B6, 21 Nov 2026: "she is resigning due to second job I'm ready for the
+ * draft" saved the reason "Second job I'm ready for the draft."). A manager who ends the message by telling the app to go
+ * ahead has finished the reason: the speaker's readiness ("I'm ready", "we're all set"), "go ahead", or a request about
+ * the draft or form itself ("make the draft", "create the exit form", "ready for the draft"). Only words about the
+ * form or the go-ahead, so a reason that itself has "make" or "start" in it ("to start a new job") is kept whole.
+ */
+const TO_THE_APP = String.raw`(?:(?:i'?m|i am|we'?re|we are)\s+(?:ready|done|all set|good to go|finished)\b|(?:ok(?:ay)?[,\s]+)?(?:please\s+)?go\s+ahead\b|(?:(?:please|you can|can you|could you|let'?s)\s+)?(?:create|make|start|generate|build|prepare|draft|send|open|do)\s+(?:(?:the|a|my|this|that|her|his|their)\s+)?(?:(?:exit|resignation)\s+)?(?:draft|form|paperwork)\b|ready for (?:the|a|my) (?:draft|form)\b)`;
 const REASON_END = new RegExp(
-  String.raw`\s*(?:[.;!?\n]|,\s*(?:and\s+|but\s+|so\s+)?(?=${NEXT_FACT})|\s+(?:and|but|so)\s+(?=${NEXT_FACT}))|\s+(?=${FACT_START})`,
+  String.raw`\s*(?:[.;!?\n]|,\s*(?:and\s+|but\s+|so\s+)?(?=${NEXT_FACT})|\s+(?:and|but|so)\s+(?=${NEXT_FACT}))|\s+(?=${FACT_START})|[,\s]+(?=${TO_THE_APP})`,
 );
 
 /** Each opening, and whether the words it matched belong to the reason. */
@@ -610,10 +624,7 @@ function sentence(text: string): string {
  * is one, else to the end of the sentence. Never guessed from anything else.
  * Only with EXIT_INTAKE_FIX_ENABLED.
  */
-const ADDRESS_LABEL =
-  /\b(?:(?:permanent|home|mailing|current)\s+address(?:\s+is|\s*[:=\-–—])?|address\s*(?:is|[:=\-–—]))\s*/gi;
-const ADDRESS_THROUGH_ZIP = /^\d{1,6}[A-Za-z]?\s+[^\n]{2,100}?\b\d{5}(?:-\d{4})?\b/;
-const ADDRESS_TO_END = /^\d{1,6}[A-Za-z]?\s+[^\n.;!?]{2,100}?(?=\s*(?:[.;!?\n]|,\s*(?:she|he|they|her|his|last|and)\b|$))/i;
+/* The address shape lives in `address-spans.ts`, shared with the store readers that leave an address out. */
 
 function addressIn(turn: string): string | null {
   for (const match of turn.matchAll(ADDRESS_LABEL)) {
@@ -630,6 +641,63 @@ export function readPermanentAddress(rawText: string): string | null {
   let address: string | null = null;
   for (const turn of (rawText ?? "").split(JOIN)) address = addressIn(turn) ?? address;
   return address;
+}
+
+/*
+ * ============================================================================
+ * ONLY THE MANAGER'S OWN ADDRESS (port from the sibling app's #1119, item 19)
+ * ============================================================================
+ *
+ * An exit form came back with a home address the manager never typed. The staff record carries no address, so it can
+ * only come from text someone else wrote: in this app, the card's own lines, which Create drafts from when no manager
+ * turn qualifies (`draftNotesFromCard`). An address is the manager's when its letters and digits appear, in order, in
+ * a message they typed in this chat. Never gated by a flag: it only ever leaves something out.
+ */
+const addressKey = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, "");
+
+/** Whether `address` is in `managerText` (every message the manager typed in this chat), letters and digits alike. */
+export function addressTypedIn(address: string, managerText: string): boolean {
+  const want = addressKey(address);
+  return want !== "" && addressKey(managerText).includes(want);
+}
+
+/**
+ * `text` (lines someone other than the manager wrote) without any labelled address ("home address 412 …") the manager
+ * did not type in `managerText`; the label goes with it. `removed` lists what was left out.
+ */
+export function withoutUntypedAddresses(text: string, managerText: string): { text: string; removed: string[] } {
+  const spans: [number, number, string][] = [];
+  for (const match of text.matchAll(ADDRESS_LABEL)) {
+    const start = match.index ?? 0;
+    const rest = text.slice(start + match[0].length);
+    const found = ADDRESS_THROUGH_ZIP.exec(rest) ?? ADDRESS_TO_END.exec(rest);
+    if (!found) continue;
+    const address = found[0].replace(/[\s,]+$/g, "");
+    if (!addressTypedIn(address, managerText)) spans.push([start, start + match[0].length + found[0].length, address.replace(/\s+/g, " ")]);
+  }
+  if (spans.length === 0) return { text, removed: [] };
+  let kept = "";
+  let at = 0;
+  for (const [start, end] of spans) {
+    kept += text.slice(at, start);
+    at = end;
+  }
+  kept += text.slice(at);
+  const tidy = kept
+    .split("\n")
+    .map((line) =>
+      line
+        .replace(/\b(?:her|his|their|the|and|with)\s*([.,;])/gi, "$1")
+        .replace(/\s+([.,;!?])/g, "$1")
+        .replace(/([.,;])\s*[.,;]+/g, "$1")
+        .replace(/(:\s*)[.,;]+\s*/g, "$1")
+        .replace(/[ \t]{2,}/g, " ")
+        .trimEnd(),
+    )
+    .join("\n")
+    .replace(/^[\s.,;]+/, "")
+    .trim();
+  return { text: tidy, removed: spans.map(([, , address]) => address) };
 }
 
 /**
@@ -850,6 +918,51 @@ export function readExitDetails(rawText: string, today: string, facts?: ExitFact
     answers,
     ambiguities,
   };
+}
+
+/*
+ * ============================================================================
+ * HOW THE PERSON RESIGNED IS HOW THEY QUIT (QA's Bubbles round 2, 22 Nov 2026, U26)
+ * ============================================================================
+ *
+ * "<GM> called and left a voicemail for <P> when she did not show for her shift. Later that day <P> returned the call
+ * and told <AGM> … she quit effective immediately." saved How Employee Resigned "Voicemail": the voicemail was the
+ * manager's, not how she quit. Two readings for the agent loop's exit card, from the line's own methods and the exit
+ * form's own reader, no new word lists:
+ *
+ *   `EXIT_METHOD_LABELS`            the methods this line takes; the model reads one (`exit_method`).
+ *   `quoteNamesMethod`              the manager's quoted words name that method: half its words or more (three letters
+ *                                   or more each), said whole, as a prefix, or a close spelling; or the line's own
+ *                                   reader reads it in the quote.
+ *   `resignationStatementMethod`    with no method from the model: only the sentences the exit form's own reader reads a
+ *                                   resignation type from (`readExitFacts`, one sentence at a time) are read for the
+ *                                   method; undefined when no sentence states one (the whole account is read, as before).
+ */
+export const EXIT_METHOD_LABELS: readonly string[] = METHODS.map((method) => method.label);
+
+export function quoteNamesMethod(quote: string, label: string): boolean {
+  if (!EXIT_METHOD_LABELS.includes(label)) return false;
+  if (methodsIn(normalize(quote)).includes(label)) return true;
+  const wordsOf = (text: string) => [...new Set((text.toLowerCase().match(/[a-z]+/g) ?? []).filter((word) => word.length >= 3))];
+  const labelWords = wordsOf(label);
+  const quoted = wordsOf(quote);
+  const named = labelWords.filter((word) =>
+    quoted.some((typed) => typed === word || word.startsWith(typed) || typed.startsWith(word) || (typed.length >= 5 && word.length >= 5 && editDistance(typed, word) <= 2)),
+  );
+  return labelWords.length > 0 && named.length >= Math.ceil(labelWords.length / 2);
+}
+
+export function resignationStatementMethod(rawText: string, today: string): string | null | undefined {
+  const stating: string[] = [];
+  for (const turn of normalize(rawText).split(JOIN)) {
+    for (const sentence of statements(turn)) {
+      if ((exitFactValues(readExitFacts(sentence, today)).checked[EXIT_TYPE_GROUP] ?? []).length > 0) stating.push(sentence);
+    }
+  }
+  if (stating.length === 0) return undefined;
+  const found: string[] = [];
+  for (const sentence of stating) for (const label of methodsIn(sentence)) if (!found.includes(label)) found.push(label);
+  return joinMethods(found);
 }
 
 /** The Details answers as form values, keyed the way the stored version keys them. */

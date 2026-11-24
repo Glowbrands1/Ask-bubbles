@@ -12,6 +12,7 @@ import type { FormsActor } from "@/lib/forms/access";
 import { actorMaySeeInstance, authorizeInstance } from "@/lib/forms/instance-scope";
 import type { AskResponse } from "@/lib/ai/types";
 import { formEditSingleWriterEnabled } from "@/lib/config/chat-quality-flags";
+import { isTeamSubject } from "@/lib/forms/team-subject";
 import { displayName, rosterNameNamedIn, type RosterEmployee } from "@/lib/forms/employee-match";
 import { isBareNameTurn } from "@/lib/chat/cross-chat-guard";
 import {
@@ -77,6 +78,19 @@ export function asksForSameForm(text: string): boolean {
 export function requestTurn(notes: string): string {
   const turns = notes.split(JOIN).map((turn) => turn.trim()).filter(Boolean);
   return turns.at(-1) ?? "";
+}
+
+/**
+ * Does Create copy the manager's earlier form, unasked by id (the draft route's implicit copy)? Only when the card's own
+ * request asks for "the same … form", and never for the agent loop's card (QA's live re-test, 21 Nov 2026, item 24): the
+ * loop's card carries its own account, already the earlier card's when the manager asked for "the same coaching form for
+ * <B>", and the manager pressed Create on that card. Its notes end with the turn that names <B> ("Do the same coaching
+ * form for <B>"), so the copy ran, and with <A>'s card never created it took this account's newest other form of the
+ * template, an older one about something else, and saved that over what the card showed.
+ */
+export function implicitCopyAsked(input: { notes: string; cardFromLoop: boolean }): boolean {
+  if (input.cardFromLoop) return false;
+  return asksForSameForm(requestTurn(input.notes));
 }
 
 function escaped(word: string): string {
@@ -195,6 +209,11 @@ export function swapName(text: string, from: string, to: string): string {
   const toWords = to.trim().split(/\s+/).filter(Boolean);
   if (fromWords.length === 0 || toWords.length === 0) return text;
   let out = text.replace(new RegExp(`\\b${escaped(fromWords.join(" "))}\\b`, "gi"), toWords.join(" "));
+  /*
+   * THE TEAM CARD'S "All team members" IS A PLACEHOLDER, NOT A NAME (port of the sibling app's fix, QA's code audit item A, 20 Nov 2026):
+   * only the whole phrase is swapped. Its words alone are ordinary words ("All guests must be greeted…"), never a name.
+   */
+  if (isTeamSubject(from)) return out;
   const alone = (word: string, replacement: string) => {
     if (NAME_WORDS.has(word.toLowerCase())) return;
     const capitalised = word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();

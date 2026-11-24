@@ -6,6 +6,7 @@ import { APPROVED_GOOGLE_STORES } from "@/config/company/google-reviews";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 import { classifyDatabaseError } from "./database-error";
+import { monthlyProgress, progressMonths, type MonthlyProgress } from "./monthly-progress";
 import { centralMidnight, centralToday, closedMonthContext, goalContext, monthOf, type GoalContext, type GoalRow } from "./goals";
 import type { GoogleFailureCode } from "./types";
 
@@ -409,4 +410,25 @@ export async function readGoalData(now: Date = new Date(), client: SupabaseClien
   check(error);
   const rows = goalRowsFrom(data);
   return { context, rows };
+}
+
+/**
+ * Every month the month-by-month table shows, each read with the goal table's
+ * own function (`readGoalDataForMonth`), so a month here is the figure the
+ * leaderboard shows for that month. See `monthly-progress.ts`.
+ */
+export async function readMonthlyProgress(now: Date = new Date(), client: SupabaseClient = getSupabaseAdmin()): Promise<MonthlyProgress> {
+  const today = centralToday(now);
+  const months = progressMonths(today);
+  const [perMonth, postedByStore] = await Promise.all([
+    Promise.all(months.map(async (month) => ({ month, rows: (await readGoalDataForMonth(month, now, client)).rows }))),
+    // Reviews POSTED each month, for the months before a store started counting.
+    Promise.all(
+      APPROVED_GOOGLE_STORES.map(async (store) => {
+        const trend = await readPeriodTrend("month", store.code, client);
+        return [store.code, new Map(trend.map((p) => [p.start.slice(0, 7), p.qualifyingCount]))] as const;
+      }),
+    ),
+  ]);
+  return monthlyProgress(perMonth, today, new Map(postedByStore));
 }

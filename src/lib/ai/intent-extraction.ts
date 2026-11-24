@@ -2,7 +2,8 @@ import "server-only";
 
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { CLAUDE_HAIKU_MODEL } from "@/lib/config/models";
-import { intentExtractionEnabled } from "@/lib/config/chat-quality-flags";
+import { intentExtractionEnabled, statedPlanStepsEnabled } from "@/lib/config/chat-quality-flags";
+import { keptPlanSteps } from "@/lib/forms/stated-plan-steps";
 import { readDirectoryFacts, loadScopedRoster, type DirectoryFact } from "@/lib/forms/employee-roster";
 import { listTemplateSummaries } from "@/lib/forms/repository";
 import { manualSectionHeadings } from "@/lib/forms/official-policy-manual";
@@ -19,9 +20,11 @@ import type { GroundedPerson } from "./grounded-entities";
 import {
   decideIntentTurn,
   INTENT_TOOL_DESCRIPTION,
-  INTENT_TOOL_INPUT_SCHEMA,
+  intentToolInputSchema,
   INTENT_TOOL_NAME,
+  readPlanStepsSlot,
 } from "./intent-slots";
+import { notePlanSteps } from "./plan-steps-turn";
 import type { AskRequest, AskResponse } from "./types";
 
 /**
@@ -62,7 +65,7 @@ export async function applyIntentExtraction(input: {
       tool: {
         name: INTENT_TOOL_NAME,
         description: INTENT_TOOL_DESCRIPTION,
-        input_schema: INTENT_TOOL_INPUT_SCHEMA,
+        input_schema: intentToolInputSchema(statedPlanStepsEnabled()),
       },
       messages: [
         {
@@ -71,6 +74,16 @@ export async function applyIntentExtraction(input: {
         },
       ],
     }).catch(() => null);
+    /*
+     * STATED_PLAN_STEPS_ENABLED (ported from the sibling app's f062, Pau via QA, 20 Nov 2026): the plan steps the reader
+     * returned, each kept only when its words are the manager's own (`keptPlanSteps`), for this turn's card
+     * (`plan-steps-turn.ts`).
+     */
+    if (statedPlanStepsEnabled()) {
+      /* The manager's own turns in this chat: a later "yes" to an offer still carries the request's words. */
+      const managerText = [...input.request.history.filter((turn) => turn.role === "user").map((turn) => turn.content), input.request.question].join("\n");
+      notePlanSteps(keptPlanSteps(readPlanStepsSlot(raw), managerText));
+    }
 
     const decision = decideIntentTurn({
       question: input.request.question,

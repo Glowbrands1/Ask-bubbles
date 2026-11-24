@@ -5,6 +5,8 @@ import { COMPANY_JOB_TITLES, isJobTitleAbbreviation } from "@/config/company/job
 import { COMPANY_LOCATIONS, locationByCode, locationById, locationNameKey } from "@/lib/locations";
 
 import { extractFormDate } from "./form-date-answer";
+import { withoutAddressLines } from "./address-spans";
+import { foldName } from "./fold-name";
 import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
 import { antiLoopEnabled, exitAnswerNotACorrectionEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { companyNameStops } from "./name-stops";
@@ -1447,10 +1449,12 @@ function settle(strong: string[], weak: string[], text: string, subjects: readon
  * name beside the full name, or a surname given as its initial ("Avery T").
  */
 export function samePerson(a: string, b: string): boolean {
+  // Port from the sibling app's #1141: accents off and every apostrophe straight (`foldName`), so "Lucía Ramírez" and
+  // "lucia ramirez", or "D’Angelo" and "D'Angelo", are the same person.
   const words = (name: string) =>
-    name
+    foldName(name)
       .toLowerCase()
-      .replace(/['’]s\b/g, "")
+      .replace(/'s\b/g, "")
       .replace(/\./g, "")
       .split(/\s+/)
       .filter(Boolean);
@@ -2011,14 +2015,15 @@ export function extractJobTitle(text: string): string | null {
  * and the form flow's read-back both use.
  */
 export function locationFor(input: ProposalInput, team: boolean): LocationProposal {
+  /* QA (23 Nov 2026, u22 live): an address given as the employee's ("address: 123 Test St, Lees Summit, MO …") names no store. */
   return proposeLocationWithSource(
     input.scope,
-    input.locationText ?? input.context.text,
+    withoutAddressLines(input.locationText ?? input.context.text),
     team ? [] : (input.employeeLocationIds ?? []),
     input.storeIndex,
     {
       reportUnmatched: input.reportUnmatchedStore ?? true,
-      ...(input.locationText === undefined ? { turns: input.context.messages.map((message) => message.content) } : {}),
+      ...(input.locationText === undefined ? { turns: input.context.messages.map((message) => withoutAddressLines(message.content)) } : {}),
       bareReply: input.storeReply?.bareReply ?? false,
       ...(input.storeReply?.answeredTurns ? { answeredTurns: input.storeReply.answeredTurns } : {}),
       ...(input.storeReply?.confirmedCode

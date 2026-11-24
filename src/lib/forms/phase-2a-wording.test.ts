@@ -3,6 +3,7 @@ import { extractText, getDocumentProxy } from "unpdf";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import approved from "@/test/fixtures/approved-template-changes.json";
+import { RETIRED_TEMPLATE_KEYS } from "@/config/company/forms/retired";
 
 import { checkboxGroupsForVariant, fieldsForVariant, parseFormDocument } from "./document";
 import { TEMPLATE_SEEDS } from "./library";
@@ -57,18 +58,30 @@ const D18: [string, string] = [
 ];
 const PAIRS = [D3, D4, D12, D18];
 
+/*
+ * RELEASED 23 Nov 2026 (Pau, via QA: "ok all ur picks"): held wording now in Buff City Soap terms (template key, the
+ * old text that must be gone, the new text that must be there). CHANGED ON PURPOSE.
+ */
+const RELEASED: [string, string, string][] = [
+  ["tsd-epp", "the most important skill for a Store Director to possess?", "the most important skill for a General Manager to possess?"], // D6
+  // Pau, 23 Nov: BCS terms in the forms (QA's final picks): the KPIs from the KB's "Domo Reporting Overview", SVC as
+  // the store reports (Domo), and Buff Rewards from the KB's "Buff Rewards – Talk Track and FAQ".
+  ["tsd-epp", "Club Close", "AOV (Goal / Result)"], // the KPIs
+  ["tsd-epp", "Aware of all items on the SVC and able to describe to DM", "Aware of all items on the store reports (Domo) and able to describe to DM"], // D7
+  ["management-interview-round-1", "the tanning bed they reserved is unavailable", "the product they came in for is out of stock"], // M1-1
+  ["management-interview-round-2", "lotions and memberships sales", "add-on product sales and Buff Rewards sign-ups"], // D19
+  ["management-interview-round-2", "new Assistant Store Director or Tanning Consultant", "new Assistant General Manager or Team Member"], // M2-2
+  ["management-interview-round-2", "as a Store Director to reduce expenses", "as a General Manager to reduce expenses"], // D20
+];
+
 /** Held or unapproved wording: it must still be there, byte for byte (template key, exact text). */
 const UNCHANGED: [string, string][] = [
   ["sdit-epp", "Uphold the Buff City Soap Experience."], // D2/X-5 held
   ["tsd-epp", "Uphold the Buff City Soap Experience."],
   ["sdit-epp", "Make fact based decisions when the Store Director is not present."], // D5 held
-  ["tsd-epp", "What do you feel is the most important skill for a Store Director to possess?"], // D6 held
   ["sdit-epp", "Determine focuses based on the Bonus Viewer."], // SD-4 held
-  ["tsd-epp", "Aware of all items on the SVC and able to describe to DM"], // D7 held
-  ["tsd-epp", "Club Close"], // KPIs held
   ["sdit-epp", "PPTA"],
   ["fttc-epp", "In what areas is the {{roleAbbr}} currently succeeding?"], // role mapping held
-  ["fttc-epp", "TC"],
   // D10 held: Pau confirmed (via QA, 25 Oct 2026) that Buff City Soap uses Sunlync too. Only the tanning
   // clause ("verify tanning has been removed") was removed, in revision 4.
   ["resignation-exit", "Place comment on employee’s Sunlync account stating they are no longer employed."], // D10 held
@@ -76,15 +89,9 @@ const UNCHANGED: [string, string][] = [
   ["demotion", "or the monthly manager bonus"], // DE-3 held
   ["demotion", "Any elected benefits will terminate"],
   // The prescreen uniform question (D14) was removed by Phase 2B (phase-2b-prescreen.test.ts), so it is no longer pinned here.
-  // D15 resolved (QA, 25 Oct 2026): the heading reads "Core Values", the JBA Policy Manual's own heading for
-  // these five values; the values are unchanged. Pinned in seed-sibling-brand.test.ts and template-parity QA-4.
-  ["tanning-consultant-interview", "Core Values"],
-  ["tanning-consultant-interview", "Our company has five core values."], // D16 held
-  ["tanning-consultant-interview", "overseeing daily store operations"], // D17 held
-  ["management-interview-round-1", "the tanning bed they reserved is unavailable"], // M1-1 held
-  ["management-interview-round-2", "lotions and memberships sales"], // D19 held
-  ["management-interview-round-2", "new Assistant Store Director or Tanning Consultant"], // M2-2 held
-  ["management-interview-round-2", "If you were given direction as a Store Director to reduce expenses"], // D20 held
+  // D15, D16 and D17 were held wording on the Tanning Consultant Interview, which was removed from the library and its
+  // key retired (the sibling company's role; Pau, 21 Nov 2026): no template holds them now (asserted below).
+  // D6, the TSD KPIs, the FTTC role mapping, M1-1, D19, M2-2 and D20 are released (Pau, 23 Nov 2026): RELEASED below.
   ["coaching", "Engaging Conversation"], // D1: keep existing coaching topics
   ["coaching", "New Client Documents"],
   ["dmit-epp-tsd", "ensuring the highest level of client service throughout the stores"], // DM-2 preserve
@@ -130,14 +137,20 @@ describe("the four approved wording changes", () => {
     expect(raw(key)).toContain(esc(wording));
   });
 
+  it.each(RELEASED)("released by Pau on 23 Nov 2026: %s — %s", (key, before, after) => {
+    expect(raw(key)).not.toContain(esc(before));
+    expect(raw(key)).toContain(esc(after));
+  });
+
   it("changes no key, option key, variant or permission", () => {
     expect(raw("sdit-epp")).toContain('"key":"client_engagement"');
     expect(raw("sdit-epp")).toContain('"key":"client_service"');
     expect(raw("management-interview-round-1")).toContain('"hands_on_work_notes"');
     expect(raw("prescreen-phone-interview")).not.toContain('"uniform_services"'); // removed by Phase 2B, not by this change
     expect(seed("sdit-epp").variants).toEqual([{ key: expect.any(String), label: "SDIT review", role: "Training Store Director", roleAbbr: "SDIT" }]);
-    expect(seed("tsd-epp").variants).toEqual([{ key: expect.any(String), label: "TSD review", role: "District Manager", roleAbbr: "TSD" }]);
-    expect(seed("fttc-epp").variants).toEqual([{ key: expect.any(String), label: "FTTC review", role: "Store Director", roleAbbr: "TC" }]);
+    // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the General Manager and Team Member plans' Buff City Soap roles.
+    expect(seed("tsd-epp").variants).toEqual([{ key: expect.any(String), label: "GM review", role: "District Manager", roleAbbr: "GM" }]);
+    expect(seed("fttc-epp").variants).toEqual([{ key: expect.any(String), label: "Team Member review", role: "General Manager", roleAbbr: "TM" }]);
     expect(Object.fromEntries(TEMPLATE_SEEDS.map((entry) => [entry.key, entry.requiredPermission]))).toMatchObject({
       "sdit-epp": "create_epp",
       demotion: "create_employment_change_form",
@@ -156,19 +169,29 @@ describe("the four approved wording changes", () => {
   it("re-issues exactly eight templates by one revision each", () => {
     expect(Object.fromEntries(ISSUED.map((key) => [key, seed(key).revision]))).toEqual({
       "sdit-epp": 6,
-      "tsd-epp": 5,
-      "asd-sdit-epp": 3,
-      "fttc-epp": 3,
+      // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): Buff City Soap titles and terms re-issue these four once more.
+      "tsd-epp": 6,
+      "asd-sdit-epp": 4,
+      "fttc-epp": 4,
       "dmit-epp-tsd": 3,
       "dmit-epp-dmit": 3,
       demotion: 2,
-      "management-interview-round-1": 4,
+      "management-interview-round-1": 5,
     });
     // resignation-exit is 4 since its Steps to Finish Termination dropped the tanning clause (QA, 25 Oct 2026).
-    // tanning-consultant-interview is 4 since its core-values heading names no company (QA, 25 Oct 2026).
-    for (const key of ["coaching", "dpoa", "policy-review", "follow-up-coaching", "position-transfer", "prescreen-phone-interview", "resignation-exit", "tanning-consultant-interview", "management-interview-round-2"]) {
-      expect(seed(key).revision, key).toBe(({ coaching: 2, dpoa: 7 /* revision 7, 4 Nov 2026 */, "policy-review": 2, "follow-up-coaching": 2, "position-transfer": 1, "prescreen-phone-interview": 3, "resignation-exit": 4, "tanning-consultant-interview": 4, "management-interview-round-2": 3 } as Record<string, number>)[key]);
+    // tanning-consultant-interview is back at 5 as the Team Member Interview Form; round 2 is at 4 (Pau, 23 Nov 2026).
+    for (const key of ["coaching", "dpoa", "policy-review", "follow-up-coaching", "position-transfer", "prescreen-phone-interview", "resignation-exit", "management-interview-round-2", "tanning-consultant-interview"]) {
+      expect(seed(key).revision, key).toBe(({ coaching: 2, dpoa: 8 /* revision 8, HR via Pau, 19 Nov 2026 (revision 7, 4 Nov 2026: Type of Offense) */, "policy-review": 2, "follow-up-coaching": 2, "position-transfer": 1, "prescreen-phone-interview": 3, "resignation-exit": 4, "management-interview-round-2": 4, "tanning-consultant-interview": 5 } as Record<string, number>)[key]);
     }
+  });
+
+  // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the interview is back as the Team Member Interview Form, so D16 and D17 are
+  // held on it again, as written (Pau approved the five core values); D15 stays resolved ("Core Values").
+  it("D16 and D17 are back, held, on the Team Member Interview Form, whose key is not retired", () => {
+    expect(RETIRED_TEMPLATE_KEYS).not.toContain("tanning-consultant-interview");
+    expect(raw("tanning-consultant-interview")).toContain("Our company has five core values.");
+    expect(raw("tanning-consultant-interview")).toContain("overseeing daily store operations");
+    expect(raw("tanning-consultant-interview")).toContain('"label":"Core Values"');
   });
 });
 
@@ -214,10 +237,14 @@ describe("the generated PDFs", () => {
     expect(round1).not.toContain("cleaning beds");
   });
 
-  it("still print the held wording", async () => {
-    expect(await pdfText("management-interview-round-1")).toContain("tanning bed they reserved");
+  it("still print the held wording, and print the released wording in Buff City Soap terms (Pau, 23 Nov 2026)", async () => {
     expect(await pdfText("demotion")).toContain("monthly manager bonus");
-    expect(await pdfText("tsd-epp")).toContain("Club Close");
+    const round1 = await pdfText("management-interview-round-1");
+    expect(round1).toContain("the product they came in for is out of stock");
+    expect(round1).not.toContain("tanning");
+    const tsd = await pdfText("tsd-epp");
+    expect(tsd).toContain("Net Sales");
+    expect(tsd).not.toContain("Club Close");
   });
 });
 

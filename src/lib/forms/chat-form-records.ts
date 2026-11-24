@@ -3,18 +3,22 @@ import "server-only";
 import { promptLabel } from "@/lib/ai/prompts";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { businessToday } from "@/lib/business-date";
-import { formRecordsNoJudgementEnabled, formsOnFileOrderMatchPossibleEnabled, priorRecordFinalOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import { formRecordsNoJudgementEnabled, formsOnFileCountsEnabled, formsOnFileOrderMatchPossibleEnabled, priorRecordFinalOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import { countFormsOnFile, type FormCounts } from "./forms-on-file-counts";
 import { locationById } from "@/lib/locations";
 import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
 import type { AccessScope, Role } from "@/types";
 
 import type { FormsActor } from "./access";
+import { foldName } from "./fold-name";
 import { FOLLOW_UP_LABEL, followUpState } from "./follow-up";
 import { resolveFormsVisibility } from "./forms-visibility";
 import { instanceListFilterFor, visibleInstances } from "./instance-scope";
 import { listInstances, type InstanceRow } from "./instances";
 import { authorizedLocationIds } from "./location-scope";
 import { privateAwareLimit } from "./private-creators";
+import { HR_STATE_LABEL, awaitingHr } from "./hr-approval-rules";
+import { resolveHrApprover } from "./hr-approval-approvers";
 
 /**
  * ============================================================================
@@ -190,16 +194,30 @@ const STOP_WORDS = new Set(
 
 /** The words of a question that could be part of somebody's name. */
 export function candidateNameWords(text: string): string[] {
-  const words = text
+  // Port from the sibling app's #1141: names folded (`foldName`), so "Ramírez" is one word, "ramirez", never "ram rez".
+  const words = foldName(text)
     .toLowerCase()
-    .replace(/['’]s\b/g, "")
+    .replace(/'s\b/g, "")
     .split(/[^a-z]+/)
     .filter((word) => word.length >= 2 && !STOP_WORDS.has(word));
   return [...new Set(words)].slice(0, 8);
 }
 
 function nameWords(name: string): string[] {
-  return name.toLowerCase().split(/[^a-z]+/).filter((word) => word.length >= 2);
+  return foldName(name).toLowerCase().split(/[^a-z]+/).filter((word) => word.length >= 2);
+}
+
+/**
+ * The pieces an accented name used to split into ("ramírez" → "ram", "rez"), for the Forms Register READ only: the read
+ * matches name words inside the stored name (`ilike`, letters a–z), so a question typed with the accent still reads a form
+ * whose name is stored with it. Matching is on the folded words. Empty when the text has no accent.
+ */
+function accentedNamePieces(text: string): string[] {
+  if (foldName(text) === text.replace(/[‘’ʼ`´]/g, "'")) return [];
+  return text
+    .toLowerCase()
+    .split(/[^a-z]+/)
+    .filter((word) => word.length >= 2 && !STOP_WORDS.has(word));
 }
 
 export interface NameMatches {
@@ -267,6 +285,18 @@ export interface FormDateRange {
 export interface FormKind {
   label: string;
   templateNameWords: string[];
+  /**
+   * Port from the sibling app's #1133 (QA's code audit, item 28): words a form's name must NOT have to be this kind. The read
+   * matches templateNameWords as part of the name (`ilike`), so "coaching" also reads the Follow-Up Coaching Form;
+   * `ofKind` drops it after the read.
+   */
+  excludeTemplateNameWords?: string[];
+}
+
+/** Only the rows of this kind (a Coaching kind never keeps a Follow-Up Coaching Form). No kind: every row. */
+export function ofKind<T extends { templateName: string }>(rows: readonly T[], kind: FormKind | null | undefined): T[] {
+  const excluded = kind?.excludeTemplateNameWords ?? [];
+  return excluded.length === 0 ? [...rows] : rows.filter((row) => !excluded.some((word) => row.templateName.toLowerCase().includes(word)));
 }
 
 const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
@@ -345,7 +375,8 @@ export function formDateRangeFromQuestion(question: string, today: string): Form
     const monday = addDays(today, -weekday - 7);
     return { from: monday, to: addDays(monday, 6), label: "last week" };
   }
-  if (/\b(?:this|current)\s+month\b|\bmonth to date\b|\bmtd\b/.test(text)) {
+  // FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, f081): "list ca for the month" asks about this month.
+  if (/\b(?:this|current)\s+month\b|\bmonth to date\b|\bmtd\b/.test(text) || (formsOnFileCountsEnabled() && /\b(?:for|in|during|over) the month\b/.test(text))) {
     return { ...monthRange(year, monthIndex), to: today, label: `this month (${monthRange(year, monthIndex).label})` };
   }
   if (/\b(?:last|past|previous)\s+month\b/.test(text)) {
@@ -395,7 +426,7 @@ export function formDateRangeFromInput(from: unknown, to: unknown, today: string
 const FORM_KINDS: ReadonlyArray<{ pattern: RegExp; kind: FormKind }> = [
   { pattern: /\b(?:cas?|cafs?|corrective(?: actions?)?|write[- ]?ups?|written up|wrote up|warnings?|disciplinary|discipline)\b/, kind: { label: "Corrective Action form", templateNameWords: ["corrective"] } },
   { pattern: /\b(?:follow[- ]?up coachings?)\b/, kind: { label: "Follow-Up Coaching form", templateNameWords: ["follow"] } },
-  { pattern: /\b(?:coach(?:ing|ings|ed)?)\b/, kind: { label: "Coaching form", templateNameWords: ["coaching"] } },
+  { pattern: /\b(?:coach(?:ing|ings|ed)?)\b/, kind: { label: "Coaching form", templateNameWords: ["coaching"], excludeTemplateNameWords: ["follow"] } },
   { pattern: /\b(?:exit(?: forms?| interviews?)?|resignations?|resigned|terminations?|terminated|quit)\b/, kind: { label: "Resignation/Exit form", templateNameWords: ["exit", "resignation"] } },
   { pattern: /\b(?:epps?|performance plans?)\b/, kind: { label: "EPP form", templateNameWords: ["epp"] } },
 ];
@@ -422,6 +453,23 @@ export function isFormRangeQuestion(question: string, today: string): boolean {
   if (!formKindFromText(text)) return false;
   if (/\b(?:make|create|draft|draw|start|write|do|need|prepare|fill|generate|new)\b(?! (?:on file|filed))/.test(text) && !/\b(?:who|how many|which|list|show)\b/.test(text)) return false;
   return formDateRangeFromQuestion(text, today) !== null || /\b(?:who (?:got|gets|received|had|has|was|were)|how many|which (?:employees|people|team members|staff)|list (?:all|every|the)|show (?:me )?(?:all|every|the))\b/.test(text);
+}
+
+/**
+ * FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, QA's f081, 20 Nov 2026): a request to LIST forms on file, never to
+ * make one or open one. "list ca for the month" was answered with no forms read, and "show me CA and coaching forms for
+ * <A> this month" went to the open-which-one flow. A listing word (list, show me, how many, who got / has / had, any) with
+ * a kind of form, and a period or plural form words ("forms", "CAs", "coachings"); never with a word that opens or changes
+ * one ("open", "edit", "change", "fix", "update", "the draft", "make", "create"). Off: never.
+ */
+export function isFormListQuestion(question: string, today: string): boolean {
+  if (!formsOnFileCountsEnabled()) return false;
+  const text = (question ?? "").toLowerCase().replace(/\s+/g, " ");
+  if (!formKindFromText(text)) return false;
+  if (/\b(?:open|edit|change|fix|update|correct|reopen|finali[sz]e|sign|make|create|draft|write(?!-?ups?\b)|start|new)\b|\bthe draft\b/.test(text)) return false;
+  const listing = /\b(?:list|show me|show|how many|who (?:got|gets|has|had|received)|are there any|any)\b/.test(text);
+  const many = formDateRangeFromQuestion(text, today) !== null || /\b(?:forms|cas|caf?s|coachings|write-?ups|warnings|corrective actions)\b/.test(text);
+  return listing && many;
 }
 
 /* Words that name a date or a kind of form, never a person ("november", "ca"). */
@@ -470,6 +518,16 @@ function describeRow(row: InstanceRow, today: string, viewerId?: string | null):
     parts.push(`follow-up: ${FOLLOW_UP_LABEL[state]}`);
   }
   if (row.archivedAt) parts.push("archived");
+  /*
+   * HR APPROVAL. A form HR has not approved reaches this list only for its creator, its sender and HR
+   * (`hiddenWhileAwaitingHr`), so its state is said here. "Approved by HR" is said only to its creator and sender: everybody else reads an
+   * approved form as an ordinary finalized one (owner, 23 Nov 2026).
+   */
+  if (awaitingHr(row.hrApprovalState)) {
+    parts.push(`HR approval: ${HR_STATE_LABEL[row.hrApprovalState!].toLowerCase()} — not on file until HR approves it`);
+  } else if (row.hrApprovalState === "approved" && viewerId && (row.createdBy === viewerId || row.hrApprovalRequestedBy === viewerId || row.hrApprovalSenders.includes(viewerId))) {
+    parts.push("HR approval: approved by HR");
+  }
   parts.push(...createdByPart(row, viewerId));
   return `- ${parts.join("; ")}`;
 }
@@ -523,6 +581,19 @@ export function withoutRecordJudgement(reply: string): string {
     .trim();
 }
 
+/** FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, f081): the code's counts, for the model to copy. */
+function countsSection(counted: { counts: FormCounts; listed: number; of: number; complete: boolean }): string {
+  const statuses = (entry: Readonly<Record<string, number>>) => Object.entries(entry).map(([status, count]) => `${status} ${count}`).join(", ");
+  const lines = counted.counts.by_person.map((person) =>
+    `- ${person.employee}: ${person.total} — ${person.by_form.map((form) => `${form.form} ${form.total} (${form.by_date.map((day) => `${day.date ?? "no date"}: ${day.count}, ${statuses(day.statuses)}`).join("; ")})`).join("; ")}`,
+  );
+  return [
+    `COUNTS (code counted every form the read found: ${counted.counts.total}${counted.complete ? "" : ", the first rows of a read that stopped at its limit"}). Copy these numbers exactly. Never count or add up the rows yourself, and never put one person's forms under another person's name. Mark an archived form "(archived)". Archived drafts are left out unless the question asked for archived forms.`,
+    ...lines,
+    ...(counted.of > counted.listed ? [`${counted.listed} of these ${counted.of} forms are listed above; say how many are not shown.`] : []),
+  ].join("\n");
+}
+
 export function renderFormRecordsBlock(input: {
   visibility: AccessScope;
   /** The name words searched for, or empty when the question named nobody. */
@@ -534,8 +605,16 @@ export function renderFormRecordsBlock(input: {
   today: string;
   /** CROSS_CHAT_REPLY_GUARD_ENABLED: the asking user's id, to mark who created each row. */
   viewerId?: string | null;
-  /** The form dates and kind the list was read for; `recent` is then every such form, up to `limit`. */
-  narrowed?: { range: FormDateRange | null; kind: FormKind | null; limit: number } | null;
+  /**
+   * The form dates and kind the list was read for; `recent` is then every such form, up to `limit`. `cutOff`: the
+   * database read came back full, so there may be more, however few rows the visibility and kind filters left.
+   */
+  narrowed?: NarrowedList | null;
+  /**
+   * FORMS_ON_FILE_COUNTS_ENABLED: the counts of every form the read found (not only the ones listed), and how many were
+   * listed of how many, with whether the read was complete. Absent: as before.
+   */
+  counted?: { counts: FormCounts; listed: number; of: number; complete: boolean } | null;
 }): string {
   const viewerId = input.viewerId ?? null;
   const { words, matches, recent, today } = input;
@@ -582,7 +661,16 @@ export function renderFormRecordsBlock(input: {
     );
   }
 
+  if (input.counted && input.counted.counts.total > 0) sections.push(countsSection(input.counted));
   return sections.join("\n\n");
+}
+
+/** A list read by form date or kind, and whether its read hit the cap. */
+interface NarrowedList {
+  range: FormDateRange | null;
+  kind: FormKind | null;
+  limit: number;
+  cutOff?: boolean;
 }
 
 function narrowedWhat(narrowed: { range: FormDateRange | null; kind: FormKind | null }, plural = true): string {
@@ -590,9 +678,13 @@ function narrowedWhat(narrowed: { range: FormDateRange | null; kind: FormKind | 
   return narrowed.range ? `${noun} dated ${narrowed.range.label} (${narrowed.range.from} to ${narrowed.range.to})` : noun;
 }
 
-/** Whether the narrowed list is every such form, or stopped at its cap. */
-function narrowedSentence(narrowed: { range: FormDateRange | null; kind: FormKind | null; limit: number }, count: number): string {
-  return count >= narrowed.limit
+/**
+ * Whether the narrowed list is every such form, or stopped at its cap. Port from the sibling app's #1133 (item 29): a list is
+ * complete only when the database returned fewer rows than it was asked for; counting the rows left after the
+ * visibility filter called a cut-off list complete (100 read, 60 visible, "every such form").
+ */
+function narrowedSentence(narrowed: NarrowedList, count: number): string {
+  return narrowed.cutOff === true || count >= narrowed.limit
     ? `This list stops at ${narrowed.limit} forms, so there may be more ${narrowedWhat(narrowed)}. Say so, and that ${REGISTER_PATH} has the full list.`
     : `This is every ${narrowedWhat(narrowed, false)} this user can see, read by form date — not a sample of recent forms. Never say the list is capped or that older ones may be missing.`;
 }
@@ -629,13 +721,22 @@ export async function chatFormsActor(actor: FormRecordsActor): Promise<FormsActo
    * route: `visibleInstances` needs it to keep the reader's own forms at a
    * store their assignment still covers (`ownFormStillInScope`).
    */
-  return { id: actor.subject, role: actor.role, verified: true, scope: actor.scope, visibility };
+  return {
+    id: actor.subject,
+    role: actor.role,
+    verified: true,
+    scope: actor.scope,
+    visibility,
+    hrApprover: await resolveHrApprover(actor.subject),
+  };
 }
 
 const MATCH_LIMIT = 50;
 const RECENT_LIMIT = 20;
 /** A list read by form date or kind: every such form up to this many, then the list says it stopped. */
 export const NARROWED_LIMIT = 100;
+/** FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, f081): a counted read covers up to this many rows (PostgREST's page). */
+export const COUNTED_READ_LIMIT = 1000;
 
 /**
  * The FORMS ON FILE block for this turn, or null when this caller may not read
@@ -680,6 +781,9 @@ export async function loadFormRecords(input: {
     const range = input.range ?? (input.narrowFromQuestion ? formDateRangeFromQuestion(input.question, today) : null);
     const kind = input.kind ?? (input.narrowFromQuestion ? formKindFromText(input.question) : null);
     const narrowed = range || kind ? { range, kind, limit: NARROWED_LIMIT } : null;
+    const counting = formsOnFileCountsEnabled();
+    /* FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, f081): an archived draft is left out unless the question asks for archived forms. */
+    const keep = (row: InstanceRow) => !counting || /\barchiv/i.test(input.question) || !(row.archivedAt && row.status === "draft");
     const narrowFilter = {
       ...(range ? { formDateFrom: range.from, formDateTo: range.to } : {}),
       ...(kind ? { templateNameWords: kind.templateNameWords } : {}),
@@ -695,29 +799,46 @@ export async function loadFormRecords(input: {
     }
 
     if (words.length > 0) {
-      const split = splitRecordDrafts(
-        input.question,
-        visibleInstances(
-          formsActor,
-          // PRIVATE_CREATOR_FORMS: over-read, then trim to the page; off, the page itself.
-          await listInstances("all", privateAwareLimit(MATCH_LIMIT), { ...filter, ...narrowFilter, employeeNameWords: words }),
-        ).slice(0, MATCH_LIMIT),
-      );
+      // PRIVATE_CREATOR_FORMS: over-read, then trim to the page; off, the page itself.
+      const asked = privateAwareLimit(counting ? COUNTED_READ_LIMIT : MATCH_LIMIT);
+      // An accented question also reads the old letter pieces, so a name stored with its accent is still read.
+      const readWords = [...new Set([...words, ...accentedNamePieces(nameSource).filter((word) => !narrowing || !RANGE_WORDS.has(word))])];
+      const read = await listInstances("all", asked, { ...filter, ...narrowFilter, employeeNameWords: readWords });
+      // Item 28: a Coaching kind never keeps a Follow-Up Coaching Form (`ofKind`).
+      const found = ofKind(visibleInstances(formsActor, read), kind).filter(keep);
+      const split = splitRecordDrafts(input.question, found.slice(0, MATCH_LIMIT));
       const matches = matchRowsToQuestion(split.onFile, words, nameSource);
       const drafts = matchRowsToQuestion(split.notOnFile, words, nameSource);
       const notOnFile = [...drafts.named, ...drafts.possible];
       if (matches.named.length > 0 || matches.possible.length > 0 || notOnFile.length > 0) {
-        return { block: renderFormRecordsBlock({ visibility, words, matches, recent: [], notOnFile, today, viewerId, narrowed }) };
+        // Item 29: this read stops at MATCH_LIMIT; a full read is never called every such form.
+        const matchNarrowed = narrowed ? { ...narrowed, limit: MATCH_LIMIT, cutOff: read.length >= asked } : null;
+        /* FORMS_ON_FILE_COUNTS_ENABLED: the named person's forms counted over every one found, never only the listed ones. */
+        const all = counting ? matchRowsToQuestion(found, words, nameSource) : null;
+        const counted = all
+          ? { counts: countFormsOnFile([...all.named, ...all.possible]), listed: matches.named.length + matches.possible.length + notOnFile.length, of: all.named.length + all.possible.length, complete: read.length < asked }
+          : null;
+        return { block: renderFormRecordsBlock({ visibility, words, matches, recent: [], notOnFile, today, viewerId, narrowed: matchNarrowed, counted }) };
       }
     }
 
     if (narrowed && !(words.length > 0 && looksLikeItNamesSomebody(nameSource))) {
       // Archived forms count: "who got a CA this month" asks what was filed, not what is on the active shelf.
-      const split = splitRecordDrafts(
-        input.question,
-        visibleInstances(formsActor, await listInstances("all", privateAwareLimit(NARROWED_LIMIT), { ...filter, ...narrowFilter })).slice(0, NARROWED_LIMIT),
-      );
-      return { block: renderFormRecordsBlock({ viewerId, visibility, words, matches: null, recent: split.onFile, notOnFile: split.notOnFile, today, narrowed }) };
+      // FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, f081): archived FINALIZED forms still count; archived drafts are left out.
+      const asked = privateAwareLimit(counting ? COUNTED_READ_LIMIT : NARROWED_LIMIT);
+      const read = await listInstances("all", asked, { ...filter, ...narrowFilter });
+      // Item 28: a Coaching kind never keeps a Follow-Up Coaching Form (`ofKind`).
+      const found = ofKind(visibleInstances(formsActor, read), kind).filter(keep);
+      const listed = counting
+        ? [...found].sort((a, b) => (b.formDate ?? "").localeCompare(a.formDate ?? "") || a.employeeName.localeCompare(b.employeeName)).slice(0, NARROWED_LIMIT)
+        : found.slice(0, NARROWED_LIMIT);
+      const split = splitRecordDrafts(input.question, listed);
+      // Item 29: complete only when the database returned fewer rows than it was asked for.
+      const cutOff = read.length >= asked;
+      const counted = counting ? { counts: countFormsOnFile(found), listed: listed.length, of: found.length, complete: !cutOff } : null;
+      return {
+        block: renderFormRecordsBlock({ viewerId, visibility, words, matches: null, recent: split.onFile, notOnFile: split.notOnFile, today, narrowed: { ...narrowed, cutOff }, counted }),
+      };
     }
 
     const recentSplit = splitRecordDrafts(
@@ -757,7 +878,7 @@ export async function loadFormRecords(input: {
  * the recent list instead of a false "nothing on file".
  */
 function looksLikeItNamesSomebody(text: string): boolean {
-  const tokens = text.toLowerCase().replace(/['’]s\b/g, "").split(/[^a-z]+/).filter(Boolean);
+  const tokens = foldName(text).toLowerCase().replace(/['’]s\b/g, "").split(/[^a-z]+/).filter(Boolean);
   const candidate = (word: string | undefined) =>
     word !== undefined && word.length >= 2 && !STOP_WORDS.has(word);
   for (let i = 0; i < tokens.length; i += 1) {

@@ -42,6 +42,13 @@ export const WOVEN_BCS_COMPANY_NAME_ENV = "WOVEN_BCS_COMPANY_NAME";
  * file part is BLOCKED: tracked and reported, never fetched.
  */
 export const WOVEN_BCS_FILE_LIBRARY_DOWNLOAD_ENABLED_ENV = "WOVEN_BCS_FILE_LIBRARY_DOWNLOAD_ENABLED";
+/** Board f105: list policies from Woven's management table (`GET /Policy`), which says which are published. Default off. */
+export const WOVEN_BCS_POLICY_MANAGEMENT_LIST_ENABLED_ENV = "WOVEN_BCS_POLICY_MANAGEMENT_LIST_ENABLED";
+/**
+ * Every content POST carries the page's anti-forgery token in a header (the
+ * content lists answered HTTP 400 from 19 Nov 2026; see `web-app.ts`). Default off.
+ */
+export const WOVEN_POST_ANTIFORGERY_HEADER_ENABLED_ENV = "WOVEN_POST_ANTIFORGERY_HEADER_ENABLED";
 
 /** The reference platform's tenant variables. Never read as configuration; a foreign value disables the connector. */
 export const INHERITED_TENANT_ENV = {
@@ -66,6 +73,10 @@ export interface WovenKnowledgeConfig {
   tenantProblem: string | null;
   /** Downloads switched on after their route was verified for this company. Default off. */
   downloads: { fileLibrary: boolean };
+  /** WOVEN_BCS_POLICY_MANAGEMENT_LIST_ENABLED: policies are listed from `GET /Policy`. Absent or false: the Knowledge Center cards. */
+  policyManagementList?: boolean;
+  /** WOVEN_POST_ANTIFORGERY_HEADER_ENABLED: content POSTs carry the page's anti-forgery token in a header. Absent or false: none. */
+  postAntiforgeryHeader?: boolean;
   credentials: WovenTeamCredentials | null;
   missingCredentials: string[];
   problems: string[];
@@ -179,6 +190,8 @@ export function readWovenKnowledgeConfig(env: Env = process.env): WovenKnowledge
     baseUrl: WOVEN_WEB_APP_ORIGIN,
     tenantProblem,
     downloads: { fileLibrary: readFlag(env, WOVEN_BCS_FILE_LIBRARY_DOWNLOAD_ENABLED_ENV) },
+    policyManagementList: readFlag(env, WOVEN_BCS_POLICY_MANAGEMENT_LIST_ENABLED_ENV),
+    postAntiforgeryHeader: readFlag(env, WOVEN_POST_ANTIFORGERY_HEADER_ENABLED_ENV),
     /* A foreign company withholds the credentials too: nothing can sign in on its behalf. */
     credentials: missingCredentials.length === 0 && !tenantProblem ? { username, password } : null,
     missingCredentials,

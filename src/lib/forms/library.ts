@@ -15,7 +15,7 @@ import {
   PAYROLL_DEDUCT_OPTIONS,
 } from "./payroll-deduct";
 import { payrollDeductAmountBlock } from "./payroll-deduct-amount";
-import { PRIOR_ACTIONS_KEY, PRIOR_ACTIONS_LABEL } from "./prior-actions";
+import { POLICY_MANUAL_SIGNED_KEY, POLICY_MANUAL_SIGNED_LABEL, PRIOR_ACTIONS_KEY, PRIOR_ACTIONS_LABEL_REV8 } from "./prior-actions";
 import { CA_ACTION_PLAN_CLOSING } from "./required-closing";
 
 /**
@@ -26,7 +26,7 @@ import { CA_ACTION_PLAN_CLOSING } from "./required-closing";
  *
  *   coaching    Coaching Form
  *   corrective  Corrective Action Form, Policy Review
- *   epp         SDIT EPP, TSD EPP, ASD-SDIT Performance EPP, FTTC Performance EPP
+ *   epp         SDIT EPP, General Manager / Assistant General Manager / Team Member Performance EPP
  *   dmit_epp    DMIT EPP — TSD Review, DMIT EPP — DMIT Review
  *
  * The EPP four are the same three-page document with a different title and a
@@ -491,11 +491,24 @@ export function correctiveActionDocument(): FormDocument {
          *
          * "None — first occurrence" is still a real answer, for the reason it
          * always was: a blank line here reads as a history nobody checked.
+         *
+         * REVISION 8 (HR via Pau, 19 Nov 2026) splits it in two required
+         * boxes: the policy manual's signed date (the creator's, never
+         * drafted) and the past 90 days' history (this key, relabelled).
          */
         kind: "field",
-        field: field(PRIOR_ACTIONS_KEY, PRIOR_ACTIONS_LABEL, "ai", "long_text", {
-          help: 'One per line: each coaching or corrective action previously received, with the date it was signed. Write "None — first occurrence" when there has been none.',
+        field: field(POLICY_MANUAL_SIGNED_KEY, POLICY_MANUAL_SIGNED_LABEL, "manager", "long_text", {
+          help: "The date the employee signed the JBA Policy Manual. Typed by the person creating the form; required.",
+          minLines: 2,
+          required: true,
+        }),
+      },
+      {
+        kind: "field",
+        field: field(PRIOR_ACTIONS_KEY, PRIOR_ACTIONS_LABEL_REV8, "ai", "long_text", {
+          help: 'One per line: each coaching or corrective action received in the past 90 days, with the date the employee signed it. Write "None — first occurrence" when there has been none. Required.',
           minLines: 4,
+          required: true,
         }),
       },
 
@@ -1121,7 +1134,7 @@ export function eppVariant(role: string, roleAbbr: string, label: string): FormV
   return [{ key: "default", label, role, roleAbbr }];
 }
 
-/* ------------------------------------------------------------- TSD EPP --- */
+/* ---------------------------------- General Manager EPP (key tsd-epp) --- */
 
 /**
  * ============================================================================
@@ -1235,7 +1248,7 @@ export const TSD_PLAN_CATEGORIES: readonly {
   {
     key: "salon_standards",
     category: "Store Standards of Cleanliness and Safety",
-    objective: "Aware of all items on the SVC and able to describe to DM",
+    objective: "Aware of all items on the store reports (Domo) and able to describe to DM",
   },
 ];
 
@@ -1250,8 +1263,24 @@ export const TSD_PLAN_CATEGORIES: readonly {
 const TSD_ACKNOWLEDGEMENT =
   "I confirm that my supervisor and I have discussed this Employee Performance Plan and I will participate in the plan for improvement.";
 
-/** The five metrics this plan measures, for the manager and for the store. */
-const TSD_METRICS = ["PPTA", "LPSVA", "UPTA", "Club Close", "Average Club Dollar"] as const;
+/**
+ * The six measure lines, for the manager and for the store: Buff City Soap's KPIs from the knowledge base's Domo
+ * Reporting Overview (Net Sales, Comp Sales %, Items per Transaction, Average Order Value, Discount Rate %, Product
+ * Mix %), each a Goal / Result line (Pau, 23 Nov: BCS terms in the forms; QA's final pick). They replace the reference
+ * platform's five (PPTA, LPSVA, UPTA, Club Close, Average Club Dollar). The first five keep those stored keys, row for
+ * row (`manager_ppta` is Net Sales …), so a saved plan still loads; Product Mix % is a new key (`manager_product_mix`,
+ * `salon_product_mix`). Written only from figures the manager supplied, as before.
+ */
+const TSD_MEASURES = [
+  ["ppta", "Net Sales"],
+  ["lpsva", "Comp Sales %"],
+  ["upta", "IPT"],
+  ["club_close", "AOV"],
+  ["average_club_dollar", "Discount Rate %"],
+  ["product_mix", "Product Mix %"],
+] as const;
+const tsdMeasureField = (prefix: "manager" | "salon", [key, kpi]: (typeof TSD_MEASURES)[number]) =>
+  field(`${prefix}_${key}`, `${kpi} (Goal / Result)`, "ai");
 
 /**
  * ============================================================================
@@ -1267,8 +1296,8 @@ const TSD_METRICS = ["PPTA", "LPSVA", "UPTA", "Club Close", "Average Club Dollar
  * objectives that are reviewed again at the re-evaluation.
  *
  * ITS TITLE IS THE FORM'S OWN. "Management Performance Plan" is what the
- * paper says, and managers call it the TSD EPP — which is the template's
- * NAME, not its title. Both are true and they are different strings.
+ * paper says, and managers call it the GM EPP — the template's NAME (General
+ * Manager Performance EPP, Pau, 23 Nov 2026), not its title. Both are true and they are different strings.
  *
  * THE SELF-ASSESSMENT IS THE EMPLOYEE'S, AND ASK BUBBLES NEVER ANSWERS IT. Every
  * field in that section is `employee`, which is not in `AI_WRITABLE`, so
@@ -1335,17 +1364,11 @@ export function tsdEppDocument(): FormDocument {
         responsibility: "ai",
       },
 
-      /*
-       * FIVE METRICS, NAMED. The SDIT plan asks for three; this one asks for
-       * five, and Club Close and Average Club Dollar are the two a management
-       * plan turns on. Every one stays EMPTY when nothing was supplied.
-       */
+      /* SIX KPI LINES, Goal / Result each (Domo Reporting Overview; Pau, 23 Nov: BCS terms in the forms). */
       { kind: "section", label: "Manager's current productivity" },
       {
         kind: "field_row",
-        fields: TSD_METRICS.map((metric) =>
-          field(`manager_${metric.toLowerCase().replace(/\s+/g, "_")}`, metric, "ai"),
-        ),
+        fields: TSD_MEASURES.map((measure) => tsdMeasureField("manager", measure)),
       },
       {
         kind: "field",
@@ -1356,9 +1379,7 @@ export function tsdEppDocument(): FormDocument {
       { kind: "section", label: "Store's current productivity" },
       {
         kind: "field_row",
-        fields: TSD_METRICS.map((metric) =>
-          field(`salon_${metric.toLowerCase().replace(/\s+/g, "_")}`, metric, "ai"),
-        ),
+        fields: TSD_MEASURES.map((measure) => tsdMeasureField("salon", measure)),
       },
       {
         kind: "field",
@@ -1378,7 +1399,7 @@ export function tsdEppDocument(): FormDocument {
         kind: "field",
         field: field(
           "self_important_skill",
-          "What do you feel is the most important skill for a Store Director to possess?",
+          "What do you feel is the most important skill for a General Manager to possess?",
           "employee",
           "long_text",
         ),
@@ -1720,9 +1741,9 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
     displayOrder: 2,
     document: correctiveActionDocument(),
     variants: [],
-    revision: 7,
+    revision: 8,
     revisionNote:
-      "Renamed to Corrective Action Form, and Observation of Offense drafts as Observed/Expectation/Going Forward with the Action Plan as the plan-of-action paragraph. Revision 3 sets the two policy fields to the business's own reading of them: Policy Violated is the offense category ticked on the form, and Direct policy names the approved manual with its section and page. Revision 4 adds \"Is payroll deduct applicable?\" as a Yes / No the manager answers (one answer, unanswered until they give it). Revision 5 (HR feedback, 3 Oct 2026) replaces \"Previous corrective action for this policy or issue\" and \"Date of previous corrective action\" with one multi-line field, \"List previously received coaching and/or corrective action with date signed\", and ends every Action Plan with \"Future policy violations may be subject to additional corrective action up to and including termination of employment.\" Revision 6 (District Manager feedback, 21 Oct 2026) makes the Action Plan two sentences — \"Management will review the <policy> policy with <employee>.\" and \"Future policy violations may result in additional corrective action up to and including termination of employment.\" — with the payroll deduction between them when payroll deduct is Yes. Revision 7 (client request, 4 Nov 2026) makes Type of Offense four boxes — Attendance Policy, Standards of Conduct, Dress Code Violation, Other — removing Tardiness/Leaving Early and Absenteeism (now Attendance Policy), Under Performance and Violation of Company Policies (now Standards of Conduct), and the Other write-in line (Other is a box). Forms filed against earlier versions keep the document they were signed on; the template key and every stored value are unchanged.",
+      "Renamed to Corrective Action Form, and Observation of Offense drafts as Observed/Expectation/Going Forward with the Action Plan as the plan-of-action paragraph. Revision 3 sets the two policy fields to the business's own reading of them: Policy Violated is the offense category ticked on the form, and Direct policy names the approved manual with its section and page. Revision 4 adds \"Is payroll deduct applicable?\" as a Yes / No the manager answers (one answer, unanswered until they give it). Revision 5 (HR feedback, 3 Oct 2026) replaces \"Previous corrective action for this policy or issue\" and \"Date of previous corrective action\" with one multi-line field, \"List previously received coaching and/or corrective action with date signed\", and ends every Action Plan with \"Future policy violations may be subject to additional corrective action up to and including termination of employment.\" Revision 6 (District Manager feedback, 21 Oct 2026) makes the Action Plan two sentences — \"Management will review the <policy> policy with <employee>.\" and \"Future policy violations may result in additional corrective action up to and including termination of employment.\" — with the payroll deduction between them when payroll deduct is Yes. Revision 7 (client request, 4 Nov 2026) makes Type of Offense four boxes — Attendance Policy, Standards of Conduct, Dress Code Violation, Other — removing Tardiness/Leaving Early and Absenteeism (now Attendance Policy), Under Performance and Violation of Company Policies (now Standards of Conduct), and the Other write-in line (Other is a box). Revision 8 (HR via Pau, 19 Nov 2026) replaces the one history line with two required boxes, in HR's words: \"List date of JBA policy manual signed by employee\" (typed by the person creating the form) and \"List previous coaching and corrective actions and include date signed by employee in past 90 days\" (the same key as before). Neither can be left blank at Finalize. Forms filed against earlier versions keep the document they were signed on; the template key and every stored value are unchanged.",
     bundledPdfName: "Corrective Action Form.pdf",
   },
   {
@@ -1775,9 +1796,10 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
   },
   {
     key: "tsd-epp",
-    name: "TSD EPP",
-    shortName: "TSD EPP",
-    description: "Employee Performance Plan for a Training Store Director.",
+    /* Buff City Soap's General Manager plan, reviewed by the District Manager (Pau, 23 Nov 2026). The key stays. */
+    name: "General Manager Performance EPP",
+    shortName: "GM EPP",
+    description: "Employee Performance Plan for a General Manager, reviewed with the District Manager.",
     category: "hr_performance",
     layoutFamily: "epp",
     requiredPermission: "create_epp",
@@ -1790,47 +1812,55 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
      * The document names the role in its own words throughout, so no label
      * here depends on the interpolation either way.
      */
-    variants: eppVariant("District Manager", "TSD", "TSD review"),
-    revision: 5,
+    variants: eppVariant("District Manager", "GM", "GM review"),
+    /*
+     * 6 (Pau, 23 Nov: BCS terms in the forms): Buff City Soap's General Manager plan. The reference platform's metrics
+     * are Buff City Soap's six Domo KPIs, Goal / Result each (five on their old stored keys, Product Mix % new); "SVC"
+     * is the store reports (Domo); "Store Director" is the General Manager.
+     */
+    revision: 6,
     revisionNote:
-      "The Management Performance Plan the business issues: the nine management expectations marked twice, five metrics for the manager and five for the store, the manager's own self-assessment, the eight Plan of Action objectives and their re-evaluation, with the company-policy expectation stated against the JB & Associates Employment Policy Manual.",
-    bundledPdfName: "Management EPP (TSD).pdf",
+      "Buff City Soap's General Manager Performance EPP: the nine management expectations marked twice, six KPIs (Net Sales, Comp Sales %, IPT, AOV, Discount Rate %, Product Mix %, Goal / Result each) for the manager and for the store, the manager's own self-assessment, the eight Plan of Action objectives and their re-evaluation.",
+    bundledPdfName: "General Manager Performance EPP.pdf",
   },
   {
     key: "asd-sdit-epp",
-    name: "ASD-SDIT Performance EPP",
-    shortName: "ASD-SDIT",
-    description: "Performance plan covering the ASD to SDIT development track.",
+    /*
+     * Buff City Soap's Assistant General Manager plan, reviewed by the General Manager (Pau, 23 Nov: BCS terms in the
+     * forms; the name is the KB framework's "assistant store manager development EPP", section 5). The key stays.
+     */
+    name: "Assistant General Manager Development EPP",
+    shortName: "AGM EPP",
+    description: "Development plan for an Assistant General Manager, reviewed with the General Manager.",
     category: "hr_performance",
     layoutFamily: "epp",
     requiredPermission: "create_epp",
     displayOrder: 6,
-    document: eppDocument("Performance EPP - ASD/SDIT"),
-    variants: eppVariant("Training Store Director", "ASD", "ASD/SDIT review"),
-    revision: 3,
-    revisionNote: "Seeded from the approved reference forms.",
-    bundledPdfName: "ASD-SDIT Performance EPP.pdf",
+    /* Its name (QA, 23 Nov 2026: the printed title matches the Development EPP). */
+    document: eppDocument("Development EPP - Assistant General Manager"),
+    variants: eppVariant("General Manager", "AGM", "AGM review"),
+    revision: 4,
+    revisionNote: "Buff City Soap's Assistant General Manager Development EPP (Pau, 23 Nov 2026).",
+    bundledPdfName: "Assistant General Manager Development EPP.pdf",
   },
   {
     key: "fttc-epp",
-    name: "FTTC Performance EPP",
-    shortName: "FTTC",
     /*
-     * Not "for a full-time Tanning Consultant": tanning is the reference
-     * platform's product, and the description is shown on the chooser's cards
-     * (QA, 25 Oct 2026). The plan's own name stays; Buff City Soap's matching
-     * role is not known yet, so none is invented here.
+     * Buff City Soap's Team Member plan, one for full-time, part-time and seasonal Team Members, reviewed by the
+     * General Manager (Pau, 23 Nov 2026). The key stays.
      */
-    description: "The FTTC Employee Performance Plan.",
+    name: "Team Member Performance EPP",
+    shortName: "TM EPP",
+    description: "Employee Performance Plan for a Team Member (full time, part time or seasonal), reviewed with the General Manager.",
     category: "hr_performance",
     layoutFamily: "epp",
     requiredPermission: "create_epp",
     displayOrder: 7,
-    document: eppDocument("Performance EPP - FTTC"),
-    variants: eppVariant("Store Director", "TC", "FTTC review"),
-    revision: 3,
-    revisionNote: "Seeded from the approved reference forms.",
-    bundledPdfName: "FTTC Performance EPP.pdf",
+    document: eppDocument("Performance EPP - Team Member"),
+    variants: eppVariant("General Manager", "TM", "Team Member review"),
+    revision: 4,
+    revisionNote: "Buff City Soap's Team Member Performance EPP (Pau, 23 Nov 2026).",
+    bundledPdfName: "Team Member Performance EPP.pdf",
   },
   {
     key: "dmit-epp-tsd",

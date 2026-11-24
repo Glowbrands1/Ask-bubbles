@@ -31,9 +31,10 @@ export interface ReplayAnswer {
 export interface ReplayThread {
   /** `reading`: what the stand-in reading models return this turn (e.g. `{ employeeName }`, the name as typed); none by default. */
   say(text: string, reading?: Record<string, unknown>): Promise<ReplayAnswer>;
-  create(): Promise<string>;
+  /** `store`: the store the manager picks on the card before Create (the browser's picker; board f140). */
+  create(store?: string): Promise<string>;
   /** Create from the latest card for this person (an earlier card still on screen). */
-  createCard?(employeeName: string): Promise<string>;
+  createCard?(employeeName: string, store?: string): Promise<string>;
   /** The chat as the browser holds it. */
   readonly conversation?: readonly import("@/types").ChatMessage[];
   readonly proposal: ReplayAnswer["formProposal"] | null;
@@ -41,8 +42,13 @@ export interface ReplayThread {
 }
 
 export interface ReplayContext {
-  thread(): ReplayThread;
-  as(role: string, scope: unknown): void;
+  /**
+   * A browser tab's thread. `options.conversationId`: join this conversation id (a second tab on the same chat, e.g.
+   * a duplicated tab); `options.idPrefix`: this tab's message ids (browsers mint distinct ids; default "m").
+   */
+  thread(options?: { readonly conversationId?: string; readonly idPrefix?: string }): ReplayThread & { readonly conversationId?: string };
+  /** `subject`: who is signed in (default "qa-manager"), for a case with two people (port from the sibling app, HR approval). */
+  as(role: string, scope: unknown, subject?: string): void;
   directory(rows: readonly DirectoryRow[]): void;
   /** Every knowledge search's query this case, in order (POLICY_CARRY_RETRIEVAL, 12 Nov 2026). */
   searches?(): string[];
@@ -53,6 +59,8 @@ export interface ReplayContext {
   fullManual?(document: { id: string; title: string; chunks: readonly unknown[] }): void;
   /** Chunks the pinned policy manual also has, this case only (ported from the sibling app's pack); none by default. */
   manualAlsoHas?(chunks: readonly Record<string, unknown>[]): void;
+  /** The pinned policy manual's chunks in place of the pack's CA sections (e.g. production's rows), this case only. */
+  manualIs?(chunks: readonly Record<string, unknown>[]): void;
   /** What the drafting model writes at Create. */
   /** `extra`: other fields of the draft tool's input, e.g. `{ offense_basis: "sales" }` (CA_SALES_POLICY_ENABLED). */
   draftWrites(values: Record<string, string>, checked?: Record<string, string[]>, extra?: Record<string, unknown>): void;
@@ -94,6 +102,10 @@ export interface ReplayContext {
   forms(): Record<string, unknown>[];
   /** The FORMS ON FILE block the answering model was last given (empty when none): FORMS_ON_FILE_DATE_RANGE, 18 Nov 2026. */
   lastFormRecords?(): string;
+  /** The REPORT DATA block the answering model was last given (empty when none): Google reviews in chat, 18 Nov 2026. */
+  lastReportData?(): string;
+  /** The answering model's last system prompt (its report-figure rule): Google reviews in chat, 18 Nov 2026. */
+  lastSystem?(): string;
   values(instanceId: string): Record<string, string>;
   /** The ticked options of each checkbox group (form_instance_values.checked); groups with none are left out. */
   checked(instanceId: string): Record<string, string[]>;
@@ -113,8 +125,41 @@ export interface ReplayContext {
   redraft(instanceId: string, notes: string): Promise<Record<string, unknown>>;
   /** The manager types on the form and saves (filled by the manager). */
   typeOnForm(instanceId: string, values: Record<string, string>): void;
+  /** Tick a form's checkbox groups (form_instance_values.checked), as a form on file holds them: its warning level, its boxes. */
+  checkOnForm?(instanceId: string, checked: Record<string, string[]>): void;
+  /** The real template and current version ids of a form, for a row a case puts on file directly (its values then load as a saved form's). */
+  templateIds?(key: string): { template_id: string; template_version_id: string };
   /** Production's race: the next message arrives before the drafting model's values are saved. */
   draftNotYetSaved(instanceId: string): void;
+  /** The rows a table holds now (HR approval, 23 Nov 2026: the form a case marks as sent to HR). */
+  rows?(table: string): Record<string, unknown>[];
+  /** Adds rows to a table of the case's database (HR approval, 23 Nov 2026: the approver's `form_hr_approvers` row). */
+  addRows?(table: string, rows: readonly Record<string, unknown>[]): void;
+  /*
+   * THE AGENT LOOP (AGENT_LOOP_ENABLED; ported from the sibling app's pack, QA 21 Nov 2026). Off in this app's production,
+   * so a case that never calls `loopModel` runs exactly as before.
+   */
+  /** Whether AGENT_LOOP_ENABLED is on for this run. */
+  loopOn?(): boolean;
+  /**
+   * The loop's model for this case (`loop-stand-in.ts`), and the loop turned on for this case's signed-in manager only
+   * (AGENT_LOOP_ENABLED on, AGENT_LOOP_USERS listing them); both switches are restored after the case.
+   * `scripted` (QA's live regression triage, 22 Nov 2026): the stand-in plays even in a live run (AGENT_LOOP_LIVE), for a
+   * case whose condition is the app's own (a timeout, a stalled model) or a tool input the stand-in sends on purpose (a
+   * control with evidence the manager never wrote): the real model would not produce it, so the case would test nothing.
+   */
+  loopModel?(standIn: import("./loop-stand-in").LoopStandIn, options?: { readonly scripted?: boolean }): void;
+  /** Fault injection: from now on, the loop's roster read (find_staff) fails, as a directory outage would. */
+  rosterFails?(): void;
+  /**
+   * The signed-in manager's forms visibility designation (`forms_all_store_access`), this case only: mode `all` reads
+   * every store's forms on file, as production's district managers have it (the round-2 tester's harness patch, QA 22 Nov).
+   */
+  formsAllStoreAccess?(mode?: "all" | "woven_affiliations"): void;
+  /** Woven's own name for a registered store, by store id (`woven_location_map`), this case only (U54, 22 Nov 2026). */
+  wovenStoreNames?(names: Readonly<Record<string, string>>): void;
+  /** Watches the loop's entry point (`runAgentTurn`): how many turns entered it since, and `stop` to unwatch. */
+  watchLoopEntries?(): { entered(): number; stop(): void };
 }
 
 export interface DirectoryRow {
@@ -125,6 +170,8 @@ export interface DirectoryRow {
   employmentStatus: string;
   locationIds: string[];
   positionName: string | null;
+  /** Woven's primary store for this person (the loop's store_from_woven); none unless a case gives one. */
+  primaryLocationId?: string;
 }
 
 export interface ReplayCase {

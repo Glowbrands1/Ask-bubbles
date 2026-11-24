@@ -28,7 +28,9 @@ import { CardChangePanel } from "./card-change-panel";
 import { logTurnEvent } from "@/lib/analytics/telemetry";
 import { reusedDraftNotice } from "@/lib/forms/reused-draft-notice";
 
-import { DRAFT_FAILED_WARNING, createInlineForm } from "./create-inline-form";
+import { DRAFT_FAILED_WARNING, createAnswerLimited, createFailureMessage, createInlineForm } from "./create-inline-form";
+import { sendClientFormEvent } from "./client-form-telemetry";
+import { createFailureKind } from "@/lib/analytics/client-form-events";
 import { InlineForm, type PrefillState } from "./inline-form";
 import { FormRevisionsMount } from "@/form-revisions/form-revisions-mount";
 import { teamCardNoPositionEnabled } from "@/lib/config/chat-quality-flags";
@@ -434,6 +436,13 @@ function FormProposalCard({
   const inFlight = React.useRef(false);
 
   /*
+   * f073 (QA live test, 20 Nov 2026): "Create draft" is pressable only once this card runs in the browser, so a
+   * button drawn before React attached its click handler (server HTML, or a page still loading a new deploy's code)
+   * reads "Loading…" and is disabled, never a button that does nothing.
+   */
+  const mounted = React.useSyncExternalStore(noSubscription, inBrowser, onServer);
+
+  /*
    * ==========================================================================
    * A NEWER PROPOSAL MAKES THIS ONE READ-ONLY
    * ==========================================================================
@@ -481,7 +490,16 @@ function FormProposalCard({
   }, []);
 
   async function create() {
-    if (inFlight.current || superseded) return;
+    /*
+     * f073: every press reaches the server log (`client-form-telemetry.ts`): the click, whether it started anything
+     * and why not, the create leaving, and how it ended. Ids and timings only.
+     */
+    const clickedAt = performance.now();
+    const proposalId = proposal.proposalId;
+    const elapsed = () => Math.round(performance.now() - clickedAt);
+    const ignored = inFlight.current ? "in_flight" : superseded ? "superseded" : null;
+    sendClientFormEvent({ event: "form.create.clicked", proposalId, ...(ignored ? { ignored } : {}) });
+    if (ignored) return;
     inFlight.current = true;
     setCreating(true);
     setProblem(null);
@@ -495,10 +513,13 @@ function FormProposalCard({
     let rowExists = false;
 
     try {
+      // The create POST starts synchronously inside `createInlineForm`.
+      sendClientFormEvent({ event: "form.create.sent", proposalId, elapsedMs: 0 });
       const result = await createInlineForm({
         proposal: location ? { ...proposal, locationId: location } : proposal,
         messages: conversation,
-        call: (url, init) => formsFetch(url, role, user.name, init),
+        /* f073: the create POST is given up after CREATE_ANSWER_MS, never left waiting on a stalled connection. */
+        call: createAnswerLimited((url, init) => formsFetch(url, role, user.name, init)),
         /*
          * SYNCHRONOUS, THE MOMENT THE ROW EXISTS — not after this promise
          * settles. Drafting can run for up to two minutes, and for every
@@ -508,6 +529,7 @@ function FormProposalCard({
          */
         onCreated: (reference) => {
           rowExists = true;
+          sendClientFormEvent({ event: "form.create.answered", proposalId, elapsedMs: elapsed() });
           setCreated(reference);
           onCreated(reference);
           /*
@@ -541,7 +563,8 @@ function FormProposalCard({
           : { kind: "complete", ...(result.draftNotice ? { notice: result.draftNotice } : {}) },
       );
     } catch (error) {
-      const message = (error as Error).message;
+      if (!rowExists) sendClientFormEvent({ event: "form.create.failed", proposalId, elapsedMs: elapsed(), failure: createFailureKind(error) });
+      const message = createFailureMessage(error);
       setProblem(message);
       /*
        * WHY THIS IS LOGGED AND NOT JUST SHOWN. The rollout reported "create a
@@ -554,7 +577,8 @@ function FormProposalCard({
       logTurnEvent("form.create.failed", {
         templateKey: proposal.templateKey,
         where: rowExists ? "FormProposalCard/draft" : "FormProposalCard/create",
-        reason: message,
+        // The error's own name and words (f073: "CreateNoAnswerError", "TypeError: Load failed"), not the card's.
+        reason: `${(error as Error)?.name ?? "Error"}: ${(error as Error)?.message ?? String(error)}`,
       });
       /*
        * Only a FAILED CREATE releases the guard — the form does not exist, so
@@ -695,6 +719,7 @@ function FormProposalCard({
         </ProposalRow>
         {proposal.formDate ? <ProposalRow label="Date">{proposal.formDate}</ProposalRow> : null}
         {proposal.incidentTime ? <ProposalRow label="Time">{proposal.incidentTime}</ProposalRow> : null}
+        {proposal.newStore ? <ProposalRow label="New store">{proposal.newStore}</ProposalRow> : null}
         {proposal.warningLevel ? (
           <ProposalRow label="Type of warning">
             {proposal.warningLevel === "verbal"
@@ -758,9 +783,9 @@ function FormProposalCard({
 
       {!superseded && (proposal.supportsInlineDraft || (location && proposal.status === "needs_location")) ? (
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Button size="sm" onClick={() => void create()} disabled={creating}>
-            {creating ? <Loader2 className="animate-spin" /> : null}
-            {creating ? "Creating…" : "Create draft"}
+          <Button size="sm" onClick={() => void create()} disabled={creating || !mounted}>
+            {creating || !mounted ? <Loader2 className="animate-spin" /> : null}
+            {creating ? "Creating…" : mounted ? "Create draft" : "Loading…"}
           </Button>
           {problem ? (
             <span className="text-xs text-status-attention">{problem}</span>
@@ -779,6 +804,11 @@ function storeText(id: string): string {
 
 /** The forms whose Job Title is a record fact Bubbles fills from Woven or asks for. */
 const POSITION_FORMS: ReadonlySet<string> = new Set(["coaching", "follow-up-coaching", "dpoa", "policy-review"]);
+
+/* f073: false in the server's HTML and while it hydrates, true once the browser's code runs the card. */
+const noSubscription = () => () => {};
+const inBrowser = () => true;
+const onServer = () => false;
 
 function ProposalRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -864,7 +894,8 @@ function ChatErrorBubble({
   );
 }
 
-export function ThinkingBubble() {
+/** `status`: the AI loop's short status while it works ("Looking up <name>…"); plain text, display only. */
+export function ThinkingBubble({ status }: { status?: string | null } = {}) {
   return (
     <div className="flex gap-3" aria-live="polite">
       <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-surface">
@@ -884,6 +915,7 @@ export function ThinkingBubble() {
             />
           ))}
         </span>
+        {status ? <span className="mt-2 block text-sm text-muted-foreground" data-testid="thinking-status">{status}</span> : null}
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import {
   draftNotesFromConversation,
 } from "@/lib/forms/draft-notes";
 import { cardPolicyToDraftEnabled } from "@/lib/config/chat-quality-flags";
-import { cardPolicyFor } from "@/lib/forms/card-policy";
+import { cardPolicyFor, cardPolicyLineFor } from "@/lib/forms/card-policy";
 import { remapDraftSourcesClientEnabled } from "@/lib/config/chat-quality-flags";
 import type { ChatFormInstanceRef, ChatFormProposal, ChatMessage } from "@/types";
 
@@ -83,6 +83,69 @@ export const NO_NOTES_WARNING =
 /** The JSON `fetch` wrapper the caller supplies — `formsFetch`, in the app. */
 export type FormsCall = <T>(url: string, init?: RequestInit) => Promise<T>;
 
+/*
+ * ============================================================================
+ * f073 (QA live test, 20 Nov 2026): A CREATE THAT NEVER ANSWERS IS GIVEN UP
+ * ============================================================================
+ *
+ * A "Create draft" press sent no create the server saw, showed nothing, and a second press 115 s later worked; the
+ * deploy had changed just before. A request on a connection that stalls (not one that fails) waits until the browser
+ * gives up on its own, minutes later. The create POST alone is a few database writes, no model call, so it gets
+ * CREATE_ANSWER_MS and is then aborted, and the card says to press Create again in words a manager reads.
+ *
+ * NEVER A SECOND FORM: a second press of the same card sends the same `proposalId`, and the create route returns the
+ * draft that card already made (`findRecentAssistantDraft`), so a first request that did reach the server is reused.
+ * The prefill after it is not limited here: it is a model call with its own limits, and the row exists by then.
+ */
+export const CREATE_ANSWER_MS = 30_000;
+
+export const CREATE_RETRY_MESSAGE = "Something went wrong — press Create again.";
+
+/** Board f140: Create on a card that still asks which store, in one line; nothing is saved. */
+export const STORE_NEEDED_MESSAGE = "Which store is this about? Choose the store on the card, then press Create.";
+
+/** The create POST did not answer within CREATE_ANSWER_MS. */
+export class CreateNoAnswerError extends Error {
+  constructor() {
+    super(CREATE_RETRY_MESSAGE);
+    this.name = "CreateNoAnswerError";
+  }
+}
+
+/** `call`, with the create POST given up after `limitMs`; every other request is passed through unchanged. */
+export function createAnswerLimited(call: FormsCall, limitMs: number = CREATE_ANSWER_MS): FormsCall {
+  return async <T,>(url: string, init: RequestInit = {}): Promise<T> => {
+    if (url !== "/api/forms/instances" || String(init.method ?? "GET").toUpperCase() !== "POST") return call<T>(url, init);
+    const controller = new AbortController();
+    let gaveUp = false;
+    const timer = setTimeout(() => {
+      gaveUp = true;
+      controller.abort();
+    }, limitMs);
+    try {
+      return await call<T>(url, { ...init, signal: controller.signal });
+    } catch (error) {
+      if (gaveUp) throw new CreateNoAnswerError();
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+}
+
+/**
+ * The words a create failure is shown in. A refusal from the route keeps its own reason (it describes the template or
+ * the permission); a request the network lost or that never answered says to press Create again, never the browser's
+ * own "Failed to fetch" / "Load failed".
+ */
+export function createFailureMessage(error: unknown): string {
+  if (error instanceof CreateNoAnswerError) return CREATE_RETRY_MESSAGE;
+  const name = (error as { name?: unknown } | null)?.name;
+  if (error instanceof TypeError || name === "AbortError" || name === "TypeError") return CREATE_RETRY_MESSAGE;
+  const message = error instanceof Error ? error.message.trim() : "";
+  return message || CREATE_RETRY_MESSAGE;
+}
+
 export async function createInlineForm({
   proposal,
   messages,
@@ -119,7 +182,26 @@ export async function createInlineForm({
    * docs/chat-phase-3.md. A validated id with no name is honest; a validated id
    * with a demo name beside it is not.
    */
-  const created = await call<{ instance: { id: string }; reused?: boolean; reusedFrom?: string }>("/api/forms/instances", {
+  /*
+   * Board f140 (QA's Bubbles round 2, U06): a card can be "ready" while its store is still open (locationResolution
+   * "needs_selection", or status "needs_location"), and Create saved the draft with NO store. A card that still asks which
+   * store is never created: the manager gets the card's own question in one line, and nothing is saved. Every Create
+   * goes through here, the agent loop's cards and the regular chat's alike.
+   */
+  /*
+   * A2 (QA's live re-run, 23 Nov 2026): an agent-loop card with no store that was NOT asking (an admin's card for a former
+   * employee) saved location null. Every agent-loop card needs its store, unless the manager stated the form is for no store
+   * (U04's no_store: `noStoreStated`).
+   */
+  /*
+   * The regular chat's admin cards (QA, 23 Nov 2026, after #1087): "your account covers every location" cards saved
+   * location null. They now ask which store (`forms/proposal.ts`), and Create refuses ANY card with no store, the regular
+   * chat's as the loop's, unless the manager stated it is for no store (U04).
+   */
+  if (!proposal.locationId && !proposal.noStoreStated) {
+    throw new Error(STORE_NEEDED_MESSAGE);
+  }
+  const created = await call<{ instance: { id: string }; reused?: boolean; reusedFrom?: string; followUpNotice?: unknown }>("/api/forms/instances", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -158,7 +240,23 @@ export async function createInlineForm({
        * Omitted otherwise, so the box starts empty — a warning described as
        * already given is never this. Revalidated by the route.
        */
-      ...(proposal.warningLevel ? { warningLevel: proposal.warningLevel } : {}),
+      ...(proposal.warningLevel ? { warningLevel: proposal.warningLevel } : proposal.loopTermination ? { warningLevel: "termination" } : {}),
+      /*
+       * The agent loop's card (AGENT_LOOP_ENABLED, ported from the sibling app): its payroll amount is the card's own, its
+       * termination is locked server-side on the manager's termination word, and its account fills an exit form's reason
+       * line (a termination) or Additional Details (a resignation). Absent on every other card.
+       */
+      ...(proposal.fromAgentLoop && proposal.payrollDeductAmount ? { payrollDeductAmount: proposal.payrollDeductAmount } : {}),
+      ...(proposal.fromAgentLoop ? { fromAgentLoop: true } : {}),
+      /* The loop's exit card: how the person left and the manager's words for it (port from the sibling app: a real manager's exit form, 20 Nov 2026). */
+      ...(proposal.fromAgentLoop && proposal.exitHow && proposal.exitHowQuote ? { exitHow: proposal.exitHow, exitHowQuote: proposal.exitHowQuote } : {}),
+      /* The loop's transfer card: the new store, in the manager's words with their quote (U54, 22 Nov 2026); checked again by the route. */
+      ...(proposal.fromAgentLoop && proposal.newStoreSaid && proposal.newStoreQuote ? { newStoreSaid: proposal.newStoreSaid, newStoreQuote: proposal.newStoreQuote } : {}),
+      /* The loop's exit card: how the person resigned and the manager's words for it (U26, 22 Nov 2026); checked again by the route. */
+      ...(proposal.fromAgentLoop && proposal.exitMethod && proposal.exitMethodQuote ? { exitMethod: proposal.exitMethod, exitMethodQuote: proposal.exitMethodQuote } : {}),
+      /* The loop's exit card: the reason the person is leaving and the manager's words for it (B6, 22 Nov 2026); checked again by the route. */
+      ...(proposal.fromAgentLoop && proposal.exitReason && proposal.exitReasonQuote ? { exitReason: proposal.exitReason, exitReasonQuote: proposal.exitReasonQuote } : {}),
+      ...(proposal.fromAgentLoop && proposal.issue ? { loopAccount: proposal.issue } : {}),
       /*
        * AI_READS_CODE_CHECKS_ENABLED: what the reader took from the manager's
        * words, each with its quote. Absent with the flag off. The route checks
@@ -226,30 +324,68 @@ export async function createInlineForm({
    * qualified: a draft with usable turns is unchanged. Off, as before. See
    * `draftNotesFromCard`.
    */
+  const fromCard = !draftNotesAreUsable(fromTurns) && remapDraftSourcesClientEnabled();
+  /*
+   * The agent loop's card (ported from the sibling app; QA, 18 Nov 2026): a loop card that carries an account drafts
+   * from the card's own lines (its account first), with the manager's turns it cites after them, so a request split
+   * over two turns ("CA for … on 9/12", then "for <employee>") still drafts. A loop card with no account is as before.
+   */
+  const loopCard = proposal.fromAgentLoop ? draftNotesFromCard(proposal) : null;
   const notes =
-    draftNotesAreUsable(fromTurns) || !remapDraftSourcesClientEnabled() ? fromTurns : draftNotesFromCard(proposal);
+    loopCard && draftNotesAreUsable(loopCard)
+      ? {
+          ...loopCard,
+          text: draftNotesAreUsable(fromTurns) ? `${loopCard.text}\n\n${fromTurns.text}` : loopCard.text,
+          usedMessageIds: fromTurns.usedMessageIds,
+        }
+      : fromCard
+        ? draftNotesFromCard(proposal)
+        : fromTurns;
+  /* Pau (20 Nov 2026, ported): the follow-up date Create set on a loop's Corrective Action, said on the card. */
+  const createdFollowUp = typeof created.followUpNotice === "string" && created.followUpNotice.trim() !== "" ? created.followUpNotice : null;
   if (!draftNotesAreUsable(notes)) {
-    return { reference, draftWarning: NO_NOTES_WARNING };
+    return { reference, draftWarning: NO_NOTES_WARNING, ...(createdFollowUp ? { draftNotice: createdFollowUp } : {}) };
   }
 
   try {
-    const drafted = await call<{ notice?: unknown }>(`/api/forms/instances/${reference.instanceId}/draft`, {
+    const drafted = await call<{ notice?: unknown; followUpNotice?: unknown }>(`/api/forms/instances/${reference.instanceId}/draft`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         notes: notes.text,
+        // Port from the sibling app's #1119: the route keeps no address from the card's own lines.
+        ...(fromCard ? { notesFromCard: true } : {}),
         // AI_READS_CODE_CHECKS_ENABLED: checked again against `notes` by the draft route. Absent with the flag off.
         ...(proposal.checkedReading ? { readerQuotes: proposal.checkedReading } : {}),
         // NEXT_PUBLIC_CARD_POLICY_TO_DRAFT_ENABLED: the policy the card cited (QA live check, 3 Nov 2026).
         ...(cardPolicyToDraftEnabled() && cardPolicyFor(proposal, messages) ? { cardPolicy: cardPolicyFor(proposal, messages) } : {}),
+        /*
+         * The agent loop's card (ported from the sibling app; QA 17–20 Nov 2026): its policy is the saved form's, its
+         * prior actions ("" for none), its own account (with the times and facts it holds), the coaching topic, and its
+         * attendance record (an absence is never written up as lateness). The draft route reads them only with
+         * `cardFromLoop`.
+         */
+        ...(proposal.fromAgentLoop ? { cardFromLoop: true } : {}),
+        ...(proposal.fromAgentLoop ? { cardPriorActions: proposal.priorActions?.trim() ?? "" } : {}),
+        ...(proposal.fromAgentLoop && typeof proposal.issue === "string" && proposal.issue.trim() ? { cardAccount: proposal.issue.trim().slice(0, 6_000) } : {}),
+        // NEXT_PUBLIC_CARD_POLICY_TO_DRAFT_ENABLED: the loop card's whole policy line (its second heading, the Policy Violated line, a Coaching Form's citation).
+        ...(proposal.fromAgentLoop && cardPolicyToDraftEnabled() && cardPolicyLineFor(proposal, messages) ? { cardPolicyLine: cardPolicyLineFor(proposal, messages) } : {}),
+        ...(proposal.fromAgentLoop && proposal.coachingTopic ? { cardTopic: proposal.coachingTopic } : {}),
+        // QA's Bubbles live round 3 (A1(b)): earlier spellings of the card's person; the route re-checks each.
+        ...(proposal.fromAgentLoop && proposal.earlierNames && proposal.earlierNames.length > 0 ? { cardEarlierNames: proposal.earlierNames.slice(0, 5) } : {}),
+        // STATED_PLAN_STEPS_ENABLED (ported, f062): the plan steps the card carries (set only with the flag on, server-side), from either path.
+        ...(proposal.planSteps && proposal.planSteps.length > 0 ? { cardPlanSteps: proposal.planSteps } : {}),
+        ...(proposal.fromAgentLoop && proposal.attendanceKind ? { cardAttendance: proposal.attendanceKind } : {}),
         // SAME_FORM_COPY_NEW_PERSON_ENABLED: the form this card copies; re-checked by the route.
         ...(proposal.copyFromInstanceId ? { copyFromInstanceId: proposal.copyFromInstanceId } : {}),
       }),
     });
     const notice = typeof drafted?.notice === "string" && drafted.notice.trim() !== "" ? drafted.notice : null;
-    return { reference, draftWarning: null, draftNotice: notice };
+    const draftedFollowUp = typeof drafted?.followUpNotice === "string" && drafted.followUpNotice.trim() !== "" ? drafted.followUpNotice : null;
+    const notices = [notice, createdFollowUp ?? draftedFollowUp].filter((line): line is string => Boolean(line));
+    return { reference, draftWarning: null, draftNotice: notices.length > 0 ? notices.join(" ") : null };
   } catch {
     // The form exists. Report it, warn about the prefill, change nothing else.
-    return { reference, draftWarning: DRAFT_FAILED_WARNING };
+    return { reference, draftWarning: DRAFT_FAILED_WARNING, ...(createdFollowUp ? { draftNotice: createdFollowUp } : {}) };
   }
 }

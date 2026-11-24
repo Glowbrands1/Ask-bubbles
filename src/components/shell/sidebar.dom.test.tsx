@@ -160,9 +160,10 @@ describe("what an Employee sees on the rail with real authentication", () => {
     });
   }
 
-  it("shows exactly the two screens it is entitled to", () => {
+  it("shows exactly the three screens it is entitled to", () => {
     const { container } = renderAs("employee", false);
-    expect(navLinks(container).sort()).toEqual(["Ask Bubbles", "History"].sort());
+    // AI TRAINING (Nov 2026) is the staff AI training program, for every role.
+    expect(navLinks(container).sort()).toEqual(["AI TRAINING", "Ask Bubbles", "History"].sort());
   });
 
   it("does not offer the Knowledge Base management screen", () => {
@@ -212,10 +213,10 @@ describe("what an Employee sees on the rail with real authentication", () => {
       (node) => node.textContent?.trim() ?? "",
     );
 
-    // "Knowledge" goes with its only entry, the administrators' Knowledge Base
-    // console — the heading is wrong when NOTHING is under it.
-    expect(headings.sort()).toEqual(["Assistant"]);
-    for (const gone of ["Home", "Knowledge", "Insights", "Forms", "Admin"]) {
+    // "Knowledge" stays for AI TRAINING (Nov 2026), which every role opens; the
+    // administrators' Knowledge Base console under it is still hidden.
+    expect(headings.sort()).toEqual(["Assistant", "Knowledge"]);
+    for (const gone of ["Home", "Insights", "Forms", "Admin"]) {
       expect(headings, gone).not.toContain(gone);
     }
   });

@@ -61,6 +61,11 @@ describe("payroll deduction, minimum wage and the bonus", () => {
     ["payroll should deduct her uniform", { payroll_deduction_applicable: "yes" }],
     ["No payroll deduction.", { payroll_deduction_applicable: "no" }],
     ["Payroll deduction is not applicable", { payroll_deduction_applicable: "no" }],
+    // Ported from the sibling app (QA's production audit of an exit form, 20 Nov 2026): "no apply" and "payroll deduct: no"
+    // answer No; both were read as Yes.
+    ["create exit for Remy Calder. payroll deduct no apply", { payroll_deduction_applicable: "no" }],
+    ["payroll deduct no", { payroll_deduction_applicable: "no" }],
+    ["payroll deduct: no", { payroll_deduction_applicable: "no" }],
     ["Drop her to minimum wage and she forfeits her bonus.", { dropped_to_minimum_wage: "yes", forfeit_bonus: "yes" }],
     ["She will be dropped to minimum wage and forfeit her bonus", { dropped_to_minimum_wage: "yes", forfeit_bonus: "yes" }],
     ["She won't be dropped to minimum wage or forfeit her bonus.", { dropped_to_minimum_wage: "no", forfeit_bonus: "no" }],

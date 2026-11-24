@@ -421,6 +421,29 @@ export class SupabaseKnowledgeProvider implements KnowledgeProvider {
    * `lib/forms/official-policy-manual.ts` — which is pure, so the decision is
    * testable against the manual's own text.
    */
+  /**
+   * Which document is the JBA Policy Manual for this scope, and its version (port from the sibling app; the agent loop's
+   * manual cache keys on it). Null when it cannot be told.
+   */
+  async officialPolicyManualVersion(scopeId: string): Promise<{ readonly documentId: string; readonly version: string } | null> {
+    try {
+      const client = getSupabaseAdmin();
+      const { data, error } = await client
+        .from("knowledge_documents")
+        .select("id, title, category, original_filename, tags, version, source")
+        .eq("knowledge_scope_id", scopeId)
+        .eq("indexed", true)
+        .eq("status", "indexed");
+      if (error) return null;
+      const resolution = resolvePolicyManual(await withInheritedTags(client, scopeId, (data ?? []) as RoleDocumentRow[]));
+      if (!resolution.ok) return null;
+      const document = resolution.document as RoleDocumentRow & { version?: unknown };
+      return { documentId: document.id, version: String(document.version) };
+    } catch {
+      return null;
+    }
+  }
+
   async fetchOfficialPolicyManual(
     scopeId: string,
   ): Promise<OfficialPolicyManualResult> {

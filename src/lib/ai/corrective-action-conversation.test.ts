@@ -939,7 +939,8 @@ describe("\"Start an EPP for Sarah.\"", () => {
       ...answer.formSelection!.additional.map((choice) => choice.templateName),
     ];
     expect(offered).toContain("SDIT EPP");
-    expect(offered).toContain("TSD EPP");
+    // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the TSD EPP is Buff City Soap's General Manager Performance EPP.
+    expect(offered).toContain("General Manager Performance EPP");
   });
 
   it("offers a plan inline only where one reading of the document is settled", async () => {

@@ -115,20 +115,21 @@ describe("the prescreen without the uniform question", () => {
     expect(Object.fromEntries(TEMPLATE_SEEDS.filter((entry) => entry.key !== KEY).map((entry) => [entry.key, entry.revision]))).toMatchObject({
       coaching: 2,
       // Revision 6: the Action Plan as two sentences (District Manager feedback, 21 Oct 2026).
-      dpoa: 7, // Revision 7 (4 Nov 2026, client request, template approved): Type of Offense is four boxes.
+      dpoa: 8, // CHANGED ON PURPOSE, revision 8 (HR via Pau, 19 Nov 2026): two required history boxes; revision 7 (4 Nov 2026) made Type of Offense four boxes.
       "policy-review": 2,
       "follow-up-coaching": 2,
-      // 4: the core-values heading names no company (QA, 25 Oct 2026; seed-sibling-brand.test.ts).
-      "tanning-consultant-interview": 4,
-      "management-interview-round-1": 4, // Phase 2A re-issue
-      "management-interview-round-2": 3,
+      // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the Team Member Interview Form is restored at 5 (was 4 before it was
+      // removed), and both management interviews are re-issued with Buff City Soap's roles and role play.
+      "tanning-consultant-interview": 5,
+      "management-interview-round-1": 5,
+      "management-interview-round-2": 4,
       // 4: Steps to Finish Termination without sibling-company system names (QA, 25 Oct 2026).
       "resignation-exit": 4,
     });
-    // Held items still say what they said. The core-values heading no longer names a company
-    // (QA, 25 Oct 2026; seed-sibling-brand.test.ts); the values under it are unchanged.
-    expect(JSON.stringify(seed("tanning-consultant-interview").document)).toContain("Nothing’s Impossible");
-    expect(JSON.stringify(seed("tanning-consultant-interview").document)).not.toContain("Sun Tan City");
+    // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the key is back as the Team Member Interview Form (it was removed on 21 Nov);
+    // still no seed names the sibling company.
+    expect(TEMPLATE_SEEDS.find((entry) => entry.key === "tanning-consultant-interview")?.name).toBe("Team Member Interview Form");
+    for (const entry of TEMPLATE_SEEDS) expect(JSON.stringify(entry.document), entry.key).not.toContain("Sun Tan City");
   });
 });
 

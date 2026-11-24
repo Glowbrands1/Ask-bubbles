@@ -1319,7 +1319,7 @@ describe("PICK. an ambiguous request offers structured choices", () => {
 
 /**
  * ============================================================================
- * THE FOUR HIRING FORMS ARE WITHHELD FROM THE CHOOSER
+ * THE HIRING FORMS ARE WITHHELD FROM THE CHOOSER
  * ============================================================================
  *
  * The business asked for the Hiring & Interview forms to stop appearing among
@@ -1350,14 +1350,20 @@ describe("HIDE. the hiring forms are not offered as choices", () => {
     });
   }
 
+  /*
+   * CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the two management interviews are no longer withheld (they are Buff City
+   * Soap's interviews now, offered like any other form); the Prescreen still is. The library still holds all three, so
+   * these pin both sides: the withheld one is never offered, the two others are.
+   */
+  const PRESCREEN = hiring("prescreen-phone-interview", "Prescreen / Phone Interview Form", 10);
   const HIRING = [
-    hiring("prescreen-phone-interview", "Prescreen / Phone Interview Form", 10),
-    hiring("tanning-consultant-interview", "Tanning Consultant Interview Form", 11),
+    PRESCREEN,
     hiring("management-interview-round-1", "First Round Management Interview Form", 12),
     hiring("management-interview-round-2", "Second Round Management Interview Form", 13),
   ];
+  const WITHHELD = [PRESCREEN];
 
-  it("offers none of the four, visible or collapsed", async () => {
+  it("offers the withheld one neither visible nor collapsed, and offers the management interviews", async () => {
     const { proposals } = await load([template(), dpoa(), ...HIRING]);
     const response = await proposals.proposeFormForTurn(
       turn(BUTTON, { role: "district_manager" }),
@@ -1365,7 +1371,7 @@ describe("HIDE. the hiring forms are not offered as choices", () => {
 
     // `offered()` reads the primary card AND everything behind "See more
     // forms" — a form withheld only from the visible card is still offered.
-    expect(offered(response!)).toEqual(["Coaching Form", "Corrective Action Form"]);
+    expect(offered(response!)).toEqual(["Coaching Form", "Corrective Action Form", "First Round Management Interview Form", "Second Round Management Interview Form"]);
   });
 
   it("leaves every other form exactly where it was", async () => {
@@ -1377,7 +1383,7 @@ describe("HIDE. the hiring forms are not offered as choices", () => {
     expect(response!.formSelection!.primary.templateKey).toBe("coaching");
     expect(
       response!.formSelection!.additional.map((entry) => entry.templateKey),
-    ).toEqual(["dpoa", "sdit-epp"]);
+    ).toEqual(["dpoa", "sdit-epp", "management-interview-round-1", "management-interview-round-2"]);
   });
 
   it("does not name one in the prose either", async () => {
@@ -1386,7 +1392,7 @@ describe("HIDE. the hiring forms are not offered as choices", () => {
       turn(BUTTON, { role: "district_manager" }),
     );
 
-    for (const entry of HIRING) {
+    for (const entry of WITHHELD) {
       expect(response!.content, entry.name as string).not.toContain(entry.name);
     }
   });
@@ -1401,17 +1407,17 @@ describe("HIDE. the hiring forms are not offered as choices", () => {
 
     expect(response!.content).toMatch(/not published in Ask Bubbles yet/i);
     expect(response!.content).toContain("Coaching Form");
-    for (const entry of HIRING) {
+    for (const entry of WITHHELD) {
       expect(response!.content, entry.name as string).not.toContain(entry.name);
     }
   });
 
-  it("asks the question and offers nothing when the hiring forms are all there is", async () => {
+  it("asks the question and offers nothing when the withheld form is all there is", async () => {
     /*
      * The rule that Bubbles asks rather than defaults survives an empty
      * shortlist: withholding must not fall back to offering a withheld form.
      */
-    const { proposals } = await load(HIRING);
+    const { proposals } = await load(WITHHELD);
     const response = await proposals.proposeFormForTurn(
       turn(BUTTON, { role: "district_manager" }),
     );

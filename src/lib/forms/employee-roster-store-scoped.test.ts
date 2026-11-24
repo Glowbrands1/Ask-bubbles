@@ -49,7 +49,7 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 
-const { loadScopedRoster, loadScopedRosterResult, readDirectoryFacts, readStoreRoster } = await import("./employee-roster");
+const { loadScopedRoster, loadScopedRosterResult, readDirectoryFacts, readDirectoryRoster, readStoreRoster } = await import("./employee-roster");
 const { ROSTER_NON_PERSON } = await import("./roster-non-person");
 
 const KEARNEY = "loc-66";
@@ -106,7 +106,9 @@ describe("ROSTER_STORE_SCOPED_ENABLED off", () => {
     expect(names(await loadScopedRoster(storeScope(KEARNEY)))).toEqual(["Avery Quill", "Casey Morrow"]);
     const directory = reads.filter((read) => read.table === "employee_access_directory");
     expect(directory.length).toBeGreaterThan(0);
-    expect(directory.every((read) => read.calls.includes("limit(5000)"))).toBe(true);
+    // Changed on purpose (port from the sibling app's #1142, QA's code audit item 18): the whole-directory read is paged,
+    // never `limit(5000)`.
+    expect(directory.every((read) => read.calls.some((call) => call.startsWith("range(")))).toBe(true);
   });
 });
 
@@ -158,9 +160,32 @@ describe("ROSTER_STORE_SCOPED_ENABLED on", () => {
     for (let index = 0; index < 1205; index += 1) person(`bulk-${String(index).padStart(4, "0")}`, "Bulk", `Person${index}`, KEARNEY);
     const roster = await readStoreRoster(storeScope(KEARNEY));
     expect(roster).toHaveLength(1206);
-    // Flag off, the same directory is cut at the cap with no error.
+    // Changed on purpose (port from the sibling app's #1142, QA's code audit item 18): flag off, the whole-directory read
+    // is paged too, so the same directory is no longer cut at the cap.
     delete process.env.ROSTER_STORE_SCOPED_ENABLED;
-    expect((await loadScopedRoster(storeScope(KEARNEY))).length).toBeLessThan(1206);
+    expect((await loadScopedRoster(storeScope(KEARNEY))).length).toBeGreaterThanOrEqual(1206);
+  });
+
+  /*
+   * Port from the sibling app's #1142 (QA's code audit item 18, 20 Nov 2026): the whole-directory read (this app's
+   * flag-off roster and the typo reader's protected name words) asked for 5,000 / 20,000 rows, but the service answers at
+   * most 1,000, so past that a person and their store were simply missing. Every read is paged.
+   */
+  it("the whole-directory read pages past the 1,000-row cap: a terminated person after it is still read, with their store", async () => {
+    for (let index = 0; index < 1205; index += 1) person(`bulk-${String(index).padStart(4, "0")}`, "Bulk", `Person${index}`, KEARNEY);
+    person("zz-gone", "Quill", "Fenwick", KEARNEY, { employment_status: "terminated" });
+    const rows = await readDirectoryRoster();
+    const gone = rows.find((row) => row.id === "zz-gone");
+    expect(gone, "the terminated person past the cap was not read").toBeTruthy();
+    expect(gone!.locationIds, "their affiliation past the cap was not read").toEqual([KEARNEY]);
+  });
+
+  it("the flag-off grounded facts page past the cap too", async () => {
+    delete process.env.ROSTER_STORE_SCOPED_ENABLED;
+    for (let index = 0; index < 1205; index += 1) person(`bulk-${String(index).padStart(4, "0")}`, "Bulk", `Person${index}`, KEARNEY);
+    person("zz-late", "Quill", "Fenwick", KEARNEY);
+    const facts = await readDirectoryFacts(storeScope(KEARNEY));
+    expect(facts.some((fact) => fact.id === "zz-late"), "the person past the cap was not read").toBe(true);
   });
 
   it("a read error is unavailable, never nobody and never everyone", async () => {

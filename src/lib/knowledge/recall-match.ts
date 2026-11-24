@@ -99,6 +99,8 @@ export async function matchRecallKnowledge(input: {
   readonly query: string;
   readonly scopeId: string;
   readonly limit?: number;
+  /** The manager's question before rewrite (the agent loop passes it; the sibling app's topic pin reads it). Not read here yet. */
+  readonly question?: string | null;
 }): Promise<MatchedChunkRow[]> {
   const limit = input.limit ?? RETRIEVAL.topK;
   const query = input.query.trim();

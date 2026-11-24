@@ -24,9 +24,10 @@ export const EDIT_PERMISSION_BY_TEMPLATE: Readonly<Record<string, Permission>> =
   "Corrective Action Form": "create_corrective_action",
   "Policy Review": "create_policy_review",
   "SDIT EPP": "create_epp",
-  "TSD EPP": "create_epp",
-  "ASD-SDIT Performance EPP": "create_epp",
-  "FTTC Performance EPP": "create_epp",
+  /* Renamed to Buff City Soap titles (Pau, 23 Nov 2026): the EPPs for the General Manager, AGM and Team Member. */
+  "General Manager Performance EPP": "create_epp",
+  "Assistant General Manager Development EPP": "create_epp",
+  "Team Member Performance EPP": "create_epp",
   "DMIT EPP — TSD Review": "create_epp",
   "DMIT EPP — DMIT Review": "create_epp",
   "Follow-Up Coaching Form": "create_coaching_form",
@@ -34,7 +35,7 @@ export const EDIT_PERMISSION_BY_TEMPLATE: Readonly<Record<string, Permission>> =
   "Demotion Form": "create_employment_change_form",
   "Position Transfer Form": "create_employment_change_form",
   "Prescreen / Phone Interview Form": "create_hiring_form",
-  "Tanning Consultant Interview Form": "create_hiring_form",
+  "Team Member Interview Form": "create_hiring_form",
   "First Round Management Interview Form": "create_hiring_form",
   "Second Round Management Interview Form": "create_hiring_form",
 };

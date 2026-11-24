@@ -1,3 +1,4 @@
+import { foldName } from "./fold-name";
 import { rosterCompoundSurnameEnabled, sharedLoginNotStaffEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 
 /**
@@ -129,9 +130,8 @@ export function displayName(employee: RosterEmployee): string {
 }
 
 function normalize(text: string): string {
-  return text
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
+  // Port from the sibling app's #1141: one fold for every name comparison (`foldName`).
+  return foldName(text)
     .toLowerCase()
     .replace(/['’.]/g, "")
     .replace(/[^a-z\s-]/g, " ")
@@ -415,6 +415,11 @@ export const AFFIRMATIVE =
 const NEGATIVE =
   /^\s*(?:no|nope|nah|n|keep (?:it|that|the name)?(?: as (?:i )?typed| as is)?|keep\s+.+|leave it|as typed|that'?s (?:wrong|not (?:her|him|them|it|right)))\b/i;
 
+/** The manager's answer to a name question keeps the name as typed ("no", "keep it as typed"): today's reading, for a recorded question (agent loop). */
+export function saysNo(answer: string): boolean {
+  return NEGATIVE.test(answer);
+}
+
 export type NameConfirmation =
   /** The manager said yes to the single name Bubbles suggested. */
   | { kind: "accepted"; name: string }
@@ -496,4 +501,20 @@ export function settledNameQuestions(
     }
   }
   return { accepted, kept };
+}
+
+/**
+ * QA's live re-test (21 Nov 2026): a two-word name the roster reads as this roster person ALONE, by a close spelling
+ * ("<First> <Lastx>" for <First> <Lasty>), is this person's misspelt name. Another roster person's exact name, two close
+ * people, or no roster id: never. The card and the drafted write-up put the corrected name in place of the old spelling (`short-name.ts` withCorrectedSpelling).
+ */
+export function rosterSpellingOf(id: string | null, roster: readonly RosterEmployee[]): ((name: string) => boolean) | undefined {
+  if (!id || roster.length === 0) return undefined;
+  const person = roster.find((row) => row.id === id);
+  if (!person) return undefined;
+  return (name: string) => {
+    const match = matchEmployeeName(name, roster);
+    if (match.kind === "confirm") return match.candidates.length === 1 && match.candidates[0]!.employee.id === id;
+    return match.kind === "unchecked" && match.closeName === displayName(person);
+  };
 }

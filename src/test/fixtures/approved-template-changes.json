@@ -1,5 +1,5 @@
 {
- "note": "Every difference between the migrated templates and the Ask Sunny published versions. Each is an approved change (company branding, the source app name, the exit form key and description, Salon -> Store terminology, and client/customer -> guest terminology approved 2026-10-19 for SD-2, TS-5, TI-4, TI-5, M1-6 and X-1). Phase 2A wording changes approved 2026-10-19 (D3 7G Service, D4 Employee Performance Plan acknowledgement, D12 demotion example placeholder, D18 Makery cleaning scenario) are listed here and allow-listed by exact text in the parity test. The prescreen's Sun Tan City uniform/product-use question was REMOVED (D14, Option A, approved 2026-10-19): the removal is declared in src/test/approved-removals.ts, which deletes exactly that block from the Ask Sunny snapshot before comparison, and the description change is listed here. The Corrective Action Form's revision 6 (District Manager feedback approved 2026-10-21: the Action Plan's help text, its closing \"may result in\", and the revision note) is listed here and allow-listed by exact text in the parity test. QA, 25 Oct 2026 (no sibling-company product in what a Buff City Soap manager reads): the Sunlync step without its tanning clause (QA-2; Sunlync and MyGlow are confirmed) and the FTTC EPP's chooser description (QA-3) are listed here and allow-listed by exact text in the parity test. QA, 25 Oct 2026 (QA-4): the hidden Tanning Consultant Interview's core-values heading reads \"Core Values\" (the JBA Policy Manual's own heading), without the sibling company's name; listed here and allow-listed by exact text in the parity test. Anything not listed here fails template-parity.test.ts.",
+ "note": "Every difference between the migrated templates and the Ask Sunny published versions. Each is an approved change (company branding, the source app name, the exit form key and description, Salon -> Store terminology, and client/customer -> guest terminology approved 2026-10-19 for SD-2, TS-5, TI-4, TI-5, M1-6 and X-1). Phase 2A wording changes approved 2026-10-19 (D3 7G Service, D4 Employee Performance Plan acknowledgement, D12 demotion example placeholder, D18 Makery cleaning scenario) are listed here and allow-listed by exact text in the parity test. The prescreen's Sun Tan City uniform/product-use question was REMOVED (D14, Option A, approved 2026-10-19): the removal is declared in src/test/approved-removals.ts, which deletes exactly that block from the Ask Sunny snapshot before comparison, and the description change is listed here. The Corrective Action Form's revision 6 (District Manager feedback approved 2026-10-21: the Action Plan's help text, its closing \"may result in\", and the revision note) is listed here and allow-listed by exact text in the parity test. QA, 25 Oct 2026 (no sibling-company product in what a Buff City Soap manager reads): the Sunlync step without its tanning clause (QA-2; Sunlync and MyGlow are confirmed) and the FTTC EPP's chooser description (QA-3) are listed here and allow-listed by exact text in the parity test. QA, 25 Oct 2026 (QA-4): the hidden Tanning Consultant Interview's core-values heading reads \"Core Values\" (the JBA Policy Manual's own heading), without the sibling company's name; listed here and allow-listed by exact text in the parity test. Anything not listed here fails template-parity.test.ts. Buff City Soap titles and terms approved by Pau on 23 Nov 2026 (via QA, \"ok all ur picks\"): the Team Member, Assistant General Manager and General Manager Performance EPPs (fttc-epp, asd-sdit-epp, tsd-epp; their variants' role and abbreviation; the General Manager plan's reference-platform metrics become Buff City Soap's six Domo KPIs, Goal / Result each: five on their stored keys, Product Mix % on a new key per table; SVC becomes the store reports (Domo)), the Team Member Interview Form (tanning-consultant-interview, restored), and the management interviews' role play, roles and Scenario 2 wording (QA's final pick, 23 Nov 2026).",
  "changes": [
   {
    "sourceKey": "coaching",
@@ -27,13 +27,31 @@
    "sourceKey": "dpoa",
    "path": ".revisionNote",
    "from": "Renamed to Corrective Action Form, and Observation of Offense drafts as Observed/Expectation/Going Forward with the Action Plan as the plan-of-action paragraph. Revision 3 sets the two policy fields to the business's own reading of them: Policy Violated is the offense category ticked on the form, and Direct policy names the approved manual with its section and page. Revision 4 adds \"Is payroll deduct applicable?\" as a Yes / No the manager answers (one answer, unanswered until they give it). Revision 5 (HR feedback, 3 Oct 2026) replaces \"Previous corrective action for this policy or issue\" and \"Date of previous corrective action\" with one multi-line field, \"List previously received coaching and/or corrective action with date signed\", and ends every Action Plan with \"Future policy violations may be subject to additional corrective action up to and including termination of employment.\" Forms filed against earlier versions keep the document they were signed on; the template key and every stored value are unchanged.",
-   "to": "Renamed to Corrective Action Form, and Observation of Offense drafts as Observed/Expectation/Going Forward with the Action Plan as the plan-of-action paragraph. Revision 3 sets the two policy fields to the business's own reading of them: Policy Violated is the offense category ticked on the form, and Direct policy names the approved manual with its section and page. Revision 4 adds \"Is payroll deduct applicable?\" as a Yes / No the manager answers (one answer, unanswered until they give it). Revision 5 (HR feedback, 3 Oct 2026) replaces \"Previous corrective action for this policy or issue\" and \"Date of previous corrective action\" with one multi-line field, \"List previously received coaching and/or corrective action with date signed\", and ends every Action Plan with \"Future policy violations may be subject to additional corrective action up to and including termination of employment.\" Revision 6 (District Manager feedback, 21 Oct 2026) makes the Action Plan two sentences — \"Management will review the <policy> policy with <employee>.\" and \"Future policy violations may result in additional corrective action up to and including termination of employment.\" — with the payroll deduction between them when payroll deduct is Yes. Revision 7 (client request, 4 Nov 2026) makes Type of Offense four boxes — Attendance Policy, Standards of Conduct, Dress Code Violation, Other — removing Tardiness/Leaving Early and Absenteeism (now Attendance Policy), Under Performance and Violation of Company Policies (now Standards of Conduct), and the Other write-in line (Other is a box). Forms filed against earlier versions keep the document they were signed on; the template key and every stored value are unchanged."
+   "to": "Renamed to Corrective Action Form, and Observation of Offense drafts as Observed/Expectation/Going Forward with the Action Plan as the plan-of-action paragraph. Revision 3 sets the two policy fields to the business's own reading of them: Policy Violated is the offense category ticked on the form, and Direct policy names the approved manual with its section and page. Revision 4 adds \"Is payroll deduct applicable?\" as a Yes / No the manager answers (one answer, unanswered until they give it). Revision 5 (HR feedback, 3 Oct 2026) replaces \"Previous corrective action for this policy or issue\" and \"Date of previous corrective action\" with one multi-line field, \"List previously received coaching and/or corrective action with date signed\", and ends every Action Plan with \"Future policy violations may be subject to additional corrective action up to and including termination of employment.\" Revision 6 (District Manager feedback, 21 Oct 2026) makes the Action Plan two sentences — \"Management will review the <policy> policy with <employee>.\" and \"Future policy violations may result in additional corrective action up to and including termination of employment.\" — with the payroll deduction between them when payroll deduct is Yes. Revision 7 (client request, 4 Nov 2026) makes Type of Offense four boxes — Attendance Policy, Standards of Conduct, Dress Code Violation, Other — removing Tardiness/Leaving Early and Absenteeism (now Attendance Policy), Under Performance and Violation of Company Policies (now Standards of Conduct), and the Other write-in line (Other is a box). Revision 8 (HR via Pau, 19 Nov 2026) replaces the one history line with two required boxes, in HR's words: \"List date of JBA policy manual signed by employee\" (typed by the person creating the form) and \"List previous coaching and corrective actions and include date signed by employee in past 90 days\" (the same key as before). Neither can be left blank at Finalize. Forms filed against earlier versions keep the document they were signed on; the template key and every stored value are unchanged."
   },
   {
    "sourceKey": "dpoa",
    "path": ".document.blocks[0].brand",
    "from": "SUN TAN CITY",
    "to": "BUFF CITY SOAP"
+  },
+  {
+   "sourceKey": "dpoa",
+   "path": ".document.blocks[6].field.label",
+   "from": "List previously received coaching and/or corrective action with date signed",
+   "to": "List previous coaching and corrective actions and include date signed by employee in past 90 days"
+  },
+  {
+   "sourceKey": "dpoa",
+   "path": ".document.blocks[6].field.help",
+   "from": "One per line: each coaching or corrective action previously received, with the date it was signed. Write \"None — first occurrence\" when there has been none.",
+   "to": "One per line: each coaching or corrective action received in the past 90 days, with the date the employee signed it. Write \"None — first occurrence\" when there has been none. Required."
+  },
+  {
+   "sourceKey": "dpoa",
+   "path": ".document.blocks[6].field.required",
+   "from": null,
+   "to": true
   },
   {
    "sourceKey": "dpoa",
@@ -181,15 +199,33 @@
   },
   {
    "sourceKey": "tsd-epp",
+   "path": ".name",
+   "from": "TSD EPP",
+   "to": "General Manager Performance EPP"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".shortName",
+   "from": "TSD EPP",
+   "to": "GM EPP"
+  },
+  {
+   "sourceKey": "tsd-epp",
    "path": ".description",
    "from": "Employee Performance Plan for a Training Salon Director.",
-   "to": "Employee Performance Plan for a Training Store Director."
+   "to": "Employee Performance Plan for a General Manager, reviewed with the District Manager."
   },
   {
    "sourceKey": "tsd-epp",
    "path": ".revisionNote",
    "from": "The Management Performance Plan the business issues: the nine management expectations marked twice, five metrics for the manager and five for the salon, the manager's own self-assessment, the eight Plan of Action objectives and their re-evaluation, with the company-policy expectation stated against the JB & Associates Employment Policy Manual.",
-   "to": "The Management Performance Plan the business issues: the nine management expectations marked twice, five metrics for the manager and five for the store, the manager's own self-assessment, the eight Plan of Action objectives and their re-evaluation, with the company-policy expectation stated against the JB & Associates Employment Policy Manual."
+   "to": "Buff City Soap's General Manager Performance EPP: the nine management expectations marked twice, six KPIs (Net Sales, Comp Sales %, IPT, AOV, Discount Rate %, Product Mix %, Goal / Result each) for the manager and for the store, the manager's own self-assessment, the eight Plan of Action objectives and their re-evaluation."
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".bundledPdfName",
+   "from": "Management EPP (TSD).pdf",
+   "to": "General Manager Performance EPP.pdf"
   },
   {
    "sourceKey": "tsd-epp",
@@ -223,9 +259,91 @@
   },
   {
    "sourceKey": "tsd-epp",
+   "path": ".document.blocks[13].fields[0].label",
+   "from": "PPTA",
+   "to": "Net Sales (Goal / Result)"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[13].fields[1].label",
+   "from": "LPSVA",
+   "to": "Comp Sales % (Goal / Result)"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[13].fields[2].label",
+   "from": "UPTA",
+   "to": "IPT (Goal / Result)"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[13].fields[3].label",
+   "from": "Club Close",
+   "to": "AOV (Goal / Result)"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[13].fields[4].label",
+   "from": "Average Club Dollar",
+   "to": "Discount Rate % (Goal / Result)"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[13].fields[5]",
+   "from": null,
+   "to": {
+    "key": "manager_product_mix",
+    "label": "Product Mix % (Goal / Result)",
+    "input": "text",
+    "responsibility": "ai"
+   }
+  },
+  {
+   "sourceKey": "tsd-epp",
    "path": ".document.blocks[15].label",
    "from": "Salon's current productivity",
    "to": "Store's current productivity"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[16].fields[0].label",
+   "from": "PPTA",
+   "to": "Net Sales (Goal / Result)"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[16].fields[1].label",
+   "from": "LPSVA",
+   "to": "Comp Sales % (Goal / Result)"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[16].fields[2].label",
+   "from": "UPTA",
+   "to": "IPT (Goal / Result)"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[16].fields[3].label",
+   "from": "Club Close",
+   "to": "AOV (Goal / Result)"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[16].fields[4].label",
+   "from": "Average Club Dollar",
+   "to": "Discount Rate % (Goal / Result)"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[16].fields[5]",
+   "from": null,
+   "to": {
+    "key": "salon_product_mix",
+    "label": "Product Mix % (Goal / Result)",
+    "input": "text",
+    "responsibility": "ai"
+   }
   },
   {
    "sourceKey": "tsd-epp",
@@ -243,7 +361,7 @@
    "sourceKey": "tsd-epp",
    "path": ".document.blocks[21].field.label",
    "from": "What do you feel is the most important skill for a Salon Director to possess?",
-   "to": "What do you feel is the most important skill for a Store Director to possess?"
+   "to": "What do you feel is the most important skill for a General Manager to possess?"
   },
   {
    "sourceKey": "tsd-epp",
@@ -295,6 +413,12 @@
   },
   {
    "sourceKey": "tsd-epp",
+   "path": ".document.blocks[28].rows[7].objective",
+   "from": "Aware of all items on the SVC and able to describe to DM",
+   "to": "Aware of all items on the store reports (Domo) and able to describe to DM"
+  },
+  {
+   "sourceKey": "tsd-epp",
    "path": ".document.blocks[32].text",
    "from": "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.",
    "to": "I confirm that my supervisor and I have discussed this Employee Performance Plan and I will participate in the plan for improvement."
@@ -315,7 +439,7 @@
    "sourceKey": "tsd-epp",
    "path": ".document.blocks[38].options[7].label",
    "from": "Salon Standards of Cleanliness and Safety — Aware of all items on the SVC and able to describe to DM",
-   "to": "Store Standards of Cleanliness and Safety — Aware of all items on the SVC and able to describe to DM"
+   "to": "Store Standards of Cleanliness and Safety — Aware of all items on the store reports (Domo) and able to describe to DM"
   },
   {
    "sourceKey": "tsd-epp",
@@ -360,10 +484,58 @@
    "to": "Store Productivity (as provided)"
   },
   {
+   "sourceKey": "tsd-epp",
+   "path": ".variants[0].label",
+   "from": "TSD review",
+   "to": "GM review"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".variants[0].roleAbbr",
+   "from": "TSD",
+   "to": "GM"
+  },
+  {
+   "sourceKey": "asd-sdit-epp",
+   "path": ".name",
+   "from": "ASD-SDIT Performance EPP",
+   "to": "Assistant General Manager Development EPP"
+  },
+  {
+   "sourceKey": "asd-sdit-epp",
+   "path": ".shortName",
+   "from": "ASD-SDIT",
+   "to": "AGM EPP"
+  },
+  {
+   "sourceKey": "asd-sdit-epp",
+   "path": ".description",
+   "from": "Performance plan covering the ASD to SDIT development track.",
+   "to": "Development plan for an Assistant General Manager, reviewed with the General Manager."
+  },
+  {
+   "sourceKey": "asd-sdit-epp",
+   "path": ".revisionNote",
+   "from": "Seeded from the approved reference forms.",
+   "to": "Buff City Soap's Assistant General Manager Development EPP (Pau, 23 Nov 2026)."
+  },
+  {
+   "sourceKey": "asd-sdit-epp",
+   "path": ".bundledPdfName",
+   "from": "ASD-SDIT Performance EPP.pdf",
+   "to": "Assistant General Manager Development EPP.pdf"
+  },
+  {
    "sourceKey": "asd-sdit-epp",
    "path": ".document.blocks[0].brand",
    "from": "SUN TAN CITY",
    "to": "BUFF CITY SOAP"
+  },
+  {
+   "sourceKey": "asd-sdit-epp",
+   "path": ".document.blocks[0].title",
+   "from": "Performance EPP - ASD/SDIT",
+   "to": "Development EPP - Assistant General Manager"
   },
   {
    "sourceKey": "asd-sdit-epp",
@@ -382,24 +554,66 @@
    "path": ".document.blocks[18].text",
    "from": "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.",
    "to": "I confirm that my supervisor and I have discussed this Employee Performance Plan and I will participate in the plan for improvement."
+  },
+  {
+   "sourceKey": "asd-sdit-epp",
+   "path": ".variants[0].label",
+   "from": "ASD/SDIT review",
+   "to": "AGM review"
   },
   {
    "sourceKey": "asd-sdit-epp",
    "path": ".variants[0].role",
    "from": "Training Salon Director",
-   "to": "Training Store Director"
+   "to": "General Manager"
+  },
+  {
+   "sourceKey": "asd-sdit-epp",
+   "path": ".variants[0].roleAbbr",
+   "from": "ASD",
+   "to": "AGM"
+  },
+  {
+   "sourceKey": "fttc-epp",
+   "path": ".name",
+   "from": "FTTC Performance EPP",
+   "to": "Team Member Performance EPP"
+  },
+  {
+   "sourceKey": "fttc-epp",
+   "path": ".shortName",
+   "from": "FTTC",
+   "to": "TM EPP"
   },
   {
    "sourceKey": "fttc-epp",
    "path": ".description",
    "from": "Performance plan for a full-time Tanning Consultant.",
-   "to": "The FTTC Employee Performance Plan."
+   "to": "Employee Performance Plan for a Team Member (full time, part time or seasonal), reviewed with the General Manager."
+  },
+  {
+   "sourceKey": "fttc-epp",
+   "path": ".revisionNote",
+   "from": "Seeded from the approved reference forms.",
+   "to": "Buff City Soap's Team Member Performance EPP (Pau, 23 Nov 2026)."
+  },
+  {
+   "sourceKey": "fttc-epp",
+   "path": ".bundledPdfName",
+   "from": "FTTC Performance EPP.pdf",
+   "to": "Team Member Performance EPP.pdf"
   },
   {
    "sourceKey": "fttc-epp",
    "path": ".document.blocks[0].brand",
    "from": "SUN TAN CITY",
    "to": "BUFF CITY SOAP"
+  },
+  {
+   "sourceKey": "fttc-epp",
+   "path": ".document.blocks[0].title",
+   "from": "Performance EPP - FTTC",
+   "to": "Performance EPP - Team Member"
   },
   {
    "sourceKey": "fttc-epp",
@@ -421,9 +635,21 @@
   },
   {
    "sourceKey": "fttc-epp",
+   "path": ".variants[0].label",
+   "from": "FTTC review",
+   "to": "Team Member review"
+  },
+  {
+   "sourceKey": "fttc-epp",
    "path": ".variants[0].role",
    "from": "Salon Director",
-   "to": "Store Director"
+   "to": "General Manager"
+  },
+  {
+   "sourceKey": "fttc-epp",
+   "path": ".variants[0].roleAbbr",
+   "from": "TC",
+   "to": "TM"
   },
   {
    "sourceKey": "dmit-epp-tsd",
@@ -677,15 +903,45 @@
   },
   {
    "sourceKey": "tanning-consultant-interview",
+   "path": ".name",
+   "from": "Tanning Consultant Interview Form",
+   "to": "Team Member Interview Form"
+  },
+  {
+   "sourceKey": "tanning-consultant-interview",
+   "path": ".shortName",
+   "from": "TC Interview",
+   "to": "TM Interview"
+  },
+  {
+   "sourceKey": "tanning-consultant-interview",
    "path": ".description",
    "from": "The in-salon interview for a Tanning Consultant. Twelve questions through service, sales, accountability, the core values and the essential job functions.",
-   "to": "The in-store interview for a Tanning Consultant. Twelve questions through service, sales, accountability, the core values and the essential job functions."
+   "to": "The in-store interview for a Team Member. Twelve questions through service, sales, accountability, the core values and the essential job functions."
+  },
+  {
+   "sourceKey": "tanning-consultant-interview",
+   "path": ".revisionNote",
+   "from": "Published from the 03. Tanning Consultant Interview Form source document.",
+   "to": "Buff City Soap's Team Member Interview Form, restored from the last published version (v4) with its new title."
+  },
+  {
+   "sourceKey": "tanning-consultant-interview",
+   "path": ".bundledPdfName",
+   "from": "Tanning Consultant Interview Form.pdf",
+   "to": "Team Member Interview Form.pdf"
   },
   {
    "sourceKey": "tanning-consultant-interview",
    "path": ".document.blocks[0].brand",
    "from": "SUN TAN CITY",
    "to": "BUFF CITY SOAP"
+  },
+  {
+   "sourceKey": "tanning-consultant-interview",
+   "path": ".document.blocks[0].title",
+   "from": "Tanning Consultant Interview Form",
+   "to": "Team Member Interview Form"
   },
   {
    "sourceKey": "tanning-consultant-interview",
@@ -716,6 +972,12 @@
    "path": ".document.blocks[17].text",
    "from": "6. This role includes recommending products and services to clients. How comfortable are you with sales, and what’s your approach?",
    "to": "6. This role includes recommending products and services to guests. How comfortable are you with sales, and what’s your approach?"
+  },
+  {
+   "sourceKey": "tanning-consultant-interview",
+   "path": ".document.blocks[21].text",
+   "from": "8. Our company has five core values. Id like to hear about a time in your past experiences--work, school, or personal where youve shown one of these in action.",
+   "to": "8. Our company has five core values. I’d like to hear about a time in your past experiences--work, school, or personal where you’ve shown one of these in action."
   },
   {
    "sourceKey": "tanning-consultant-interview",
@@ -781,7 +1043,13 @@
    "sourceKey": "management-interview-round-1",
    "path": ".document.blocks[40].text",
    "from": "A client approaches the counter upset because the tanning bed they reserved is unavailable due to a mechanical issue. They are raising their voice and demanding a refund, while other clients are in the salon. Show how you would handle the client in the moment and explain the steps you would take afterward to address the root cause.",
-   "to": "A client approaches the counter upset because the tanning bed they reserved is unavailable due to a mechanical issue. They are raising their voice and demanding a refund, while other clients are in the store. Show how you would handle the client in the moment and explain the steps you would take afterward to address the root cause."
+   "to": "A guest approaches the counter upset because the product they came in for is out of stock. They are raising their voice and demanding a refund, while other guests are in the store. Show how you would handle the guest in the moment and explain the steps you would take afterward to address the root cause."
+  },
+  {
+   "sourceKey": "management-interview-round-1",
+   "path": ".document.blocks[49].text",
+   "from": "4. Core Values Speech: While reviewing the Core Values Speech with the candidate, ask for examples (personally or professionally) that they have demonstrated each of the 4 Core Values.",
+   "to": "4. Core Values Speech: While reviewing the Core Values Speech with the candidate, ask for examples (personally or professionally) that they have demonstrated each of our Core Values."
   },
   {
    "sourceKey": "management-interview-round-1",
@@ -835,7 +1103,7 @@
    "sourceKey": "management-interview-round-2",
    "path": ".document.blocks[19].text",
    "from": "If you were given direction as a Salon Director to reduce expenses, what would be the first three areas you would focus on, and why?",
-   "to": "If you were given direction as a Store Director to reduce expenses, what would be the first three areas you would focus on, and why?"
+   "to": "If you were given direction as a General Manager to reduce expenses, what would be the first three areas you would focus on, and why?"
   },
   {
    "sourceKey": "management-interview-round-2",
@@ -845,9 +1113,15 @@
   },
   {
    "sourceKey": "management-interview-round-2",
+   "path": ".document.blocks[26].text",
+   "from": "Scenario 2: Customer visits have dropped 20% over the past month and lotions and memberships sales are at their lowest in six months. One long-time team member is resistant to promoting add-ons, saying, “Customers don’t want to be pushed.” What are your next steps?",
+   "to": "Scenario 2: Guest visits have dropped 20% over the past month and add-on product sales and Buff Rewards sign-ups are at their lowest in six months. One long-time team member is resistant to recommending related products, saying, “Guests don’t want to be pushed.” What are your next steps?"
+  },
+  {
+   "sourceKey": "management-interview-round-2",
    "path": ".document.blocks[29].text",
    "from": "How would you create a 30–60–90 day training plan for a new Assistant Salon Director or Tanning Consultant?",
-   "to": "How would you create a 30–60–90 day training plan for a new Assistant Store Director or Tanning Consultant?"
+   "to": "How would you create a 30–60–90 day training plan for a new Assistant General Manager or Team Member?"
   }
  ]
 }

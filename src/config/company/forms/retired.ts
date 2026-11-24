@@ -14,4 +14,8 @@ import { EXAMPLE_CHECK_IN_KEY } from "./example-check-in";
  * passed QA (`src/test/qa/forms-migration-qa.test.ts`). Switched off, never
  * deleted: a check-in already filed still opens and prints.
  */
+/*
+ * The interview once seeded as the reference platform's consultant interview ("tanning-consultant-interview") is back
+ * as Buff City Soap's Team Member Interview Form (Pau, 23 Nov 2026): no longer retired. Its key stays.
+ */
 export const RETIRED_TEMPLATE_KEYS: readonly string[] = [EXAMPLE_CHECK_IN_KEY];

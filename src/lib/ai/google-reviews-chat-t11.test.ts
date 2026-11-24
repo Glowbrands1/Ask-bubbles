@@ -128,6 +128,9 @@ vi.mock("@/lib/google-reviews/views", async (importOriginal) => ({
       lastSyncAt: new Date(Date.now() - (state.syncedHoursAgo + index) * HOUR).toISOString(),
       lastSyncStatus: "complete",
     })),
+  // The weekly section's reads (18 Nov 2026), stubbed so this suite never reaches a database; nothing posted.
+  readPeriodTrend: async () => [],
+  readReviewPage: async () => ({ total: 0, rows: [], page: 1, pageSize: 20 }),
 }));
 
 vi.mock("./form-proposal", async (importOriginal) => ({

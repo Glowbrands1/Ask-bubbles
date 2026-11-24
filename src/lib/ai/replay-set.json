@@ -103,7 +103,7 @@
       "criteria": [
         "The employee is sadie hoffart. Warning is verbal, payroll is no, and the form date is 2026-10-22.",
         "The role is not Store Director. The store is not workplace policy. 45 minutes stays on the card.",
-        "The store is blank: no location id, Empire is not invented, and the reply does not ask which store.",
+        "The store is the Sioux Falls W 41st St store (loc-225): changed on purpose, Pau confirmed 22 Nov 2026 that \"Empire, SD\" is that store (a reviewed nickname); no store is invented and the reply does not ask which store.",
         "Turn 2 prior coaching matches 2025-11-01, 11/01/2025, or 11-1-25.",
         "From the turn that names Animals in the Workplace, the card cites that heading and printed page 30. Visitors is not required.",
         "No blocking question and no leaked internal text.",
@@ -121,7 +121,7 @@
       "warningLevel": "verbal",
       "payrollDeduct": "no",
       "formDate": "2026-10-22",
-      "store": { "kind": "blank" },
+      "store": { "kind": "match", "pattern": "41st|loc-225" },
       "policy": { "fromTurn": 4, "heading": "Animals in the Workplace", "page": 30 },
       "priorOnTurn": { "turn": 2, "pattern": "\\b(?:11[-/]0?1[-/](?:25|2025)|2025-11-01|november 1)\\b" },
       "roleNot": "store director",

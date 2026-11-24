@@ -10,9 +10,14 @@ import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
  * ============================================================================
  *
  * "Team Member Check-In (Example)" was this deployment's only template before
- * the migrated HR library. With all seventeen forms through QA it is retired:
+ * the migrated HR library. With all the migrated forms through QA it is retired:
  * the next library install sets it inactive. Its template row, its versions
  * and every check-in already filed stay exactly as they are.
+ *
+ * The Tanning Consultant Interview Form joined it on 21 Nov 2026 (the sibling
+ * company's role, not a Buff City Soap form; Pau, via QA): its seed was removed
+ * from the hiring library and its key retired, so a row already installed is
+ * switched off the same way and never deleted.
  */
 
 const store: FakeStore = {
@@ -77,6 +82,7 @@ beforeEach(() => {
 });
 
 describe("retiring the placeholder", () => {
+  // One key again (Pau, 23 Nov 2026): the consultant interview retired on 21 Nov is back as the Team Member Interview Form.
   it("is the one retired key", () => {
     expect(RETIRED_TEMPLATE_KEYS).toEqual([EXAMPLE_CHECK_IN_KEY]);
   });
@@ -129,6 +135,93 @@ describe("retiring the placeholder", () => {
   it("a fresh database never installs it at all", async () => {
     await ensureTemplateLibrary("system");
     expect(await getTemplateByKey(EXAMPLE_CHECK_IN_KEY)).toBeNull();
+    // Seventeen again (Pau, 23 Nov: BCS terms in the forms): the consultant interview is back as the Team Member Interview Form.
     expect(store.form_templates).toHaveLength(17);
+  });
+});
+
+/* ------------------------------------------- the Tanning Consultant Interview --- */
+
+const TCI_KEY = "tanning-consultant-interview";
+
+/** The database as production has it: the interview installed and published, with one form filed against it. */
+function withTanningConsultantInterviewInstalled() {
+  store.form_templates!.push({
+    id: "tpl-tci",
+    key: TCI_KEY,
+    name: "Tanning Consultant Interview Form",
+    short_name: "Tanning Consultant Interview",
+    description: "Interview form.",
+    category: "hiring",
+    layout_family: "interview",
+    required_permission: "forms.create",
+    display_order: 40,
+    active: true,
+  });
+  store.form_template_versions.push({
+    id: "ver-tci-1",
+    template_id: "tpl-tci",
+    version: 1,
+    status: "published",
+    document: { paper: "letter", blocks: [{ kind: "letterhead", brand: "BUFF CITY SOAP", title: "Tanning Consultant Interview Form" }] },
+    variants: [],
+    seed_revision: 1,
+  });
+  store.form_template_current!.push({ template_id: "tpl-tci", version_id: "ver-tci-1" });
+  store.form_instances.push({
+    id: "tci-1",
+    template_id: "tpl-tci",
+    template_version_id: "ver-tci-1",
+    variant_key: null,
+    employee_name: "Jordan Testperson",
+    status: "finalized",
+    source: "manual",
+    created_by: "manager-1",
+    form_date: "2026-10-30",
+    template_key: TCI_KEY,
+    template_name: "Tanning Consultant Interview Form",
+    layout_family: "interview",
+    template_version: 1,
+  });
+}
+
+/*
+ * CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the interview retired on 21 Nov 2026 is back as Buff
+ * City Soap's Team Member Interview Form, under the same key. An installed row is kept and gets the new title as a new
+ * published version; the old version and the form filed against it stay exactly as they were.
+ */
+describe("the Team Member Interview Form, under the key retired on 21 Nov 2026 (Pau, 23 Nov 2026)", () => {
+  it("is in the code library again, under its Buff City Soap title, and not retired", async () => {
+    const { TEMPLATE_SEEDS } = await import("./library");
+    expect(TEMPLATE_SEEDS.find((seed) => seed.key === TCI_KEY)?.name).toBe("Team Member Interview Form");
+    expect(RETIRED_TEMPLATE_KEYS).not.toContain(TCI_KEY);
+  });
+
+  it("an installed row is kept, and the next install publishes the new title as a new version, deleting nothing", async () => {
+    withTanningConsultantInterviewInstalled();
+    const filed = JSON.stringify(store.form_instances);
+    const result = await ensureTemplateLibrary("system");
+    expect(result.retired ?? []).toEqual([]);
+    expect(store.form_templates!.filter((row) => row.key === TCI_KEY)).toHaveLength(1);
+    const template = await getTemplateByKey(TCI_KEY);
+    expect(template?.active).toBe(true);
+    expect(template?.name).toBe("Team Member Interview Form");
+    const versions = store.form_template_versions.filter((row) => row.template_id === "tpl-tci");
+    expect(versions.map((row) => row.id)).toContain("ver-tci-1");
+    expect(versions.length).toBeGreaterThan(1);
+    expect(JSON.stringify(store.form_instances)).toBe(filed);
+    const loaded = await loadInstance("tci-1");
+    expect(loaded?.version.id).toBe("ver-tci-1");
+  });
+
+  it("can be chosen for a new form again", async () => {
+    withTanningConsultantInterviewInstalled();
+    await ensureTemplateLibrary("system");
+    expect((await listTemplateSummaries()).map((entry) => entry.key)).toContain(TCI_KEY);
+  });
+
+  it("a fresh database installs it", async () => {
+    await ensureTemplateLibrary("system");
+    expect((await getTemplateByKey(TCI_KEY))?.name).toBe("Team Member Interview Form");
   });
 });

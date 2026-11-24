@@ -56,6 +56,7 @@ process.env.NEXT_PUBLIC_DEMO_MODE = "false";
 const { ensureTemplateLibrary } = await import("@/lib/forms/repository");
 const { TEMPLATE_SEEDS, defaultVariantKey } = await import("@/lib/forms/library");
 const { HIDDEN_TEMPLATE_KEYS } = await import("@/config/company/forms/hidden");
+const { RETIRED_TEMPLATE_KEYS } = await import("@/config/company/forms/retired");
 const { createInstance } = await import("@/lib/forms/instances");
 const { fieldsForVariant, parseFormDocument } = await import("@/lib/forms/document");
 const instancesRoute = await import("./instances/route");
@@ -117,6 +118,10 @@ describe("finalize, revise with a reason, edit and finalize, for every template"
     const keys = TEMPLATE_SEEDS.map((seed) => seed.key);
     expect(HIDDEN_TEMPLATE_KEYS.length).toBeGreaterThan(0);
     for (const hidden of HIDDEN_TEMPLATE_KEYS) expect(keys).toContain(hidden);
+    // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the key is back as the Team Member Interview Form, neither hidden nor
+    // retired, so it has a seed to walk like any other.
+    expect(keys).toContain("tanning-consultant-interview");
+    expect(RETIRED_TEMPLATE_KEYS).not.toContain("tanning-consultant-interview");
   });
 
   it.each(TEMPLATE_SEEDS.map((seed) => seed.key))("%s", async (templateKey) => {

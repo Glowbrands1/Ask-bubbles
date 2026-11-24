@@ -251,7 +251,8 @@ describe("'Employee Performance Plan' plus a role the manager already gave", () 
     const proposals = await load(LIBRARY());
     const response = await proposals.proposeFormForTurn(
       turn("create an EPP", [
-        managerTurn("m1", "Jessica is an SDIT and Marco is a TSD at the same salon."),
+        // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): TSD is no longer a role in this app; the second role is a GM.
+        managerTurn("m1", "Jessica is an SDIT and Marco is a GM at the same store."),
       ]),
     );
 

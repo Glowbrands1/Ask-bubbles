@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CHAT_QUALITY_FLAG_NAMES } from "@/lib/config/chat-quality-flags";
+import { liveRecording, loopStandIn } from "./loop-stand-in";
 import { appendFileSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import PRODUCTION_FLAGS from "@/config/production-flags.json";
@@ -37,6 +38,7 @@ import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
  */
 
 const store: FakeStore = {
+  forms_all_store_access: [],
   form_instances: [],
   form_instance_values: [],
   form_instance_events: [],
@@ -49,6 +51,18 @@ const store: FakeStore = {
   chat_traces: [],
   chat_form_state: [],
   chat_form_incidents: [],
+  // Port from Ask Sunny (board f066, 20 Nov 2026): the deletion record, written by the fake as the BEFORE DELETE trigger writes it.
+  form_instance_deletions: [],
+  // Port from Ask Sunny (23 Nov 2026): AI Training -> Assignments, the AI assignment tracker read_ai_assignments reads.
+  ai_assignment_people: [],
+  ai_assignment_marks: [],
+  // HR approval (23 Nov 2026, migration 20261123002000): the approver list, the approval history, the 6 AM reminder's
+  // record, the bell, and the user directory the bell and the queue read names and emails from.
+  form_hr_approvers: [],
+  form_hr_approval_events: [],
+  form_hr_reminder_sends: [],
+  app_notifications: [],
+  app_users: [],
 } as unknown as FakeStore;
 
 // Production builds with it (NEXT_PUBLIC_, read once when the role table loads): an Assistant Manager may create forms.
@@ -88,6 +102,8 @@ const state = vi.hoisted(() => ({
   /** What the slot model reads on the next turns (`slotsRead`), as a production trace shows it. */
   /** Chunks the pinned manual also has, when a case sets them (`manualAlsoHas`); none by default. */
   manualExtra: [] as Record<string, unknown>[],
+  /** The pinned manual's rows in place of the pack's CA sections, when a case sets them (`manualIs`); null by default. */
+  manualBase: null as null | readonly Record<string, unknown>[],
   slotsRead: {} as Record<string, unknown>,
   slotReading: "none" as "none" | "ca" | "copy",
   remapObservation: null as string | null,
@@ -101,7 +117,25 @@ const state = vi.hoisted(() => ({
   chatModelCalls: 0,
   /** The FORMS ON FILE block the answering model was last given (`lastFormRecords`). */
   lastFormRecords: "",
+  /** The REPORT DATA and the system prompt the answering model was last given (`lastReportData`, `lastSystem`). */
+  lastReportData: "",
+  lastSystem: "",
   directory: [] as unknown[],
+}));
+
+/*
+ * AGENT_LOOP_ENABLED (the loop port from the sibling app, QA 21 Nov 2026): the case's stand-in model (`t.loopModel`), the
+ * roster fault (`t.rosterFails`), and the two switches as they were before the case turned the loop on for its signed-in
+ * manager (restored after every case). This app's production has AGENT_LOOP_ENABLED on (`production-flags.json`, since
+ * 21 Nov 2026) with AGENT_LOOP_USERS "*" (every signed-in manager, since 23 Nov 2026); the pack leaves AGENT_LOOP_USERS unset, so a case that never
+ * calls `t.loopModel` never enters the loop and runs exactly as before (`nov21-agent-loop-switch-off-cases.ts`).
+ */
+const loop = vi.hoisted(() => ({
+  standIn: null as import("./loop-stand-in").LoopStandIn | null,
+  rosterFails: false,
+  /** Woven's own names for registered stores (`t.wovenStoreNames`), as `woven_location_map` holds them; none by default. */
+  wovenAliases: [] as { storeId: string; kind: "woven_name" | "woven_number"; text: string }[],
+  env: null as null | { enabled: string | undefined; users: string | undefined },
 }));
 
 /*
@@ -243,7 +277,8 @@ vi.mock("@/lib/auth/server", async () => {
       }
       return {
         identity: {
-          subject: "qa-manager",
+          // `t.as(role, scope, subject)` (port from the sibling app, HR approval): a case with two people; else the QA manager.
+          subject: (state as { subject?: string }).subject ?? "qa-manager",
           email: "qa-manager@example.test",
           displayName: "QA Manager",
           role,
@@ -291,9 +326,11 @@ vi.mock("@/lib/ai/call-claude", () => ({
       usage: { inputTokens: 10, outputTokens: 5, cacheReadTokens: 0, cacheWriteTokens: 0 },
     };
   },
-  callClaude: async (input?: { formRecords?: string | null; formEditTool?: { data: string; onToolUse: (call: unknown) => void } | null }) => {
+  callClaude: async (input?: { system?: string; reportData?: string | null; formRecords?: string | null; formEditTool?: { data: string; onToolUse: (call: unknown) => void } | null }) => {
     state.chatModelCalls += 1;
     state.lastFormRecords = String(input?.formRecords ?? "");
+    state.lastReportData = String(input?.reportData ?? "");
+    state.lastSystem = String(input?.system ?? "");
     if (input?.formEditTool) {
       editTool.offered += 1;
       editTool.lastData = input.formEditTool.data;
@@ -447,6 +484,15 @@ vi.mock("@/lib/knowledge/providers/supabase", () => ({
         },
       };
     }
+    /*
+     * The loop's manual read asks for the manual's version first (`manualFor` in agent-loop/tools.ts). Ported from the
+     * sibling app's pack (QA's live re-test, 21 Nov 2026, items 6, 18, 22 and 25): without it the read threw and every loop case ran with
+     * "The JBA Policy Manual could not be read", so no loop card here ever cited a heading. Keyed on the case's own extra
+     * chunks, so a case's `manualAlsoHas` is never served another case's kept read.
+     */
+    async officialPolicyManualVersion() {
+      return { documentId: "doc-manual", version: `v-${JSON.stringify(state.manualExtra).length}` };
+    }
     async fetchOfficialPolicyManual() {
       return {
         ok: true,
@@ -454,7 +500,7 @@ vi.mock("@/lib/knowledge/providers/supabase", () => ({
         documentTitle: "2025 JBA Policy Manual - Edited 5-2025",
         documentCategory: "policies_compliance",
         matchedBy: "tag",
-        chunks: [...JBA_MANUAL_CA_CHUNKS, ...state.manualExtra],
+        chunks: [...(state.manualBase ?? JBA_MANUAL_CA_CHUNKS), ...state.manualExtra],
       };
     }
   },
@@ -476,6 +522,65 @@ vi.mock("@/lib/knowledge", () => ({
 }));
 
 vi.mock("@/lib/reporting/read/report-briefing", () => ({ loadReportBriefing: async () => null }));
+
+/*
+ * THE GOOGLE REVIEWS PAGE'S READS (GOOGLE_REVIEWS_IN_CHAT_ENABLED, QA 18 Nov 2026): fixed figures for the week of Mon
+ * 16 Nov 2026, every store, so a Google review question reads what the page would and never a database. Every store:
+ * 2 reviews this week (both qualifying, 5.0), 4 last week (3 qualifying, 4.5), 6 qualifying month to date of 10.
+ */
+vi.mock("@/lib/google-reviews/views", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/google-reviews/views")>();
+  const { goalContext } = await import("@/lib/google-reviews/goals");
+  const { APPROVED_GOOGLE_STORES } = await import("@/config/company/google-reviews");
+  return {
+    ...actual,
+    readGoalData: async () => ({
+      context: goalContext("2026-11-18"),
+      rows: APPROVED_GOOGLE_STORES.map((entry) => ({
+        storeCode: entry.code,
+        displayName: entry.displayName,
+        monthlyTarget: 10,
+        baselineReviewId: `baseline-${entry.code}`,
+        baselineReviewTime: "2026-09-01T05:00:00.000Z",
+        countFrom: null,
+        qualifyingThisWeek: 2,
+        qualifyingLastWeek: 3,
+        qualifyingMonthToDate: 6,
+        historical: 40,
+      })),
+    }),
+    readStoreSummaries: async () =>
+      APPROVED_GOOGLE_STORES.map((entry) => ({ storeCode: entry.code, reviewCount: 300, averageRating: 4.6, lastSyncAt: new Date().toISOString(), lastSyncStatus: "complete" })),
+    readPeriodTrend: async () => [
+      { start: "2026-11-09", reviewCount: 4, qualifyingCount: 3, averageRating: 4.5 },
+      { start: "2026-11-16", reviewCount: 2, qualifyingCount: 2, averageRating: 5 },
+    ],
+    readReviewPage: async () => ({ total: 0, rows: [], page: 1, pageSize: 20 }),
+    /* L3, L6 and YTD (19 Nov 2026): every store counted 2 qualifying reviews in each full month this year, 1 so far in Nov. */
+    readMonthlyProgress: async () => {
+      const { monthlyProgress, progressMonths } = await import("@/lib/google-reviews/monthly-progress");
+      const today = "2026-11-18";
+      return monthlyProgress(
+        progressMonths(today).map((month) => ({
+          month,
+          rows: APPROVED_GOOGLE_STORES.map((entry) => ({
+            storeCode: entry.code,
+            displayName: entry.displayName,
+            monthlyTarget: 10,
+            baselineReviewId: `baseline-${entry.code}`,
+            baselineReviewTime: "2025-12-01T06:00:00.000Z",
+            countFrom: null,
+            qualifyingThisWeek: 0,
+            qualifyingLastWeek: 0,
+            qualifyingMonthToDate: month === "2026-11" ? 1 : 2,
+            historical: 0,
+          })),
+        })),
+        today,
+      );
+    },
+  };
+});
 vi.mock("@/lib/reporting/read/employee-facts", () => ({
   loadEmployeeFacts: async () => null,
   NO_EMPLOYEE_DATA_REASON: "no dataset",
@@ -489,10 +594,38 @@ vi.mock("@/lib/forms/employee-roster", async (importOriginal) => {
     ...actual,
     readDirectoryFacts: async (scope: AccessScope | null) =>
       // No position on record unless the case gives one: the title is the manager's or asked.
-      actual.scopeRoster(state.directory as never, scope).map((person) => ({ ...person, title: (person as { positionName?: string | null }).positionName ?? null, primaryLocationName: "Kearney, NE" })),
+      actual.scopeRoster(state.directory as never, scope).map((person) => ({
+        ...person,
+        title: (person as { positionName?: string | null }).positionName ?? null,
+        primaryLocationName: "Kearney, NE",
+        // Woven's primary store, when the case gives one (item 10, QA's live re-test 21 Nov 2026: offered before any other store).
+        ...((state.directory as { id: string; primaryLocationId?: string }[]).find((row) => row.id === person.id)?.primaryLocationId
+          ? { primaryLocationId: (state.directory as { id: string; primaryLocationId?: string }[]).find((row) => row.id === person.id)!.primaryLocationId }
+          : {}),
+      })),
     // The turn's roster limit (`withRosterLimit`), as production's loadScopedRoster applies it.
-    loadScopedRoster: async (scope: AccessScope | null) => actual.withinRosterLimit(actual.scopeRoster(state.directory as never, scope)),
+    // AGENT_LOOP_ENABLED: find_staff reads the roster here too (`appConfig().roster.readScoped`); `t.rosterFails()` makes it fail, as a directory outage would.
+    loadScopedRoster: async (scope: AccessScope | null) => {
+      if (loop.rosterFails) throw new Error("The employee directory could not be read.");
+      return actual.withinRosterLimit(actual.scopeRoster(state.directory as never, scope));
+    },
     loadScopedRosterResult: async (scope: AccessScope | null) => rosterResultFor(actual.scopeRoster, state.directory as never, scope),
+  };
+});
+
+/*
+ * WOVEN'S OWN STORE NAMES (QA's Bubbles round 2, 22 Nov 2026, U54): production reads `woven_location_map` into the store
+ * index (`loadStoreIndex`); the pack's fake database has no such table, so the case's names (`t.wovenStoreNames`) are
+ * the Woven aliases here, none by default (the index is then the roster's, as before).
+ */
+vi.mock("@/lib/stores/woven-aliases", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/stores/woven-aliases")>();
+  const { buildStoreIndex } = await import("@/lib/stores/resolver");
+  const { COMPANY_LOCATION_ABBREVIATIONS, COMPANY_LOCATION_NICKNAMES } = await import("@/config/company/locations");
+  return {
+    ...actual,
+    loadWovenStoreAliases: async () => [...loop.wovenAliases],
+    loadStoreIndex: async () => buildStoreIndex({ nicknames: COMPANY_LOCATION_NICKNAMES, abbreviations: COMPANY_LOCATION_ABBREVIATIONS, extraAliases: [...loop.wovenAliases] }),
   };
 });
 
@@ -503,14 +636,29 @@ vi.mock("@/lib/forms/prior-forms", async (importOriginal) => ({
 
 process.env.NEXT_PUBLIC_DEMO_MODE = "false";
 
-vi.setConfig({ hookTimeout: 30_000, testTimeout: 30_000 });
+// AGENT_LOOP_LIVE (dev, opt-in; ported from the sibling app): a live model turn takes longer than the stand-ins.
+vi.setConfig({ hookTimeout: 30_000, testTimeout: process.env.AGENT_LOOP_LIVE === "1" ? 600_000 : 30_000 });
 
 const { ensureTemplateLibrary } = await import("@/lib/forms/repository");
-const { stillAsks } = await import("@/lib/forms/reply-guards");
+const { stillNeedWithoutQuestion } = await import("./still-need");
 const { createInlineForm } = await import("@/features/chat/create-inline-form");
+const { foldName } = await import("@/lib/forms/fold-name");
 const chatRoute = await import("../route");
 const instancesRoute = await import("../../forms/instances/route");
 const draftRoute = await import("../../forms/instances/[id]/draft/route");
+/* AGENT_LOOP_ENABLED (ported from the sibling app's pack, QA 21 Nov 2026): the loop's model seam, its directory seam and its manual cache. */
+const agentLoopRun = await import("@/lib/ai/agent-loop/run");
+const { __setAgentLoopModelForTests } = agentLoopRun;
+/*
+ * AGENT_LOOP_LIVE (dev, opt-in; never in CI; ported from the sibling app): the real model for the loop's cases, the
+ * same model the loop runs on in production (`CLAUDE_MODEL`, ANTHROPIC_MODEL overrides). Unset, the stand-ins.
+ */
+const liveModel = process.env.AGENT_LOOP_LIVE === "1"
+  ? (await import("@ai-sdk/anthropic")).createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? "" })((await import("@/lib/config/models")).CLAUDE_MODEL)
+  : null;
+const { forgetAgentLoopManualForTests, __setAgentLoopDirectoryForTests } = await import("@/lib/ai/agent-loop/tools");
+/** The signed-in manager every case runs as (`authorizeRequest` above): the one email a loop case lists. */
+const ACTOR_EMAIL = "qa-manager@example.test";
 
 async function call<T>(url: string, init?: RequestInit): Promise<T> {
   const request = new Request(`https://app.test${url}`, init);
@@ -568,7 +716,13 @@ class Thread {
   private sequence = 0;
   private offeredCopy: OfferedCopy | undefined;
   // A well-formed client id, so the route keeps the intake state between turns (`isClientConversationId`).
-  private readonly conversationId = createId("conv");
+  readonly conversationId: string;
+  private readonly idPrefix: string;
+
+  constructor(options: { readonly conversationId?: string; readonly idPrefix?: string } = {}) {
+    this.conversationId = options.conversationId ?? createId("conv");
+    this.idPrefix = options.idPrefix ?? "m";
+  }
 
   async say(question: string, reading: Record<string, unknown> = {}): Promise<Answer> {
     state.reading = reading;
@@ -580,7 +734,7 @@ class Thread {
       ...(formProposal ? { formProposal } : {}),
       ...(formReply ? { formReply } : {}),
     }));
-    const id = `m${(this.sequence += 1)}`;
+    const id = `${this.idPrefix}${(this.sequence += 1)}`;
     const pendingCopy = offeredCopyForTurn(this.offeredCopy, this.messages);
     this.offeredCopy = undefined;
     const response = await chatRoute.POST(
@@ -609,10 +763,8 @@ class Thread {
     const streamed = response.headers.get(STREAM_HEADER) === "1" ? unwrapStreamed(await response.text()) : null;
     const payload = (streamed ? streamed.body : await response.json()) as Answer & { error?: string };
     expect(streamed?.status ?? response.status, JSON.stringify(payload)).toBe(200);
-    // EVERY REPLY (QA, 3 Nov 2026): "I still need …" is never said unless the reply asks who, which location or which date.
-    if (/^I still need\b/m.test(payload.content ?? "")) {
-      expect(stillAsks(payload.content), `"I still need" without a question:\n${payload.content}`).not.toBeNull();
-    }
+    // EVERY REPLY (QA, 3 Nov 2026): "I still need …" is never said unless the reply asks something (`still-need.ts`).
+    expect(stillNeedWithoutQuestion(payload.content ?? ""), `"I still need" without a question:\n${payload.content}`).toBe(false);
     this.messages.push(
       { id, role: "user", content: question, createdAt: `${TODAY}T12:28:00Z` } as ChatMessage,
       {
@@ -627,23 +779,35 @@ class Thread {
     if (payload.pendingCopy) this.offeredCopy = { fromInstanceId: payload.pendingCopy.fromInstanceId, answer: payload.content };
     if (payload.formProposal) this.proposal = payload.formProposal;
     if (payload.formOpened) this.instanceId = toUuid(payload.formOpened.instanceId);
-    record.turns.push({ question, reply: payload.content ?? "", updated: payload.formUpdate?.updated ?? null });
+    record.turns.push({
+      question,
+      reply: payload.content ?? "",
+      updated: payload.formUpdate?.updated ?? null,
+      // Live loop runs (AGENT_LOOP_LIVE_ALL) or REPLAY_RECORD_CARDS=1: the card, for the outcome report. Absent otherwise, so other records are unchanged.
+      ...((process.env.AGENT_LOOP_LIVE_ALL === "1" || process.env.REPLAY_RECORD_CARDS === "1") && payload.formProposal
+        ? { card: { template: payload.formProposal.templateKey, employee: payload.formProposal.employeeName ?? null, level: payload.formProposal.warningLevel ?? null, payroll: (payload.formProposal as { payrollDeduct?: string | null }).payrollDeduct ?? null, issue: payload.formProposal.issue ?? null } }
+        : {}),
+    });
     return payload;
   }
 
   /** The card's Create, as the browser does it. */
-  async create(): Promise<string> {
+  /**
+   * `store`: the store the manager picks on the card before Create, as the browser's store picker does (board f140: Create
+   * on a card that still asks which store saves nothing, so a case that means to save one picks it).
+   */
+  async create(store?: string): Promise<string> {
     expect(this.proposal, "no card to create from").not.toBeNull();
-    const result = await createInlineForm({ proposal: this.proposal!, messages: this.messages, call, onCreated: () => {} });
+    const result = await createInlineForm({ proposal: store ? { ...this.proposal!, locationId: store } : this.proposal!, messages: this.messages, call, onCreated: () => {} });
     this.instanceId = toUuid(result.reference.instanceId);
     return this.instanceId;
   }
 
-  /** Create from the latest card for this person, as pressing Create on that card does (an earlier card still on screen). */
-  async createCard(employeeName: string): Promise<string> {
+  /** Create from the latest card for this person, as pressing Create on that card does (an earlier card still on screen). `store`: the store picked on that card first, as `create` does. */
+  async createCard(employeeName: string, store?: string): Promise<string> {
     const message = [...this.messages].reverse().find((entry) => entry.formProposal?.employeeName === employeeName);
     expect(message?.formProposal, `no card for ${employeeName} to create from`).toBeTruthy();
-    const result = await createInlineForm({ proposal: message!.formProposal!, messages: this.messages, call, onCreated: () => {} });
+    const result = await createInlineForm({ proposal: store ? { ...message!.formProposal!, locationId: store } : message!.formProposal!, messages: this.messages, call, onCreated: () => {} });
     this.instanceId = toUuid(result.reference.instanceId);
     return this.instanceId;
   }
@@ -664,6 +828,10 @@ function joinOverview() {
     if (!template && row.template_name) continue;
     Object.assign(row, { template_key: template?.key, template_name: template?.name, layout_family: template?.layout_family, template_version: version?.version });
   }
+  /* The overview's employee_name_folded, as migration 20261120002000 defines it (lower(unaccent(employee_name))). */
+  for (const row of store.form_instances ?? []) {
+    if (typeof row.employee_name === "string") Object.assign(row, { employee_name_folded: foldName(row.employee_name).toLowerCase() });
+  }
 }
 class JoiningRows extends Array<Record<string, unknown>> {
   override push(...rows: Record<string, unknown>[]) {
@@ -677,10 +845,13 @@ beforeEach(async () => {
   store.form_instances = new JoiningRows() as never;
   state.slotReading = "none";
   state.lastFormRecords = "";
+  state.lastReportData = "";
+  state.lastSystem = "";
   fullManual.document = null;
   state.remapObservation = null;
   state.slotsRead = {};
   state.manualExtra = [];
+  state.manualBase = null;
   state.knowledgeQueries = [];
   state.reading = {};
   state.draft = { values: {} };
@@ -733,7 +904,8 @@ const CLASSIFY_ON = (process.env.FLAG_CLASSIFY_ON ?? "").split(",").map((name) =
  * live failures with their targeted fixes off.
  */
 const CLASSIFY_OFF = (process.env.FLAG_CLASSIFY_OFF ?? "").split(",").map((name) => name.trim()).filter((name) => name !== "");
-const record: { turns: { question: string; reply: string; updated: string[] | null }[] } = { turns: [] };
+type RecordedCard = { template: string; employee: string | null; level: string | null; payroll: string | null; issue: string | null };
+const record: { turns: { question: string; reply: string; updated: string[] | null; card?: RecordedCard }[] } = { turns: [] };
 async function recorded(id: string, mode: string, run: () => Promise<void>) {
   record.turns = [];
   const at = performance.now();
@@ -745,7 +917,28 @@ async function recorded(id: string, mode: string, run: () => Promise<void>) {
     throw thrown;
   } finally {
     if (process.env.REPLAY_RECORD) {
-      appendFileSync(process.env.REPLAY_RECORD, `${JSON.stringify({ id, mode, ok: error === null, error, ms: Math.round(performance.now() - at), turns: record.turns })}\n`);
+      /* AGENT_LOOP_ENABLED: the loop's model calls and tokens, only on a run the loop answered (absent otherwise, so a loop-off record is as before). */
+      type TraceRow = { slots?: { agent_loop?: { model_calls?: number; model_steps?: Record<string, number>[] } } };
+      const traces = ((store as unknown as Record<string, unknown[] | undefined>).chat_traces ?? []) as TraceRow[];
+      const looped = traces
+        .map((row) => row.slots?.agent_loop)
+        .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+      const loopRecord = looped.length > 0
+        ? {
+            loop: {
+              turns: looped.length,
+              model_calls: looped.reduce((sum, entry) => sum + (entry.model_calls ?? 0), 0),
+              tokens: ["input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens"].map((key) =>
+                looped.reduce((sum, entry) => sum + (entry.model_steps ?? []).reduce((inner, step) => inner + (step[key] ?? 0), 0), 0),
+              ),
+              /* Live runs only (AGENT_LOOP_LIVE_ALL): the tool results the model saw, cut short, to read why a turn went as it did. */
+              ...(process.env.AGENT_LOOP_LIVE_ALL === "1" && loop.standIn
+                ? { tools: loop.standIn.views.map((view) => view.results.map((result) => `${result.tool}: ${JSON.stringify(result.output).slice(0, 400)}`)) }
+                : {}),
+            },
+          }
+        : {};
+      appendFileSync(process.env.REPLAY_RECORD, `${JSON.stringify({ id, mode, ok: error === null, error, ms: Math.round(performance.now() - at), turns: record.turns, ...loopRecord })}\n`);
     }
   }
 }
@@ -764,6 +957,23 @@ function production(extra: readonly string[] = []) {
     if (!saved.has(name)) saved.set(name, process.env[name]);
     delete process.env[name];
   }
+  /*
+   * AGENT_LOOP_LIVE_ALL (dev, opt-in; nothing changes when unset; ported from the sibling app): with AGENT_LOOP_LIVE=1,
+   * every case's turns go to the real model through the loop, the signed-in manager listed, so any case is a live
+   * loop-on run. This app's production has the loop on for one listed user only, so the run turns it on itself (as
+   * `t.loopModel` does); a case that sets its own stand-in replaces the recorder. Both are restored after the case.
+   */
+  if (process.env.AGENT_LOOP_LIVE_ALL === "1" && liveModel) {
+    const recorder = loopStandIn(() => {
+      throw new Error("live: the real model answers");
+    });
+    loop.standIn = recorder;
+    __setAgentLoopDirectoryForTests(async () => state.directory as never);
+    __setAgentLoopModelForTests(liveRecording(recorder, liveModel));
+    if (!loop.env) loop.env = { enabled: process.env.AGENT_LOOP_ENABLED, users: process.env.AGENT_LOOP_USERS };
+    process.env.AGENT_LOOP_ENABLED = "true";
+    process.env.AGENT_LOOP_USERS = ACTOR_EMAIL;
+  }
 }
 
 function setScope(scope: unknown) {
@@ -772,9 +982,27 @@ function setScope(scope: unknown) {
 function setRole(role: string | undefined) {
   (state as { role?: string }).role = role;
 }
+function setSubject(subject: string | undefined) {
+  (state as { subject?: string }).subject = subject;
+}
 afterEach(() => {
   setScope(undefined);
   setRole(undefined);
+  setSubject(undefined);
+  // The loop: off again, its switches as they were, its stand-in and seams cleared, its manual cache forgotten.
+  loop.standIn = null;
+  loop.rosterFails = false;
+  loop.wovenAliases = [];
+  __setAgentLoopModelForTests(null);
+  __setAgentLoopDirectoryForTests(null);
+  if (loop.env) {
+    for (const [name, value] of [["AGENT_LOOP_ENABLED", loop.env.enabled], ["AGENT_LOOP_USERS", loop.env.users]] as const) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+    loop.env = null;
+  }
+  forgetAgentLoopManualForTests();
   said.answer = null;
   editTool.input = null;
   editTool.offered = 0;
@@ -787,10 +1015,11 @@ afterEach(() => {
 
 function context(): ReplayContext {
   return {
-    thread: () => new Thread(),
-    as: (role, scope) => {
+    thread: (options) => new Thread(options),
+    as: (role, scope, subject) => {
       setRole(role);
       setScope(scope);
+      setSubject(subject);
     },
     directory: (rows) => {
       state.directory = rows as never;
@@ -804,6 +1033,9 @@ function context(): ReplayContext {
     },
     manualAlsoHas: (chunks) => {
       state.manualExtra = [...chunks];
+    },
+    manualIs: (chunks) => {
+      state.manualBase = [...chunks];
     },
     revisionWrites: (values, checked) => {
       state.revision = checked ? { values, checked } : { values };
@@ -847,6 +1079,8 @@ function context(): ReplayContext {
     calls: () => ({ chat: state.chatModelCalls, draft: state.draftCalls, revision: state.revisionCalls, tool: state.toolCalls, patch: patchScript.calls }),
     forms: () => store.form_instances as never,
     lastFormRecords: () => state.lastFormRecords,
+    lastReportData: () => state.lastReportData,
+    lastSystem: () => state.lastSystem,
     draftPrompts: () => [...draftAsked],
     revisionPrompts: () =>
       revisionAsked.map((asked) =>
@@ -867,6 +1101,20 @@ function context(): ReplayContext {
         else store.form_instance_values.push({ id: `typed-${key}`, instance_id: instanceId, field_key: key, value, checked: [], filled_by: "manager", provenance: {}, updated_at: new Date().toISOString() } as never);
       }
     },
+    templateIds: (key) => {
+      const template = (store.form_templates ?? []).find((entry) => entry.key === key);
+      if (!template) throw new Error(`no template ${key} in the store`);
+      const versions = store.form_template_versions.filter((entry) => entry.template_id === template.id).sort((a, b) => Number(b.version) - Number(a.version));
+      if (!versions[0]) throw new Error(`no version of ${key} in the store`);
+      return { template_id: String(template.id), template_version_id: String(versions[0].id) };
+    },
+    checkOnForm: (instanceId, checked) => {
+      for (const [key, options] of Object.entries(checked)) {
+        const row = store.form_instance_values.find((entry) => entry.instance_id === instanceId && entry.field_key === key);
+        if (row) Object.assign(row, { checked: [...options], filled_by: "manager" });
+        else store.form_instance_values.push({ id: `checked-${instanceId}-${key}`, instance_id: instanceId, field_key: key, value: null, checked: [...options], filled_by: "manager", provenance: {}, updated_at: new Date().toISOString() } as never);
+      }
+    },
     values: (instanceId) =>
       Object.fromEntries(store.form_instance_values.filter((row) => row.instance_id === instanceId).map((row) => [String(row.field_key), String(row.value ?? "")])),
     checked: (instanceId) =>
@@ -876,8 +1124,45 @@ function context(): ReplayContext {
           .map((row) => [String(row.field_key), (row.checked as unknown[]).map(String)]),
       ),
 
+    loopOn: () => process.env.AGENT_LOOP_ENABLED === "true",
+    /*
+     * The loop's model for this case (a stand-in, `loop-stand-in.ts`), and the loop turned on for this case's signed-in
+     * manager only: AGENT_LOOP_ENABLED on, AGENT_LOOP_USERS listing them. Unlike the sibling app, whose production runs
+     * the loop, this app's production has it off, so the case turns it on itself; both are restored after the case.
+     */
+    loopModel: (standIn, options) => {
+      loop.standIn = standIn;
+      // The loop's inactive_in_woven fact reads the whole directory (terminated people too) through its own seam.
+      __setAgentLoopDirectoryForTests(async () => state.directory as never);
+      // AGENT_LOOP_LIVE (dev, opt-in): the real model, recorded into the case's stand-in (`liveRecording`); a `scripted` case keeps its stand-in.
+      __setAgentLoopModelForTests(liveModel && !options?.scripted ? liveRecording(standIn, liveModel) : standIn.model);
+      if (!loop.env) loop.env = { enabled: process.env.AGENT_LOOP_ENABLED, users: process.env.AGENT_LOOP_USERS };
+      process.env.AGENT_LOOP_ENABLED = "true";
+      process.env.AGENT_LOOP_USERS = ACTOR_EMAIL;
+    },
+    rosterFails: () => {
+      loop.rosterFails = true;
+    },
+    formsAllStoreAccess: (mode = "all") => {
+      store.forms_all_store_access!.push({ app_user_id: "qa-manager", visibility_mode: mode, revoked_at: null });
+    },
+    wovenStoreNames: (names) => {
+      loop.wovenAliases = Object.entries(names).map(([storeId, text]) => ({ storeId, kind: "woven_name" as const, text }));
+    },
+    watchLoopEntries: () => {
+      const spy = vi.spyOn(agentLoopRun, "runAgentTurn");
+      return { entered: () => spy.mock.calls.length, stop: () => spy.mockRestore() };
+    },
     draftNotYetSaved: (instanceId) => {
       store.form_instance_values = store.form_instance_values.filter((row) => !(row.instance_id === instanceId && row.filled_by === "ai"));
+    },
+    // HR approval (port from the sibling app, 23 Nov 2026): a table's rows as they are now (objects shared, so a case can mark
+    // a form as sent to HR), and rows a case adds (the approver's `form_hr_approvers` row).
+    rows: (table) => [...(((store as unknown as Record<string, unknown[] | undefined>)[table] ?? []) as Record<string, unknown>[])],
+    addRows: (table, rows) => {
+      const tables = store as unknown as Record<string, Record<string, unknown>[] | undefined>;
+      if (!tables[table]) throw new Error(`replay pack: no table "${table}" in the case database`);
+      tables[table]!.push(...rows.map((row) => ({ ...row })));
     },
   };
 }
@@ -897,24 +1182,53 @@ function sourceText(dir: string): string {
   return out;
 }
 
+/*
+ * EVERY FLAG THIS APP READS IS IN THE FLAG FILE (QA's audit of Ask Bubbles, P3, 20 Nov 2026). The check above runs one
+ * way only, so 43 *_ENABLED flags the code reads were listed nowhere and the pack quietly ran them off, whatever
+ * production had. A flag read in production code (`envFlag("…")` or `process.env.…`; tests, replay cases and src/test
+ * are not production) must be in 'on', 'assumedOn', 'off' or 'unknown' ('unknown': never read from Vercel; QA records it).
+ */
+function productionFlagReads(dir: string, found = new Set<string>()): Set<string> {
+  for (const entry of readdirSync(dir)) {
+    const path = join(dir, entry);
+    if (statSync(path).isDirectory()) {
+      if (entry !== "replay-pack" && path !== join("src", "test")) productionFlagReads(path, found);
+    } else if (/\.tsx?$/.test(entry) && !/\.test\.tsx?$/.test(entry) && !entry.endsWith("-cases.ts")) {
+      const text = readFileSync(path, "utf8");
+      for (const match of text.matchAll(/envFlag\("([A-Z0-9_]+_ENABLED)"\)|process\.env\.([A-Z0-9_]+_ENABLED)\b|process\.env\["([A-Z0-9_]+_ENABLED)"\]/g)) {
+        found.add(match[1] ?? match[2] ?? match[3]);
+      }
+    }
+  }
+  return found;
+}
+
 describe("src/config/production-flags.json", () => {
+  const listed = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn, ...PRODUCTION_FLAGS.off, ...PRODUCTION_FLAGS.unknown];
+
   it("names only flags this app reads, each once", () => {
     const source = sourceText("src");
-    const names = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn, ...PRODUCTION_FLAGS.off];
-    expect(names.filter((name) => !source.includes(`"${name}"`) && !source.includes(`process.env.${name}`))).toEqual([]);
-    expect(names.filter((name, index) => names.indexOf(name) !== index)).toEqual([]);
+    expect(listed.filter((name) => !source.includes(`"${name}"`) && !source.includes(`process.env.${name}`))).toEqual([]);
+    expect(listed.filter((name, index) => listed.indexOf(name) !== index)).toEqual([]);
+  });
+
+  it("lists every *_ENABLED flag this app's code reads (on, assumedOn, off, or unknown until QA reads it)", () => {
+    const unlisted = [...productionFlagReads("src")].filter((name) => !listed.includes(name)).sort();
+    expect(unlisted, "add each to production-flags.json: its Vercel value in 'on' or 'off', or 'unknown' until read").toEqual([]);
   });
 });
 
 /*
- * REPLAY_PACK_HALF (CI only; QA, 9 Nov 2026): the flags-off parity run (`src/lib/ai/flags-off-parity.test.ts`) runs the
- * pack as two children, each with one half of the cases by id ("0": the first half, "1": the second), so neither child
- * passes its time budget as the pack grows. Unset, every case runs, as before.
+ * REPLAY_PACK_PART (CI only; QA, 9 Nov 2026, thirds since 21 Nov 2026): the flags-off parity run
+ * (`src/lib/ai/flags-off-parity.test.ts`) runs the pack as REPLAY_PACK_PARTS children, each with one part of the cases by
+ * id ("0" the first, "1" the next, …), so none passes its time budget as the pack grows. Two halves held until 21 Nov
+ * 2026, when the first half took 504 s of its 540 s on CI and the next cases pushed it over. Unset, every case runs.
  */
-const HALF = process.env.REPLAY_PACK_HALF;
+const PART = process.env.REPLAY_PACK_PART;
+const PARTS = Number(process.env.REPLAY_PACK_PARTS ?? "1");
 const BY_ID = [...CASES].sort((a, b) => a.id.localeCompare(b.id));
-const MIDDLE = Math.ceil(BY_ID.length / 2);
-const RUN = HALF === "0" ? BY_ID.slice(0, MIDDLE) : HALF === "1" ? BY_ID.slice(MIDDLE) : CASES;
+const PART_SIZE = Math.ceil(BY_ID.length / PARTS);
+const RUN = PART === undefined ? CASES : BY_ID.slice(Number(PART) * PART_SIZE, (Number(PART) + 1) * PART_SIZE);
 
 describe("the replay pack", () => {
   for (const replay of RUN) {

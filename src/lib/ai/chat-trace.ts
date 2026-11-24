@@ -41,7 +41,25 @@ export function openChatTrace(input: {
   };
 }
 
-export async function finishChatTrace<T>(draft: ChatTraceDraft, run: () => Promise<T>): Promise<T> {
+export async function finishChatTrace<T>(draft: ChatTraceDraft, run: () => Promise<T>, options: { readonly awaitWrite?: boolean } = {}): Promise<T> {
+  /*
+   * Ported from the sibling app for the agent loop (QA, 16 Nov 2026 there): the loop's next turn reads this row back
+   * (its name question and card records). Written after the reply, a quick next message could arrive before the row
+   * did. `awaitWrite`: the row is written before the reply returns. No caller passes it today; without it, as before.
+   */
+  if (options.awaitWrite) {
+    try {
+      const value = await runChatTrace(draft, run);
+      if (draft.succeeded === null) draft.succeeded = draft.errorSubtype === null;
+      await persistChatTrace(draft);
+      return value;
+    } catch (error) {
+      draft.succeeded = false;
+      if (!draft.errorClass && error instanceof Error) draft.errorClass = error.name;
+      void persistChatTrace(draft);
+      throw error;
+    }
+  }
   try {
     const value = await runChatTrace(draft, run);
     if (draft.succeeded === null) draft.succeeded = draft.errorSubtype === null;
@@ -85,7 +103,7 @@ async function persistChatTrace(draft: ChatTraceDraft): Promise<void> {
       thinking_tokens: model?.thinkingTokens ?? null,
       cache_creation_input_tokens: model?.cacheCreationInputTokens ?? null,
       cache_read_input_tokens: model?.cacheReadInputTokens ?? null,
-      first_token_ms: model?.firstTokenMs ?? null,
+      first_token_ms: model?.firstTokenMs ?? draft.firstTokenMs ?? null,
       latency_ms: model?.latencyMs ?? Date.now() - draft.startedAt,
       error_subtype: draft.errorSubtype,
       error_class: draft.errorClass,
@@ -102,7 +120,10 @@ async function persistChatTrace(draft: ChatTraceDraft): Promise<void> {
           withCardCheck(
             withDraftCheck(
               withFormEdit(
-                draft.reader ? { ...(draft.formExtraction?.slots ?? {}), reader: draft.reader } : (draft.formExtraction?.slots ?? null),
+                withDraftSlots(
+                  draft.reader ? { ...(draft.formExtraction?.slots ?? {}), reader: draft.reader } : (draft.formExtraction?.slots ?? null),
+                  draft.slots,
+                ),
                 draft.formEdit,
               ),
               draft.draftCheck,
@@ -125,6 +146,11 @@ async function persistChatTrace(draft: ChatTraceDraft): Promise<void> {
     console.error("chat_traces insert failed");
     // Tracing never changes what the manager sees.
   }
+}
+
+/** The draft's own `slots` (the agent loop's, once ported) over the extraction's; absent, the slots as before. */
+function withDraftSlots(slots: Record<string, unknown> | null, own: Record<string, unknown> | null | undefined): Record<string, unknown> | null {
+  return own ? { ...(slots ?? {}), ...own } : slots;
 }
 
 /** FORM_EDIT_TOOL_IN_STREAM_ENABLED: `form_edit` beside the other slots; absent, the slots as before. */

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { redactHrApproval } from "@/lib/forms/hr-approval-rules";
 
 import { teamTopicReadConversation } from "@/lib/forms/team-card-not-product";
 import { sameRequestReadConversation } from "@/lib/forms/same-request-other-person";
@@ -52,8 +53,25 @@ import {
 } from "@/lib/forms/warning-level";
 import { warningLevelFromConversation } from "@/lib/forms/warning-level-conversation";
 import { TERMINATION_OPTION, statesTermination } from "@/lib/forms/termination-stated";
+import { saysTerminationWord } from "@/lib/forms/termination-word";
+import { cardPayrollAmount } from "@/lib/forms/card-payroll-amount";
+import { applyLoopFollowUpDefault } from "@/lib/forms/follow-up-default-write";
+import { EXIT_DETAIL_FIELDS, EXIT_NOTICE_GROUP, EXIT_OPTION, EXIT_TEMPLATE_KEY, EXIT_TYPE_GROUP } from "@/lib/forms/exit-library";
+import { employmentChangeKind } from "@/lib/forms/employment-change";
+import { exitReasonOnly } from "@/lib/forms/exit-reason-only";
+import { terminationStatedTicksEnabled } from "@/lib/config/chat-quality-flags";
+
+/** The resignation types a loop exit card may carry (never the involuntary box). */
+const LOOP_EXIT_HOW = new Set<string>([EXIT_OPTION.immediateVoluntary, EXIT_OPTION.noticeNotFulfilled, EXIT_OPTION.noCallNoShow]);
+
+/* The exit form's lines the agent loop's exit card states (the loop port; the same keys as the sibling app's exit form). */
+const EXIT_PAYROLL_KEY = "payroll_deduction_applicable";
+const EXIT_ADDITIONAL_DETAILS_KEY = "details";
+/** The exit form's rehire question (`exit-library.ts`, EXIT_YES_NO_QUESTIONS). */
+const EXIT_REHIRE_KEY = "eligible_for_rehire";
 import { checkboxGroupsForVariant, parseFormDocument } from "@/lib/forms/document";
 import { businessToday } from "@/lib/business-date";
+import { withoutReadBackNote } from "@/lib/forms/read-back-note";
 import {
   conversationDraftReuseEnabled,
   draftReuseSameChatOnlyEnabled,
@@ -154,7 +172,8 @@ export async function GET(request: Request) {
     // offer a "Delete 5" that removed nothing, and would leak how many exist.
     const sweep = await findDemoInstances();
     return NextResponse.json({
-      instances,
+      // The approval columns only for those who may read HR's decision (owner, 23 Nov 2026: no leaks).
+      instances: instances.map((instance) => redactHrApproval(actor, instance)),
       view,
       demo: {
         deletable: visibleInstances(actor, sweep.deletable).length,
@@ -179,6 +198,24 @@ export async function POST(request: Request) {
       formDate?: string;
       payrollDeduct?: unknown;
       warningLevel?: unknown;
+      /** The agent loop's card (AGENT_LOOP_ENABLED): its payroll amount is the card's own (`card-payroll-amount.ts`). */
+      payrollDeductAmount?: unknown;
+      /** The agent loop's card: its termination is the model's, locked on the manager's termination word, checked here. */
+      fromAgentLoop?: unknown;
+      /** The loop's account of what happened (an exit form's reason line or Additional Details). */
+      loopAccount?: unknown;
+      /** The loop's exit card: how the person left (a resignation_type option) and the manager's words for it. */
+      exitHow?: unknown;
+      exitHowQuote?: unknown;
+      /** The loop's transfer card: where the person is moving, in the manager's words, and their quote (U54). */
+      newStoreSaid?: unknown;
+      newStoreQuote?: unknown;
+      /** The loop's exit card: How Employee Resigned and the manager's words for it (U26). */
+      exitMethod?: unknown;
+      exitMethodQuote?: unknown;
+      /** The loop's exit card: Reason for Resignation in the manager's words, and their quote (B6). */
+      exitReason?: unknown;
+      exitReasonQuote?: unknown;
       /** The chat the proposal came from, for `checkProposalIsCurrent`. Ask Bubbles only. */
       conversation?: unknown;
       /** Optional stable id for this chat. The first message id is used when this is absent. */
@@ -239,9 +276,32 @@ export async function POST(request: Request) {
      * is refused here even if the browser still offered it. See
      * `lib/forms/proposal-currency.ts`.
      */
+    /* QA's Bubbles round 2 (22 Nov 2026, U09): the level the loop locked on this card, from its server record (below). */
+    let loopRecordLevel: "verbal" | "written" | null = null;
     if (body.source === "assistant" && Array.isArray(body.conversation)) {
       // PREFERRED_NAME_CARD_CURRENT_ENABLED: "kit dovetail" is the card's Katrin Dovetail when the manager's roster says Kit is her preferred name. Off: none, and no roster read.
       const alsoCalled = await preferredNamesOf(actor.scope, body.employeeName);
+      /*
+       * The agent loop's own card (ported from the sibling app; QA, 17 Nov 2026) is read with the loop's record for it
+       * (this proposal id, this name): the turns after the card's own turn, which the loop already read with its evidence
+       * checks, and the names the loop settled as its person. Never for a card the loop has no record of. See
+       * `lib/ai/agent-loop/settled-names.ts`.
+       */
+      const settledNames = body.fromAgentLoop === true && typeof body.proposalId === "string"
+        ? await import("@/lib/ai/agent-loop/settled-names")
+        : null;
+      const settlement = settledNames
+        ? await settledNames.loopCardSettlement({
+            conversationId: typeof body.conversationId === "string" ? body.conversationId : undefined,
+            userId: actor.id,
+            messageIds: (body.conversation as { id?: unknown; role?: unknown }[]).filter((turn) => turn?.role === "user" && typeof turn.id === "string").map((turn) => String(turn.id)),
+            proposalId: String(body.proposalId),
+            employeeName: body.employeeName,
+          })
+        : null;
+      loopRecordLevel = settlement?.level ?? null;
+      const history = parseHistory(body.conversation);
+      const readFrom = settledNames && settlement ? [...settledNames.turnsAfterCard(history, settlement)] : history;
       const currency = checkProposalIsCurrent({
         // FORM_TYPE_SWITCH_ENABLED: "change to coaching" is read as the chat read it, so the switched card is current.
         // PASTED_REVIEW_NOT_ACCOUNT_ENABLED: pasted reviewer's notes are read as the chat read them (`ai/pasted-review.ts`).
@@ -249,7 +309,7 @@ export async function POST(request: Request) {
         // SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED: <A>'s card is read as it stood before "the same thing for <B>".
         // TEAM_CARD_NOT_PRODUCT_ENABLED: on the team card, "selling Bath Bomb Kits" is the topic, as the chat read it.
         conversation: teamTopicReadConversation(
-          sameRequestReadConversation(switchReadConversation(turnsWithoutPastedReview(parseHistory(body.conversation))), body.employeeName),
+          sameRequestReadConversation(switchReadConversation(turnsWithoutPastedReview(readFrom)), body.employeeName),
           body.employeeName,
         ),
         templateKey: body.templateKey,
@@ -366,6 +426,21 @@ export async function POST(request: Request) {
       if (
         payrollDeductAmountFieldEnabled() &&
         card.payrollDeduct === "yes" &&
+        card.fromAgentLoop === true
+      ) {
+        /* The agent loop's card (ported; QA's code audit, 20 Nov 2026, item 20): its amount is the card's own, never the chat's latest figure. */
+        const amount = cardPayrollAmount(card.payrollDeductAmount);
+        if (amount) {
+          await applyStatedFacts(
+            instanceId,
+            { values: { [PAYROLL_DEDUCT_AMOUNT_KEY]: amount }, checked: {} },
+            actor.id,
+            PAYROLL_DEDUCT_AMOUNT_STATED_KEYS,
+          );
+        }
+      } else if (
+        payrollDeductAmountFieldEnabled() &&
+        card.payrollDeduct === "yes" &&
         Array.isArray(card.conversation)
       ) {
         const said = card.conversation
@@ -398,7 +473,14 @@ export async function POST(request: Request) {
        * without that conversation is dropped, and the box starts empty. See
        * `lib/forms/warning-level.ts`.
        */
-      const warningLevel =
+      /*
+       * QA's Bubbles round 2 (22 Nov 2026, U09: the card said Written, the saved form had no level): a loop card's level is
+       * locked on the manager's evidence at card time and recorded server-side; the card's level is saved when it is the
+       * level that record holds. Today's re-read of the conversation (which read "Verbal CA 11-1-2026", a prior step, as
+       * the level) stays for every other card.
+       */
+      const loopLocked = card.fromAgentLoop === true && isWarningLevel(card.warningLevel) && loopRecordLevel !== null && card.warningLevel === loopRecordLevel;
+      const warningLevel = loopLocked ? (card.warningLevel as "verbal" | "written") :
         isWarningLevel(card.warningLevel) &&
         card.source === "assistant" &&
         Array.isArray(card.conversation) &&
@@ -414,7 +496,19 @@ export async function POST(request: Request) {
        * needs DM/HR approval before it is finalized. Read from the manager's own turns; a hedge ("she might be
        * terminated if this continues") states nothing. Off, `statesTermination` is false.
        */
+      /*
+       * The agent loop's card (ported; QA's design, 15 Nov 2026): its model decided this form is a termination, accepted
+       * only when the conversation's own user turns carry a termination word, checked here (`saysTerminationWord`), and
+       * gated by TERMINATION_STATED_TICKS like today's tick. A loop card never runs today's reader.
+       */
+      const fromAgentLoop = card.fromAgentLoop === true;
+      const userTurns = Array.isArray(card.conversation)
+        ? (await readingTurns(parseHistory(card.conversation))).filter((turn) => turn.role === "user").map((turn) => String(turn.content)).join("\n")
+        : "";
+      const loopTermination = fromAgentLoop && card.templateKey === "dpoa" && card.warningLevel === "termination" && terminationStatedTicksEnabled() && saysTerminationWord(userTurns);
       const termination =
+        loopTermination ||
+        (!fromAgentLoop &&
         !warningLevel &&
         card.source === "assistant" &&
         card.templateKey === "dpoa" &&
@@ -424,7 +518,7 @@ export async function POST(request: Request) {
             .filter((turn) => turn.role === "user")
             .map((turn) => String(turn.content))
             .join("\n"),
-        );
+        ));
       if (warningLevel || termination) {
         const loaded = await loadInstance(instanceId);
         const offered = loaded
@@ -439,6 +533,96 @@ export async function POST(request: Request) {
             : {};
         if (Object.keys(checked).length > 0) {
           await applyStatedFacts(instanceId, { values: {}, checked }, actor.id, WARNING_LEVEL_STATED_KEYS);
+        }
+      }
+
+      /*
+       * The agent loop's EXIT card (ported; QA item 17, 20 Nov 2026): what the manager stated goes in the exit form's own
+       * fields, as their statements (the draft never replaces them): its payroll answer, and a termination the model
+       * decided (locked on the termination word, checked again here) as "Immediate involuntary separation" with the account
+       * as the reason; otherwise the account is the exit form's Additional Details. `applyStatedFacts` validates every
+       * key against the pinned version, so a form without these lines gets nothing.
+       */
+      if (fromAgentLoop && card.templateKey !== "dpoa") {
+        const exitStated: { values: Record<string, string>; checked: Record<string, string[]> } = { values: {}, checked: {} };
+        if (isPayrollDeductAnswer(card.payrollDeduct)) exitStated.checked[EXIT_PAYROLL_KEY] = [card.payrollDeduct];
+        const account = typeof card.loopAccount === "string" ? card.loopAccount.trim().slice(0, 2_000) : "";
+        if (card.warningLevel === "termination" && saysTerminationWord(userTurns)) {
+          exitStated.checked[EXIT_TYPE_GROUP] = [EXIT_OPTION.immediateInvoluntary];
+          if (account) {
+            /* f077 and QA2's R3 (21 Nov 2026, ported): only the reason; a rehire answer in the account is the rehire question's. */
+            const { reason, rehire } = exitReasonOnly(account, new Date().toISOString().slice(0, 10));
+            exitStated.values[EXIT_DETAIL_FIELDS.resignationReason] = reason;
+            if (rehire) exitStated.checked[EXIT_REHIRE_KEY] = [rehire];
+            /*
+             * Ported from the sibling app: its QA's live L6 (22 Nov 2026; Pau: saved = card, nothing invented). With nothing
+             * stated for Additional Details, the drafting model wrote "The departure was recorded effective <date>.", words
+             * no one said. A termination's Additional Details are the card's account, the manager's own words, as a
+             * resignation's already are.
+             */
+            exitStated.values[EXIT_ADDITIONAL_DETAILS_KEY] = account;
+          }
+        } else if (account && card.templateKey === EXIT_TEMPLATE_KEY) {
+          exitStated.values[EXIT_ADDITIONAL_DETAILS_KEY] = account;
+        }
+        /*
+         * Port from the sibling app (a real manager's exit form, 20 Nov 2026): "immideate volunatary termination" ticked no
+         * type. The loop card's exit_how (never the involuntary box) is ticked as the manager's statement only when its
+         * quoted words are in this chat's own manager turns, checked here, server-side.
+         */
+        /*
+         * QA's Bubbles re-run (22 Nov 2026, B6): the exit form's own reader ticking a box in EITHER Resignation Details group
+         * (one set of boxes, split for the page's layout) is the one decision of how the person left; the card's exit_how
+         * is then never added beside it ("Submitted & Fulfilled Notice" with "Did not fulfill … notice").
+         */
+        const readerTicks = card.templateKey === EXIT_TEMPLATE_KEY
+          ? (await (async () => {
+              const { readExitFacts, exitFactValues } = await import("@/lib/forms/exit-facts");
+              const checked = exitFactValues(readExitFacts(userTurns, new Date().toISOString().slice(0, 10))).checked;
+              return [EXIT_TYPE_GROUP, EXIT_NOTICE_GROUP].some((group) => (checked[group] ?? []).length > 0);
+            })())
+          : false;
+        if (card.templateKey === EXIT_TEMPLATE_KEY && card.warningLevel !== "termination" && exitStated.checked[EXIT_TYPE_GROUP] === undefined && !readerTicks) {
+          const how = typeof card.exitHow === "string" && LOOP_EXIT_HOW.has(card.exitHow) ? card.exitHow : null;
+          const flat = (text: string) => text.toLowerCase().replace(/[*_"“”]/g, "").replace(/\s+/g, " ").trim();
+          const quote = typeof card.exitHowQuote === "string" ? flat(card.exitHowQuote) : "";
+          if (how && quote !== "" && flat(userTurns).includes(quote)) exitStated.checked[EXIT_TYPE_GROUP] = [how];
+        }
+        /*
+         * U26 (QA's Bubbles round 2, 22 Nov 2026): the loop card's How Employee Resigned, written as the manager's statement
+         * only on a resignation, when its quote is in this chat's manager turns and names that method (`quoteNamesMethod`).
+         */
+        if (card.templateKey === EXIT_TEMPLATE_KEY && card.warningLevel !== "termination" && typeof card.exitMethod === "string" && typeof card.exitMethodQuote === "string") {
+          const { quoteNamesMethod } = await import("@/lib/forms/exit-details");
+          const flat = (text: string) => text.toLowerCase().replace(/[*_"“”]/g, "").replace(/\s+/g, " ").trim();
+          if (flat(card.exitMethodQuote) !== "" && flat(userTurns).includes(flat(card.exitMethodQuote)) && quoteNamesMethod(card.exitMethodQuote, card.exitMethod)) {
+            exitStated.values[EXIT_DETAIL_FIELDS.resignationMethod] = card.exitMethod;
+          }
+        }
+        /*
+         * B6 (QA's live round 3, 22 Nov 2026): the loop card's Reason for Resignation, written as the manager's statement only
+         * on a resignation, when its quote is in this chat's manager turns and holds every word of the reason (`exit-reason-said.ts`).
+         */
+        if (card.templateKey === EXIT_TEMPLATE_KEY && card.warningLevel !== "termination" && typeof card.exitReason === "string" && typeof card.exitReasonQuote === "string") {
+          const { reasonFromQuote } = await import("@/lib/forms/exit-reason-said");
+          const flat = (text: string) => text.toLowerCase().replace(/[*_"“”]/g, "").replace(/\s+/g, " ").trim();
+          const reason = flat(card.exitReasonQuote) !== "" && flat(userTurns).includes(flat(card.exitReasonQuote)) ? reasonFromQuote(card.exitReason, card.exitReasonQuote) : null;
+          if (reason) exitStated.values[EXIT_DETAIL_FIELDS.resignationReason] = reason;
+        }
+        if (Object.keys(exitStated.checked).length > 0 || Object.keys(exitStated.values).length > 0) {
+          await applyStatedFacts(instanceId, exitStated, actor.id, new Set([EXIT_PAYROLL_KEY, EXIT_TYPE_GROUP, EXIT_DETAIL_FIELDS.resignationReason, EXIT_DETAIL_FIELDS.resignationMethod, EXIT_ADDITIONAL_DETAILS_KEY, EXIT_REHIRE_KEY]));
+        }
+        /*
+         * U54 (QA's Bubbles round 2, 22 Nov 2026): the loop's transfer card names where the person is moving. Written on
+         * New Location as the manager's statement only when the quote is in this chat's manager turns, holds the words,
+         * and the words read as exactly one store again here (the Woven-aware index; `transfer-new-store.ts`).
+         */
+        if (employmentChangeKind(card.templateKey) === "transfer" && typeof card.newStoreSaid === "string" && typeof card.newStoreQuote === "string") {
+          const { newStoreQuoted, transferNewStoreName } = await import("@/lib/forms/transfer-new-store");
+          if (newStoreQuoted(card.newStoreSaid, card.newStoreQuote, userTurns)) {
+            const name = transferNewStoreName(card.newStoreSaid.slice(0, 80), await (await import("@/lib/stores/woven-aliases")).loadStoreIndex());
+            if (name) await applyStatedFacts(instanceId, { values: { new_location: name }, checked: {} }, actor.id);
+          }
         }
       }
     }
@@ -560,6 +744,7 @@ export async function POST(request: Request) {
         employeeName: body.employeeName.trim().slice(0, 120),
         formDate: crossChatDate,
         ...(sameChat ? { sameChat } : {}),
+        actor,
       });
       if (open) return reused(open);
     }
@@ -568,7 +753,8 @@ export async function POST(request: Request) {
       templateKey: body.templateKey,
       variantKey: body.variantKey ?? null,
       employeeName: body.employeeName.trim().slice(0, 120),
-      employeeRole: body.employeeRole ?? null,
+      // QA's live re-test B8 (21 Nov 2026): the chat's "(from your words)" note never reaches the saved Job Title.
+      employeeRole: typeof body.employeeRole === "string" ? withoutReadBackNote(body.employeeRole) || null : null,
       locationId,
       locationName,
       createdBy: actor.id,
@@ -600,7 +786,25 @@ export async function POST(request: Request) {
 
     await applyCardFacts(String(instance.id));
 
-    return NextResponse.json({ instance });
+    /*
+     * Pau (20 Nov 2026, ported from the sibling app): a Corrective Action the agent loop creates gets its follow-up
+     * date, the one the manager stated or one week after the form date, so the follow-up its Action Plan promises is
+     * on the calendar. The card says it. See `follow-up-default.ts`.
+     */
+    const followUp = body.fromAgentLoop === true
+      ? await applyLoopFollowUpDefault({
+          instance: { ...instance, id: String(instance.id) },
+          managerWords: Array.isArray(body.conversation)
+            ? parseHistory(body.conversation).filter((turn) => turn.role === "user").map((turn) => String(turn.content)).join("\n")
+            : "",
+          actorId: actor.id,
+        }).catch(() => null)
+      : null;
+
+    return NextResponse.json({
+      instance: followUp ? { ...instance, followUpDate: followUp.date } : instance,
+      ...(followUp ? { followUpNotice: followUp.notice } : {}),
+    });
   } catch (error) {
     return errorResponse(error, "forms/instances/create");
   }
@@ -642,7 +846,7 @@ function incidentText(conversation: unknown, employeeName: string): string {
  */
 export async function DELETE(request: Request) {
   try {
-    await authorizeForms(request, "manage_form_records");
+    const actor = await authorizeForms(request, "manage_form_records");
     const { searchParams } = new URL(request.url);
 
     // Explicit and narrow: there is no "delete everything" shape of this call.
@@ -661,7 +865,7 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const result = await deleteDemoInstances(expected);
+    const result = await deleteDemoInstances(expected, { id: actor.id, role: actor.role, via: "demo_sweep" });
     return NextResponse.json(result);
   } catch (error) {
     if (error instanceof InstanceProtectedError) {

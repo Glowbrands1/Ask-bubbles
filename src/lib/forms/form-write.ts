@@ -47,8 +47,9 @@ import {
   saveInstanceValues,
   type LoadedInstance,
 } from "./instances";
-import { NO_PRIOR_ACTION, PRIOR_ACTIONS_KEY } from "./prior-actions";
+import { NO_PRIOR_ACTION, POLICY_MANUAL_SIGNED_KEY, PRIOR_ACTIONS_KEY } from "./prior-actions";
 import { takeReaderFoundNothing } from "./reader-found-nothing";
+import { editableDraft } from "./hr-approval-rules";
 import { spokenDates } from "./relative-date";
 import { draftableCheckboxGroups, draftableFields, type DraftValues } from "./responsibility";
 import { copiedContent } from "./same-form-copy";
@@ -511,7 +512,8 @@ export async function writeFormEdits(instanceId: string, ops: readonly FormEditO
 
   /* 1. load */
   const loaded = rules.loaded ?? (await loadInstance(instanceId));
-  if (!loaded || loaded.instance.status !== "draft") return refusedAll(keysOfOps.map((key) => ({ key, reason: "not_draft" })));
+  // A form waiting for HR approval is not the chat's to change: refused as a finalized one is.
+  if (!loaded || !editableDraft(loaded.instance)) return refusedAll(keysOfOps.map((key) => ({ key, reason: "not_draft" })));
   const snapshot = snapshotOf(loaded);
   const before: FormDraft = snapshot.draft;
 
@@ -606,7 +608,9 @@ export async function writeFormEdits(instanceId: string, ops: readonly FormEditO
   refused.push(...diff.refused);
 
   /* Code's own values: as computed, never over a typed line (unless exempt), never blanking one. */
-  const writerOf = (op: FormEditOp) => op.by ?? defaultWriter(rules.path);
+  // HR via Pau, 19 Nov 2026: the policy manual's signed date is the form creator's; a chat edit of it is their own, in their words (the reducer's verbatim rule), never the assistant's.
+  const writerOf = (op: FormEditOp) =>
+    op.by ?? (op.field === POLICY_MANUAL_SIGNED_KEY && (rules.path === "patch" || rules.path === "tool") ? ("manager" as const) : defaultWriter(rules.path));
   const derivedChanges: FieldChange[] = [];
   for (const op of derivedOps) {
     const field = before[op.field];
@@ -868,6 +872,45 @@ export async function writeRevisionEdits(
   return { accepted: result.saved.accepted, cleared: result.saved.cleared, rejected: result.saved.rejected };
 }
 
+/**
+ * The agent loop's dictated Action Plan (port from the sibling app): an Action Plan the manager dictated in chat, word
+ * for word, saved as the manager's own edit (as the form page saves their typing), via chat. Only action_plan; the
+ * caller (the loop's edit_form) checks the words are the manager's current message. Drafts only.
+ */
+export async function dictatedPlanWrite(instanceId: string, plan: string, actorId: string): Promise<{ saved: string | null }> {
+  const result = await saveInstanceValues(instanceId, { values: { action_plan: plan }, checked: {} }, actorId, { via: "chat" });
+  return { saved: result.rejected.some((row) => row.key === "action_plan") ? null : (result.values.action_plan ?? plan) };
+}
+
+/**
+ * The agent loop's name correction (port from the sibling app; `edit_form` intent "correct_name"): ONLY the Employee
+ * Name line, written as the manager's correction (path "correction"), and the form's subject column moves with it, so
+ * the card, the Forms Register and the printed form read the new name. The caller has already checked the name against
+ * this message's name_evidence and the roster; this takes no other key. `said` is the manager's message the name was
+ * quoted from.
+ */
+export async function nameCorrectionWrite(
+  instanceId: string,
+  name: string,
+  context: { readonly actorId: string; readonly said: string; readonly today?: string; readonly loaded?: LoadedInstance },
+): Promise<{ accepted: DraftValues; rejected: { key: string; reason: string }[]; result: FormWriteResult }> {
+  const newName = name.trim();
+  if (newName === "") {
+    const saved = emptySaved([{ key: "employee_name", reason: "would_blank" }]);
+    return { accepted: saved.accepted, rejected: saved.rejected, result: { changed: [], refused: [], handoff: "refused", saved } };
+  }
+  const result = await writeFormEdits(instanceId, [{ op: "set", field: "employee_name", value: newName, by: "manager" }], {
+    path: "correction",
+    actorId: context.actorId,
+    latest: context.said,
+    employeeColumn: newName,
+    readerValues: [newName],
+    ...(context.today ? { today: context.today } : {}),
+    ...(context.loaded ? { loaded: context.loaded } : {}),
+  });
+  return { accepted: result.saved.accepted, rejected: result.saved.rejected, result };
+}
+
 /* -------------------------------- the old writers' shapes, through here ---- */
 
 type PathContext = Omit<FormEditRules, "actorId">;
@@ -895,7 +938,7 @@ export async function statedWrite(
 ): Promise<string[]> {
   // As `applyStatedFacts` writes them: only into an empty line. A filled line is kept, not refused.
   const loaded = context.loaded ?? (await loadInstance(instanceId));
-  if (!loaded || loaded.instance.status !== "draft") return [];
+  if (!loaded || !editableDraft(loaded.instance)) return [];
   const filled = new Set(
     loaded.values.filter((row) => (row.value ?? "").trim() !== "" || row.checked.length > 0).map((row) => row.fieldKey),
   );

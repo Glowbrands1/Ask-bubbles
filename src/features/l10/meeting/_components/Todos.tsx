@@ -1,5 +1,6 @@
 "use client";
 // Copied from the Leadership Hub (src/app/meetings/_components/Todos.tsx); keep in step with it. See src/features/l10/README.md.
+// Ask Bubbles (Pau, 20 Nov 2026, port from the sibling app): a due date is set when adding and changed after, in both layouts.
 
 import { useState } from "react";
 import { Button, cx, inputClass } from "@/features/l10/ui/ui";
@@ -10,6 +11,7 @@ import { todoState } from "@/features/l10/lib/dueStatus";
 import type { Todo } from "@/features/l10/lib/types";
 import type { ArchivedTodo } from "@/features/l10/lib/todoHistory";
 import { mmddyyyy } from "@/features/l10/lib/bloom";
+import { todoDueLabel, withTodoDueDate } from "@/features/l10/lib/todo-due";
 
 const initials = (name: string) => name.split(" ").map((n) => n[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
 
@@ -31,13 +33,14 @@ function ListTodos({ todos, onChange, people, today }: { todos: Todo[]; onChange
   const [text, setText] = useState("");
   const [owner, setOwner] = useState("");
   const [due, setDue] = useState("");
+  const [editingDue, setEditingDue] = useState<string | null>(null);
   const mention = parseMention(text, people);
   const ownerFinal = mention.owner ?? owner;
 
   const add = () => {
     const t = mention.text.trim();
     if (!t) return;
-    onChange([...todos, { id: newItemId(), text: t, owner: ownerFinal || "—", due: due || "Next wk", ...(due ? { dueDate: due } : {}), done: false }]);
+    onChange([...todos, withTodoDueDate({ id: newItemId(), text: t, owner: ownerFinal || "—", due: "Next wk", done: false }, due)]);
     setText("");
     setDue("");
   };
@@ -58,7 +61,22 @@ function ListTodos({ todos, onChange, people, today }: { todos: Todo[]; onChange
               </span>
               <span className="hidden rounded-full bg-cream px-2.5 py-0.5 text-xs sm:inline">{t.owner}</span>
               {state !== "none" && <StatusBadge state={state} />}
-              <span className={cx("text-xs", state === "overdue" ? "font-bold text-[#7a1717]" : "text-muted")}>{t.dueDate ?? t.due ?? ""}</span>
+              {/* Pau, 20 Nov 2026: the date reads "Due Fri, Nov 27" and can be changed, or cleared back to "Next wk", after adding. */}
+              {editingDue === t.id ? (
+                <input
+                  aria-label={`Due date: ${plain(t.text)}`}
+                  type="date"
+                  autoFocus
+                  value={t.dueDate ?? ""}
+                  onChange={(e) => onChange(todos.map((x) => (x.id === t.id ? withTodoDueDate(x, e.target.value) : x)))}
+                  onBlur={() => setEditingDue(null)}
+                  className={cx(inputClass, "w-40 text-xs")}
+                />
+              ) : (
+                <button type="button" aria-label={`Change due date: ${plain(t.text)}`} onClick={() => setEditingDue(t.id)} className={cx("text-xs underline-offset-2 hover:underline", state === "overdue" ? "font-bold text-[#7a1717]" : "text-muted")}>
+                  {todoDueLabel(t)}
+                </button>
+              )}
               <button type="button" aria-label={`Delete to-do ${plain(t.text)}`} className="text-xs text-muted hover:text-[#8a1c1c]" onClick={() => onChange(todos.filter((x) => x.id !== t.id))}>
                 ✕
               </button>
@@ -108,20 +126,11 @@ function BloomTodos({ todos, onChange, people, today, history }: { todos: Todo[]
   const add = () => {
     const t = mention.text.trim();
     if (!t) return;
-    onChange([...todos, { id: newItemId(), text: t, owner: (mention.owner ?? owner) || "—", due: due || "Next wk", ...(due ? { dueDate: due } : {}), done: false }]);
+    onChange([...todos, withTodoDueDate({ id: newItemId(), text: t, owner: (mention.owner ?? owner) || "—", due: "Next wk", done: false }, due)]);
     setText("");
     setDue("");
   };
-  const setDueDate = (id: string, value: string) =>
-    onChange(
-      todos.map((x) => {
-        if (x.id !== id) return x;
-        if (value) return { ...x, dueDate: value, due: value };
-        const copy = { ...x, due: "Next wk" } as Record<string, unknown>;
-        delete copy.dueDate;
-        return copy as Todo;
-      }),
-    );
+  const setDueDate = (id: string, value: string) => onChange(todos.map((x) => (x.id === id ? withTodoDueDate(x, value) : x)));
   const toggleOpen = (id: string) =>
     setOpenIds((ids) => {
       const next = new Set(ids);

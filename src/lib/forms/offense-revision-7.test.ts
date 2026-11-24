@@ -57,9 +57,10 @@ async function printed(document: typeof OLD, values: { values: Record<string, st
 }
 
 describe("the revision 7 template", () => {
-  it("is revision 7 and offers exactly Attendance Policy, Standards of Conduct, Dress Code Violation, Other", () => {
+  it("is revision 8 (revision 7 plus the required history boxes) and offers exactly Attendance Policy, Standards of Conduct, Dress Code Violation, Other", () => {
     const seed = TEMPLATE_SEEDS.find((entry) => entry.key === "dpoa")!;
-    expect(seed.revision).toBe(7);
+    // CHANGED ON PURPOSE, revision 8 (HR via Pau, 19 Nov 2026) follows revision 7; the offense boxes are unchanged.
+    expect(seed.revision).toBe(8);
     expect(checkboxGroupsForVariant(NEW, null).find((group) => group.key === "offense_type")!.options).toEqual([
       { key: "attendance_policy", label: "Attendance Policy" },
       { key: "standards_of_conduct", label: "Standards of Conduct" },

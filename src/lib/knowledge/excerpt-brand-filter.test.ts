@@ -18,9 +18,15 @@ import { rowToCitation, type MatchedChunkRow } from "./mappers";
  *
  * B22-4 is the whole-manual reading (a question that names no brand) cut into
  * an excerpt without the brand filter. T-R1-6 names no brand: "salon" is the
- * JBA Policy Manual's own shared wording, kept by every brand reading, and
- * this app has no salon → store mapping for answers or quoted manual text,
- * so the excerpt stays the manual's verbatim text (pinned below).
+ * JBA Policy Manual's own shared wording, kept by every brand reading. The
+ * excerpt is the manual's text with only this company's display words
+ * changed (below).
+ *
+ * EXPECTATION CHANGED ON PURPOSE (QA's live re-test, 21 Nov 2026, item 7 / A5:
+ * "The quoted Late Opening policy text shows the word "salon" in Ask Bubbles";
+ * Pau wants Bubbles never to say salon). This test used to pin "salon" because
+ * no mapping existed; `MANUAL_DISPLAY_WORDS` now shows it as "store" on screen,
+ * while the stored chunk keeps "salon" (`manual-display-words.test.ts`).
  */
 
 const FLAG = "EXCERPT_BRAND_FILTER_ENABLED";
@@ -31,7 +37,7 @@ const SIBLING = /Sun\s+Tan\s+City|\bSTC\b/i;
 const B22_4_EXCERPT =
   "Qualified salaried Employees must schedule PTO in half day (4 hours), or full day (8 hours) increments only. No PTO is permitted during peak business seasons as listed below: o Sun Tan City – February 1 and June 1 o Buff";
 const LATE_OPENING_EXCERPT =
-  "When an employee assigned to open a location is unable to open the location at the proper time, the employee must notify the manager as soon as possible. The manager of the salon will be required to open the salon and wo";
+  "When an employee assigned to open a location is unable to open the location at the proper time, the employee must notify the manager as soon as possible. The manager of the store will be required to open the store and wo";
 
 const PTO_PAYOUT_QUESTION = "What is the PTO payout policy when someone leaves?";
 const PTO_PAYOUT_ANSWER =
@@ -108,7 +114,7 @@ describe("B22-4: the PTO payout excerpt (p.42) never quotes the sibling company"
 });
 
 describe("T-R1-6: the Late Opening excerpt is the manual's own text", () => {
-  it("on or off, the excerpt names no brand and is kept verbatim (no salon → store mapping exists for manual text)", () => {
+  it("on or off, the excerpt names no brand and is the manual's text, salon shown as store (MANUAL_DISPLAY_WORDS)", () => {
     for (const value of ["true", ""]) {
       vi.stubEnv(FLAG, value);
       const { source } = citedSource("What is the late opening policy?", LATE_OPENING_ANSWER);

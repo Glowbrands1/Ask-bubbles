@@ -67,6 +67,8 @@ export const APPROVED_GOOGLE_STORES: readonly ApprovedGoogleStore[] = [
     city: "Sioux Falls",
     state: "SD",
     postalCode: "57106",
+    // Pau, 22 Nov 2026 (via QA, A7): managers call this store "Empire" ("store location is empire, sd").
+    alsoKnownAs: ["Empire"],
   },
   {
     code: "236",

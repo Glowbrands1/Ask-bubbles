@@ -78,8 +78,8 @@ describe("the framework requirement is derived from the stored version", () => {
      */
     "coaching",
     // The hiring forms: the subject is a candidate, and no signal fires.
+    // (The Tanning Consultant Interview was here; it was removed from the library, key retired: Pau, 21 Nov 2026.)
     "prescreen-phone-interview",
-    "tanning-consultant-interview",
     "management-interview-round-1",
     "management-interview-round-2",
   ])("%s is not governed", (key) => {

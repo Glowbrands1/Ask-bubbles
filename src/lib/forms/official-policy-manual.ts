@@ -1022,12 +1022,31 @@ export function manualSectionHeadings(chunks: readonly ManualChunk[]): string[] 
  */
 export const COMPANY_POLICIES_OFFENSE = "company_policies";
 
+/*
+ * SECTIONS THAT GOVERN ATTENDANCE, filed under revision 7's Attendance Policy box rather than Violation of Company
+ * Policies (QA2, 21 Nov 2026): a no-show who did not find coverage cites Shift Replacement (p.37), and that is
+ * attendance, not conduct, so the card never reads "Standards of Conduct — Shift Replacement" and Create ticks
+ * Attendance Policy. QA2 added the scheduling and time-off procedure headings the same day. Only the box a cited heading is filed under; what Create cites for an account is unchanged.
+ */
+const ATTENDANCE_SECTION_HEADINGS: readonly string[] = [
+  // The manual's scheduling and time-off procedures (QA2, 21 Nov 2026).
+  "Shift Replacement",
+  "Schedule Requests/General availability Changes",
+  "Leave Requests",
+  "Paid time Off (PTO)",
+  // NOT the legally protected leaves (Family Medical, Military, Maternity, Bereavement Leave; Jury and Witness Duty;
+  // Time Off to Vote or Serve as an Election Officer): taking one is never an attendance offense, so a form never
+  // ticks Attendance because of it (QA2). They stay with item 18's rule until QA settles their handling with Pau.
+];
+
 export function offenseKeyForManualHeading(heading: string): string {
   const key = headingKey(heading);
   const ticked = Object.entries(OFFENSE_MANUAL_SECTIONS).find(([, entry]) =>
     [...entry.headings, ...(entry.managementHeadings ?? [])].some((name) => headingKey(name) === key),
   );
   if (ticked) return ticked[0];
+  const attendance = ATTENDANCE_SECTION_HEADINGS.find((name) => headingKey(name) === key);
+  if (attendance) return "attendance_policy";
   const described = DESCRIBED_SECTIONS.find((rule) => rule.headings.some((name) => headingKey(name) === key));
   return described?.offenseKey ?? COMPANY_POLICIES_OFFENSE;
 }

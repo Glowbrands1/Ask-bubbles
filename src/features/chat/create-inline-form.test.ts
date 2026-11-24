@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   DRAFT_FAILED_WARNING,
   NO_NOTES_WARNING,
+  STORE_NEEDED_MESSAGE,
   createInlineForm,
 } from "./create-inline-form";
 import type { ChatFormInstanceRef, ChatFormProposal, ChatMessage } from "@/types";
@@ -409,6 +410,62 @@ describe("a failed create produces no reference at all", () => {
 
     // And no drafting call was made against an instance that was never created.
     expect(calls).toHaveLength(1);
+  });
+});
+
+/*
+ * Board f140 (QA's Bubbles round 2, U06): a card "ready" while its store is still open was created with NO store. Every
+ * Create (the agent loop's cards and the regular chat's) refuses it in one line, and nothing is posted.
+ */
+describe("f140. a card that still asks which store is never created", () => {
+  for (const open of [{ locationResolution: "needs_selection" as const }, { status: "needs_location" as const }]) {
+    it(`${JSON.stringify(open)} and no store: the card's question, in one line, and no request at all`, async () => {
+      const { calls, call } = recorder();
+      const onCreated = vi.fn();
+      await expect(
+        createInlineForm({ proposal: proposal({ locationId: null, authorizedLocationIds: ["loc-0101", "loc-0102"], ...open }), messages: [ACCOUNT], call, onCreated }),
+      ).rejects.toThrow(STORE_NEEDED_MESSAGE);
+      expect(STORE_NEEDED_MESSAGE).toMatch(/^Which store is this about\?/);
+      expect(STORE_NEEDED_MESSAGE).not.toMatch(/\n/);
+      expect(calls).toHaveLength(0);
+      expect(onCreated).not.toHaveBeenCalled();
+    });
+  }
+
+  it("control: the same card with its store chosen is created as before", async () => {
+    const { calls, call } = recorder();
+    await createInlineForm({ proposal: proposal({ locationId: "loc-0102", locationResolution: "needs_selection", authorizedLocationIds: ["loc-0101", "loc-0102"] }), messages: [ACCOUNT], call, onCreated: () => {} });
+    expect(calls[0]?.body.locationId).toBe("loc-0102");
+  });
+
+  it("A2: an agent-loop card with no store that is not asking (an admin's card for a former employee) is refused, with no request", async () => {
+    const { calls, call } = recorder();
+    await expect(
+      createInlineForm({ proposal: proposal({ locationId: null, locationResolution: "not_applicable", fromAgentLoop: true }), messages: [ACCOUNT], call, onCreated: () => {} }),
+    ).rejects.toThrow(STORE_NEEDED_MESSAGE);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("A2 control (U04): an agent-loop card the manager said is for no store (noStoreStated) is created with none", async () => {
+    const { calls, call } = recorder();
+    await createInlineForm({ proposal: proposal({ locationId: null, locationResolution: "not_applicable", fromAgentLoop: true, noStoreStated: true }), messages: [ACCOUNT], call, onCreated: () => {} });
+    expect(calls[0]?.url).toBe("/api/forms/instances");
+    expect(calls[0]?.body.locationId ?? null).toBeNull();
+  });
+
+  /*
+   * CHANGED ON PURPOSE (QA, 23 Nov 2026, the old chat's admin cards after #1087): this was the control that a regular-chat
+   * admin card with no store ("not_applicable") is still created. Every card now needs its store, the regular chat's too.
+   */
+  it("a regular-chat admin card with no store (not_applicable) is refused: nothing saved, the store asked", async () => {
+    const { calls, call } = recorder();
+    await expect(createInlineForm({ proposal: proposal({ locationId: null, locationResolution: "not_applicable" }), messages: [ACCOUNT], call, onCreated: () => {} })).rejects.toThrow(/Which store is this about\?/);
+    expect(calls).toHaveLength(0);
+  });
+  it("control: the regular-chat admin card with its store picked is created at that store", async () => {
+    const { calls, call } = recorder();
+    await createInlineForm({ proposal: proposal({ locationId: "loc-264", locationResolution: "resolved" }), messages: [ACCOUNT], call, onCreated: () => {} });
+    expect(calls[0]?.url).toBe("/api/forms/instances");
   });
 });
 

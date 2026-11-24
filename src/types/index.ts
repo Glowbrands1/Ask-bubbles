@@ -100,6 +100,12 @@ export type Permission =
   | "view_knowledge"
   | "manage_knowledge"
   /**
+   * OPEN AI TRAINING — the AI training program's lessons, policy and best
+   * practices, and submitting a response to a lesson. Every role holds it;
+   * EDITING the program is the admin console roles' (`ADMIN_CONSOLE_ROLES`).
+   */
+  | "view_ai_training"
+  /**
    * REACH THE FORMS WORKSPACE AT ALL. Which forms somebody may CREATE is still
    * decided per template by its `requiredPermission`.
    */
@@ -761,6 +767,95 @@ export interface ChatFormProposal {
    * still see it, and copies only its content fields.
    */
   copyFromInstanceId?: string;
+  /* The agent loop's card fields (the loop port from the sibling app, 21 Nov 2026). */
+  /**
+   * A close Woven employee for the name the manager typed.
+   *
+   * Shown under the card. The card still uses the
+   * typed spelling. Absent when the flag is off, the name is exact, or
+   * nobody in Woven is close. Never a question and never a reason to wait.
+   */
+  wovenCloseMatch?: string | null;
+  /**
+   * The Corrective Action Form's "Payroll deduction amount", where the manager
+   * stated a figure and payroll is Yes. Absent when they have not, when payroll
+   * is not Yes, or when the amount field is off. Never a figure taken from a
+   * policy. See `payrollAmountFromConversation`.
+   */
+  payrollDeductAmount?: string | null;
+  /**
+   * The agent loop only (port from the sibling app): its model decided this Corrective Action is a termination and the
+   * manager's words carry a termination word. Create is sent `warningLevel: "termination"` and ticks it only when the
+   * conversation's user turns carry that word again, checked server-side (`lib/forms/termination-word.ts`).
+   */
+  loopTermination?: true;
+  /**
+   * The agent loop's exit card (port from the sibling app: a real manager's exit form, 20 Nov 2026): how the person left
+   * (a resignation_type option, never the involuntary one), as the model read the manager's words, with the words it
+   * quoted. Create ticks it only when that quote is in the chat's manager turns, checked server-side.
+   */
+  exitHow?: string;
+  exitHowQuote?: string;
+  /**
+   * The agent loop's exit card (QA's Bubbles round 2, 22 Nov 2026, U22): the lines Create saves, as the reply may read them
+   * back ("**<label>:** <value>"); a reply line under an exit field label that is not one of them is handed back.
+   */
+  exitReadBack?: string[];
+  /**
+   * The agent loop's Position Transfer card (QA's Bubbles round 2, 22 Nov 2026, U54): the store the person is moving to,
+   * as read from the manager's words (`newStoreSaid`) through the Woven-aware store index, and their words for it. Create
+   * writes New Location only when the quote is in the chat's manager turns and the words read as that store again.
+   */
+  newStore?: string;
+  newStoreSaid?: string;
+  newStoreQuote?: string;
+  /**
+   * The agent loop's exit card (QA's Bubbles round 2, 22 Nov 2026, U26): How Employee Resigned as the model read it (one of
+   * the line's own methods) and the manager's words for it. Create writes it only when the quote is in the chat's manager
+   * turns and names that method, checked server-side.
+   */
+  exitMethod?: string;
+  exitMethodQuote?: string;
+  /** The agent loop's exit card (B6, 22 Nov 2026): Reason for Resignation in the manager's words, and their quote; Create checks it again. */
+  exitReason?: string;
+  exitReasonQuote?: string;
+  /** The agent loop's card (QA's third review): Create never runs today's termination reader for it. */
+  fromAgentLoop?: true;
+  /**
+   * Board f140 / A2 (QA, 23 Nov 2026): the manager stated the form is for no store (U04, the loop's no_store), so Create may
+   * save it with none. Any other agent-loop card with no store is refused at Create (`createInlineForm`).
+   */
+  noStoreStated?: true;
+  /** The agent loop's coaching card: the topic, in the manager's words, checked against their message (QA, 17 Nov 2026). */
+  coachingTopic?: string;
+  /**
+   * QA's Bubbles live round 3 (22 Nov 2026, A1(b)): earlier spellings of the card's person in this chat (the manager's
+   * correction, or a name an earlier card was made for that is a close spelling of this one). Create's draft writes the
+   * card's name for them in its prose; the route checks each is a close spelling again.
+   */
+  earlierNames?: string[];
+  /**
+   * STATED_PLAN_STEPS_ENABLED (ported from the sibling app's f062, 21 Nov 2026): the Action Plan steps the manager stated,
+   * in their words, each checked against them (the loop's plan_steps or the intent reader's planSteps). Create adds them
+   * before the closing.
+   */
+  planSteps?: string[];
+  /**
+   * The agent loop's Corrective Action card: what the manager described for an attendance offense, kept on their quoted
+   * words (QA's production audit, 20 Nov 2026, item 21). "absence" is a missed shift, never written up as lateness.
+   */
+  attendanceKind?: "absence" | "lateness" | "left_early" | "both";
+  /**
+   * The agent loop's card (PR 2, the card record): the latest earlier card in this chat was another person's, and it
+   * stays creatable (`isProposalSuperseded`). Set from the server's card record, by roster id, never from reply text.
+   */
+  earlierCardKept?: true;
+  /**
+   * The policy the card cites, as its "**Policy:**" line reads after the label ("Late Opening Policy, JBA Policy
+   * Manual p.15"). Set by the agent loop's propose_form, whose reply is the model's own words: Create sends this
+   * card's policy, not whatever the reply's text says (`cardPolicyFor`). Optional; older cards read the reply.
+   */
+  policyLine?: string | null;
 }
 
 export interface FormHandoff {

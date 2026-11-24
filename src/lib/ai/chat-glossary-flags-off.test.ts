@@ -29,6 +29,11 @@ import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
  *
  * A control: with the flag on, the main call and the reader's call carry the
  * glossary block, and the msb turn differs.
+ *
+ * Re-recorded on purpose on 21 Nov 2026 (Pau, via QA2: the six EPP forms are hidden in this app): the only change is
+ * that the forms library block in the requests no longer lists the six EPPs.
+ * Re-recorded on purpose on 23 Nov 2026 (Pau, 23 Nov: BCS terms in the forms): the only change is that the forms library
+ * block lists the six forms unhidden under Buff City Soap's names (three EPPs, three interviews).
  */
 
 const sent = vi.hoisted(() => ({ bodies: [] as string[] }));

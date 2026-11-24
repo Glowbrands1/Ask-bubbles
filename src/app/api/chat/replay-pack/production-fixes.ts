@@ -6,6 +6,8 @@
  * entry leaves this list. Each value says which flag fixed it.
  */
 export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
+  // POSITION_ANSWER_NOT_A_SENTENCE's 11 entries left this list on 21 Nov 2026: QA read Vercel production and the flag is OFF there, so
+  // those cases are open in production again (their case files' `status: { open: … }`), held by their fix flag.
   // fixed in production by REOPEN_BY_ANY_OPEN_VERB, QA round 5, 8 Nov 2026
   "nov5-twin-sf-s26-change-ca-new-chat": "REOPEN_BY_ANY_OPEN_VERB",
   // fixed in production by NO_NOTICE_NO_DATE, QA round 5, 8 Nov 2026
@@ -882,28 +884,6 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov13-issue-keeps-work-area-front-desk": "ISSUE_KEEPS_WORK_AREA",
   // fixed in production by ISSUE_KEEPS_WORK_AREA, QA round 17z-c, 14 Nov 2026
   "nov13-issue-keeps-work-area-register": "ISSUE_KEEPS_WORK_AREA",
-  // fixed in production by POSITION_ANSWER_NOT_A_SENTENCE, QA round 17z-c, 14 Nov 2026
-  "nov13-position-answer-not-a-sentence-she-gets-a-verbal-warning": "POSITION_ANSWER_NOT_A_SENTENCE",
-  // fixed in production by POSITION_ANSWER_NOT_A_SENTENCE, QA round 17z-c, 14 Nov 2026
-  "nov13-position-answer-key-holder-said": "POSITION_ANSWER_NOT_A_SENTENCE",
-  // fixed in production by POSITION_ANSWER_NOT_A_SENTENCE, QA round 17z-c, 14 Nov 2026
-  "nov14-position-answer-gate-miss-it-s-her-second-time": "POSITION_ANSWER_NOT_A_SENTENCE",
-  // fixed in production by POSITION_ANSWER_NOT_A_SENTENCE, QA round 17z-c, 14 Nov 2026
-  "nov14-position-answer-gate-miss-she-s-a-team-lead-i-think": "POSITION_ANSWER_NOT_A_SENTENCE",
-  // fixed in production by POSITION_ANSWER_NOT_A_SENTENCE, QA round 17z-c, 14 Nov 2026
-  "nov14-position-answer-gate-miss-she-s-in-training": "POSITION_ANSWER_NOT_A_SENTENCE",
-  // fixed in production by POSITION_ANSWER_NOT_A_SENTENCE, QA round 17z-c, 14 Nov 2026
-  "nov14-position-answer-gate-miss-she-s-new": "POSITION_ANSWER_NOT_A_SENTENCE",
-  // fixed in production by POSITION_ANSWER_NOT_A_SENTENCE, QA round 17z-c, 14 Nov 2026
-  "nov14-position-answer-character-she-s-a-mess": "POSITION_ANSWER_NOT_A_SENTENCE",
-  // fixed in production by POSITION_ANSWER_NOT_A_SENTENCE, QA round 17z-c, 14 Nov 2026
-  "nov14-position-answer-character-she-s-a-good-worker": "POSITION_ANSWER_NOT_A_SENTENCE",
-  // fixed in production by POSITION_ANSWER_NOT_A_SENTENCE, QA round 17z-c, 14 Nov 2026
-  "nov14-position-answer-character-she-s-a-hard-worker": "POSITION_ANSWER_NOT_A_SENTENCE",
-  // fixed in production by POSITION_ANSWER_NOT_A_SENTENCE, QA round 17z-c, 14 Nov 2026
-  "nov14-position-answer-character-she-s-a-problem": "POSITION_ANSWER_NOT_A_SENTENCE",
-  // fixed in production by POSITION_ANSWER_NOT_A_SENTENCE, QA round 17z-c, 14 Nov 2026
-  "nov14-position-answer-character-she-s-a-minor": "POSITION_ANSWER_NOT_A_SENTENCE",
   // fixed in production by CLEANING_POLICY_IS_CARE_AND_CLEANING, QA round 17z-c, 14 Nov 2026
   "nov14-cleaning-policy-cleaning-policy": "CLEANING_POLICY_IS_CARE_AND_CLEANING",
   // fixed in production by CLEANING_POLICY_IS_CARE_AND_CLEANING, QA round 17z-c, 14 Nov 2026

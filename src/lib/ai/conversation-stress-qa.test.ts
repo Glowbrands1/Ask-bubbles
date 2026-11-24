@@ -70,7 +70,8 @@ const LIBRARY = [
   template("demotion", "Demotion Form", "create_employment_change_form"),
   template("position-transfer", "Position Transfer Form", "create_employment_change_form"),
   template("prescreen-phone-interview", "Prescreen / Phone Interview Form", "create_hiring_form"),
-  template("tanning-consultant-interview", "Tanning Consultant Interview Form", "create_hiring_form"),
+  // The Tanning Consultant Interview Form was here; it was removed from the library and its key retired (the sibling
+  // company's role; Pau, 21 Nov 2026), so no list the chat reads carries it.
 ];
 
 let counter = 0;
@@ -268,7 +269,6 @@ describe("4. the words managers use for each form (FIXED where marked)", () => {
     ["need a CA on jordan testperson", "dpoa", "jordan testperson"],
     ["jordan testperson needs a written warning for cash handling", "dpoa", "jordan testperson"], // FIXED
     ["phone screen for a candidate named Sam Rivera", "prescreen-phone-interview", "sam rivera"], // FIXED
-    ["TC interview for Sam Rivera", "tanning-consultant-interview", "sam rivera"], // FIXED
     ["step jordan testperson down to associate", "demotion", "jordan testperson"], // FIXED
     ["demote jordan testperson from shift lead", "demotion", "jordan testperson"],
     ["transfer avery testperson to another location", "position-transfer", "avery testperson"],
@@ -276,6 +276,15 @@ describe("4. the words managers use for each form (FIXED where marked)", () => {
     ["termination form for avery testperson", "resignation-exit", "avery testperson"],
   ])("%s → %s for %s", async (turn, key, person) => {
     expectCard(await converse(turn), key, person);
+  });
+
+  // Was "TC interview for Sam Rivera" → tanning-consultant-interview. That form was removed (Pau, 21 Nov 2026): the
+  // manager's words now open no card for it, and no other form is opened in its place.
+  it("'TC interview for Sam Rivera' opens no Tanning Consultant Interview card (removed, 21 Nov 2026)", async () => {
+    const replay = await converse("TC interview for Sam Rivera");
+    expect(replay.last.formProposal?.templateKey).not.toBe("tanning-consultant-interview");
+    expect(replay.last.formProposal, replay.last.content).toBeUndefined();
+    expect(replay.last.content ?? "").not.toMatch(/tanning/i);
   });
 
   it("'interview form' names four forms, so the manager picks (FIXED)", async () => {

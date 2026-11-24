@@ -2,6 +2,7 @@ import { EXCERPT_HIDDEN_BRANDS, MULTI_BRAND_MANUAL_TITLES } from "@/config/compa
 import { excerptBrandFilterEnabled, excerptBrandHeadingDropEnabled } from "@/lib/config/chat-quality-flags";
 
 import { isMultiBrandManual } from "./brand-sections";
+import { documentWordsForDisplay } from "./manual-display-words";
 
 /**
  * ============================================================================
@@ -118,9 +119,10 @@ export function withoutBrandLines(text: string, brands: readonly string[]): stri
  * else comes back unchanged.
  */
 export function excerptTextForDisplay(text: string, documentTitle: string): string {
-  if (!excerptBrandFilterEnabled()) return text;
+  /* The manual's words in this company's words (`MANUAL_DISPLAY_WORDS`: "salon" → "store"; QA, 21 Nov 2026, item 7). */
+  if (!excerptBrandFilterEnabled()) return documentWordsForDisplay(text, documentTitle);
   if (!isMultiBrandManual(documentTitle, MULTI_BRAND_MANUAL_TITLES)) return text;
-  return withoutBrandLines(text, EXCERPT_HIDDEN_BRANDS);
+  return documentWordsForDisplay(withoutBrandLines(text, EXCERPT_HIDDEN_BRANDS), documentTitle);
 }
 
 /**

@@ -233,24 +233,51 @@ describe("acceptance: a hidden interview form opens no card (QA, 25 Oct 2026)", 
     bag.guess = "coaching";
     const [reply] = await replay([TANNING_INTERVIEW]);
     expect(reply!.formProposal).toBeUndefined();
-    expect(reply!.content).toMatch(NOT_PUBLISHED);
+    /*
+     * CHANGED ON PURPOSE (Pau, 21 Nov 2026): the Tanning Consultant Interview was removed from this app's library and
+     * its matcher went with it, so these words no longer name a form and the reply is not "not published" — Bubbles
+     * asks which form is needed. Still no card, and no Coaching Form in its place.
+     * CHANGED ON PURPOSE (board f099, QA, 23 Nov 2026): a form the library has no title for is now said so before the
+     * forms menu ("There's no tanning consultant interview form in the forms library …", the form's own words only), in place of the bare "Which form do you need?".
+     */
+    /*
+     * CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms; QA's #1112 review): the interviews are published under
+     * Buff City Soap's names, so these words find them by name. None can be started in the chat: the reply names them
+     * and sends the manager to Forms (`namedFormsNotInChatReply`). No card, no menu of forms that cannot be started here,
+     * and no tanning word in anything a manager reads.
+     */
+    expect(reply!.content).toMatch(/^The forms library has the \*\*Team Member Interview Form\*\*, \*\*First Round Management Interview Form\*\* and \*\*Second Round Management Interview Form\*\*, but they can't be started in the chat yet: start one from \*\*Forms\*\*\.$/);
+    expect(reply!.content).not.toMatch(/tanning/i);
+    expect((reply as { formSelection?: unknown }).formSelection ?? null).toBeNull();
     expect(reply!.content).not.toMatch(A_CARD);
+    /* CHANGED ON PURPOSE (board f099): the reply names the form asked for in the manager's own words, to say it isn't in the library. */
+    expect(reply!.content).not.toMatch(/tanning consultant interview form for/i);
     expect(reply!.content).not.toContain("create a tanning consultant interview form for");
   });
 
-  it("conv_mvnqblza266tbwt: the first round management interview is not published, and no Corrective Action Form", async () => {
+  /*
+   * CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the management interviews are unhidden, so the same production turn opens
+   * the interview's own card. What 25 Oct guarded stays guarded: never a Corrective Action Form in its place.
+   */
+  it("conv_mvnqblza266tbwt: the first round management interview opens its own card, never a Corrective Action Form", async () => {
     bag.guess = "dpoa";
     const [reply] = await replay([FIRST_ROUND_INTERVIEW]);
-    expect(reply!.formProposal).toBeUndefined();
-    expect(reply!.content).toMatch(NOT_PUBLISHED);
+    expect(reply!.formProposal?.templateKey).toBe("management-interview-round-1");
     expect(reply!.content).not.toMatch(A_CARD);
     expect(reply!.content).not.toMatch(/Verbal or written\?|Is payroll deduct applicable\?/);
   });
 
   it("the second round management interview, the same way", async () => {
     const [reply] = await replay(["create a second round management interview form for Test Employee"]);
-    expect(reply!.formProposal).toBeUndefined();
-    expect(reply!.content).toMatch(NOT_PUBLISHED);
+    expect(reply!.formProposal?.templateKey).toBe("management-interview-round-2");
+  });
+
+  it("the Team Member Interview Form, asked for by its Buff City Soap title, opens its own card (Pau, 23 Nov 2026)", async () => {
+    bag.guess = "coaching";
+    const [reply] = await replay(["create a team member interview form for Test Employee"]);
+    expect(reply!.formProposal?.templateKey).toBe("tanning-consultant-interview");
+    expect(reply!.formProposal?.templateName).toBe("Team Member Interview Form");
+    expect(reply!.content).not.toMatch(/tanning/i);
   });
 
   it("a name sent after the not-published reply still opens no card", async () => {
@@ -260,9 +287,14 @@ describe("acceptance: a hidden interview form opens no card (QA, 25 Oct 2026)", 
     expect(replies[1]!.content).not.toMatch(A_CARD);
   });
 
-  it("asked while a Coaching card is open, the interview still opens no card", async () => {
+  it("asked while a Coaching card is open, a hidden form still opens no card", async () => {
     bag.guess = "coaching";
-    const replies = await replay(["create a coaching form for Test Employee at Kearney, late to her shift on 10-20", TANNING_INTERVIEW]);
+    /*
+     * CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the management interviews are unhidden (Pau), so the hidden form asked for here
+     * is the SDIT EPP, still hidden. The mechanism checked is the same: a hidden form named while another card is open
+     * opens no card and says it is not published.
+     */
+    const replies = await replay(["create a coaching form for Test Employee at Kearney, late to her shift on 10-20", "create an SDIT EPP for Test Employee"]);
     expect(replies[0]!.formProposal?.templateKey).toBe("coaching");
     expect(replies[1]!.formProposal ?? null).toBeNull();
     expect(replies[1]!.content).not.toMatch(A_CARD);
@@ -276,10 +308,22 @@ describe("acceptance: a hidden interview form opens no card (QA, 25 Oct 2026)", 
   ])("an interview that is no single title (%s guess): %s opens no card", async (guess, question) => {
     bag.guess = guess;
     const [reply] = await replay([question]);
-    // The proposal flow's answer: the forms this deployment publishes, no interview among them, nothing opened.
+    // The proposal flow's answer: nothing opened, no Coaching or Corrective Action card in the interview's place.
+    // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the interviews are published now, so the forms offered may name them;
+    // none is the reference platform's (no tanning word in anything a manager reads; the stored key
+    // "tanning-consultant-interview" is kept on purpose, Pau keeps the 9 keys).
     expect(reply!.formProposal).toBeUndefined();
     expect(reply!.content).not.toMatch(A_CARD);
-    expect(JSON.stringify(reply)).not.toMatch(/interview/i);
+    const read = JSON.stringify(reply, (key, value) => (key === "templateKey" ? undefined : value));
+    expect(read).not.toMatch(/tanning/i);
+    /*
+     * CHANGED ON PURPOSE (board f099, QA, 23 Nov 2026; then Pau, 23 Nov: BCS terms in the forms, QA's #1112 review): the
+     * interviews are published now and found by name, but cannot be started in the chat. The reply names them and sends
+     * the manager to Forms: never a card, never another form in their place (no Prescreen).
+     */
+    expect(reply!.content).toMatch(/^The forms library has the \*\*Team Member Interview Form\*\*, \*\*First Round Management Interview Form\*\* and \*\*Second Round Management Interview Form\*\*, but they can't be started in the chat yet: start one from \*\*Forms\*\*\.$/);
+    expect(reply!.content).not.toMatch(/Prescreen/);
+    expect((reply as { formSelection?: unknown }).formSelection ?? null).toBeNull();
   });
 });
 

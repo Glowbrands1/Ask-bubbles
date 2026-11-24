@@ -1,6 +1,7 @@
 import "server-only";
 
 import { madeAbout } from "@/lib/ai/make-it-about";
+import { manualWordsForDisplay, policyValueForDisplay } from "@/lib/knowledge/manual-display-words";
 import type { AskResponse } from "@/lib/ai/types";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import {
@@ -293,7 +294,7 @@ export async function changeActiveFormPolicy(input: {
   }
 
   const policies = manualGroundedPolicies(manual, next);
-  const value = policyFieldValue(policies);
+  const value = policyValueForDisplay(policyFieldValue(policies), manual.documentTitle);
   if (!value) return null;
 
   const policyProvenance = {
@@ -345,7 +346,7 @@ export async function changeActiveFormPolicy(input: {
     );
     for (const policy of policies.filter((p) => added.some((section) => section.heading === p.sectionTitle))) {
       if (policy.policyText.trim() === "") continue;
-      lines.push("", `**${policy.sectionTitle}:**`, ...policy.policyText.trim().split("\n").map((line) => `> ${line}`));
+      lines.push("", `**${policy.sectionTitle}:**`, ...manualWordsForDisplay(policy.policyText.trim()).split("\n").map((line) => `> ${line}`));
     }
   }
   /*
@@ -615,7 +616,7 @@ export async function rederivePolicyFromAccount(input: {
   if (!managers(POLICY_KEY)) {
     if (sections.length > 0) {
       const policies = manualGroundedPolicies(manual, sections);
-      const value = policyFieldValue(policies);
+      const value = policyValueForDisplay(policyFieldValue(policies), manual.documentTitle);
       if (value && value !== (row(POLICY_KEY)?.value ?? "").trim()) {
         const provenance = {
           [POLICY_KEY]: {

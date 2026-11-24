@@ -61,6 +61,23 @@ fixes that sat on unmerged branches reached this app but not Ask Sunny's
 `main`; port from the sibling's `main`, and if the source fix is only on a
 branch, say so in the pull request.
 
+## 5. Anything new in the app is readable by the AI
+
+The AI never looks at pages; it reads the app only through its readers (the
+chat's data tools and blocks, e.g. `src/lib/ai/chat-data-tools.ts`,
+`google-reviews-chat-read.ts`, and the agent loop's tools when it is ported). A
+new page, report, table, period or figure that a manager could ask about ships
+with its reader in the same pull request:
+
+1. The reader returns it, scoped by the same permission and stores as the page.
+2. The tool description / prompt names it, so the model knows to ask for it.
+3. A replay case asks for it in a manager's words and asserts the figures reach
+   the model.
+
+The pull request description says which: **AI can read it: yes (<reader>) / not
+needed because …**. Pau, 20 Nov 2026: a feature isn't done until the AI can read
+it, without anyone having to ask.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know

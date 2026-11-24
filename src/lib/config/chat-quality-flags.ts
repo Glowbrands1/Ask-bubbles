@@ -20,6 +20,15 @@ export function envFlag(name: string): boolean {
   return flagFromEnv(name, process.env[name]);
 }
 
+/**
+ * REQUIRED_FIELDS_AT_FINALIZE_ENABLED (HR via Pau, 19 Nov 2026; default off). A field a published
+ * version marks `required` (revision 8 of the Corrective Action Form: the policy manual's signed date and the past 90
+ * days' history) must hold a value before Finalize; a draft may stay blank. Off, a blank required field files as before.
+ */
+export function requiredFieldsAtFinalizeEnabled(): boolean {
+  return envFlag("REQUIRED_FIELDS_AT_FINALIZE_ENABLED");
+}
+
 /** Claude tool-use reading of a form turn, and routing that reading off search. */
 export function formToolsEnabled(): boolean {
   return envFlag("FORM_TOOLS_ENABLED");
@@ -924,6 +933,9 @@ export function excerptBrandFilterEnabled(): boolean {
  * A Google review question gets the Google Reviews page's month-to-date
  * figures, goal and pace for the caller's stores, and only with View reports.
  * Off, review questions keep the existing path. Ported from the sibling app (QA T11).
+ * QA, 18 Nov 2026 ("How many Google reviews did we get this week?" got "I don't have report figures like review
+ * counts"): the block also carries this week and last week (Monday–Sunday, Central), each store's average rating and
+ * the newest reviews, from the page's own reads (`google-reviews-chat-read.ts`). Default off; not on in production.
  */
 export function googleReviewsInChatEnabled(): boolean {
   return envFlag("GOOGLE_REVIEWS_IN_CHAT_ENABLED");
@@ -999,6 +1011,11 @@ export function formsGuideEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  // Loop port, Phase 2 (ported from the sibling app at QA's direction, 21 Nov 2026; all default off, nothing reads them yet but switch.ts).
+  "AGENT_LOOP_ENABLED",
+  "CURRENT_MANUAL_SCOPE_ENABLED",
+  "MANUAL_SECTION_DEDUPE_ENABLED",
+  "NEAR_MISS_NEVER_SEATED_ENABLED",
   // coding 2: OTHER_POLICY_AGREES and OTHER_NOT_A_POLICY_NAME (ported from the sibling app at QA's direction, 14 Nov 2026; default off).
   "OTHER_POLICY_AGREES_ENABLED",
   "OTHER_NOT_A_POLICY_NAME_ENABLED",
@@ -1964,6 +1981,26 @@ export function firstNameAskEnabled(): boolean {
  */
 export function unknownNameAskEnabled(): boolean {
   return envFlag("UNKNOWN_NAME_ASK_ENABLED");
+}
+
+/**
+ * STARTER_FOLLOW_UP_EXAMPLE_ENABLED (port from the sibling app's #1127 and #1150, QA item 24; default off; QA flips it). A
+ * home starter ("Create a coaching form.", "Help me prepare for a conversation with a team member.") sent as a chat's
+ * first message got "who?" with nothing to go on, and managers left. On: that follow-up carries one short example
+ * answer (`ai/starter-follow-up.ts`). Off, as before.
+ */
+export function starterFollowUpExampleEnabled(): boolean {
+  return envFlag("STARTER_FOLLOW_UP_EXAMPLE_ENABLED");
+}
+
+/**
+ * FORM_TOPIC_SEARCH_ENABLED (port of the sibling app's #1266, 23 Nov 2026; default off; QA flips it). The agent loop's
+ * find_past_forms with a topic and no employee ("any forms about cash handling at my stores this month?", "who's been
+ * written up for dress code?") searches the saved text of every form this manager may see in the forms page
+ * (`forms/form-topic-search.ts`). Off, a topic-only call is refused with a plain "not available yet".
+ */
+export function formTopicSearchEnabled(): boolean {
+  return envFlag("FORM_TOPIC_SEARCH_ENABLED");
 }
 
 /**
@@ -3846,6 +3883,15 @@ export function sameFormCopyNewPersonEnabled(): boolean {
  */
 export function payrollAmountSameMessageEnabled(): boolean {
   return envFlag("PAYROLL_AMOUNT_SAME_MESSAGE_ENABLED");
+}
+
+/**
+ * PAYROLL_CLAUSE_NOT_ACCOUNT_ENABLED (port from the sibling app, where it is on; default off here). The agent loop's
+ * account loses a bare payroll answer ("$20 payroll deduct applies", "yes payroll but I don't know the amount") and the
+ * app's own "Payroll deduction amount: $X." line (`lib/ai/payroll-clause-not-account.ts`). Off, the text as it was.
+ */
+export function payrollClauseNotAccountEnabled(): boolean {
+  return envFlag("PAYROLL_CLAUSE_NOT_ACCOUNT_ENABLED");
 }
 
 /**
@@ -5949,4 +5995,88 @@ export function formEditTouchesUpdatedAtEnabled(): boolean {
  */
 export function formsOnFileDateRangeEnabled(): boolean {
   return envFlag("FORMS_ON_FILE_DATE_RANGE_ENABLED");
+}
+
+/**
+ * FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, QA's f081 follow-up, 20 Nov 2026; same flag in both apps; default
+ * off). The chat's FORMS ON FILE block (`forms/chat-form-records.ts`) listed rows and the model counted them: a date's
+ * count wrong, a different person's form folded into another's, totals that did not add up. With the flag, the block
+ * carries counts built by code (per person as filed, per form, per date with statuses, and a total;
+ * `forms/forms-on-file-counts.ts`) for the model to copy; a period is read up to 1000 rows and counted over all of them,
+ * with up to 100 listed; and an archived DRAFT is left out unless the question asks for archived forms (finalized forms
+ * count archived or not, marked archived). Off, as before.
+ */
+export function formsOnFileCountsEnabled(): boolean {
+  return envFlag("FORMS_ON_FILE_COUNTS_ENABLED");
+}
+
+/**
+ * STATED_PLAN_STEPS_ENABLED (port from the sibling app, its f062, Pau via QA, 20 Nov 2026; same flag in both apps; default
+ * off; QA flips it after a live test). A Corrective Action's Action Plan keeps the standard plan exactly and adds each
+ * step the manager stated ("the opening procedures reviewed with <P> this week"), in their words, before the closing.
+ * The steps come from a record: the loop card's plan_steps (with evidence) or the intent reader's planSteps slot (so on
+ * the regular chat only with INTENT_EXTRACTION_ENABLED too), each kept only when its words are the manager's. Off, the
+ * tool schemas, the card and the plan are exactly as before. See `forms/stated-plan-steps.ts`.
+ */
+export function statedPlanStepsEnabled(): boolean {
+  return envFlag("STATED_PLAN_STEPS_ENABLED");
+}
+
+/*
+ * ============================================================================
+ * THE AGENT LOOP'S OWN FLAGS (loop port, Phase 2; ported from the sibling app, QA, 21 Nov 2026)
+ * ============================================================================
+ *
+ * The flags the sibling app's agent loop reads that this app did not have (its GLOBAL_SALON_ASK_ENABLED is this app's
+ * GLOBAL_STORE_ASK_ENABLED / globalStoreAskEnabled, already here). Each defaults OFF and is listed as "off" in
+ * production-flags.json. Until the loop itself is ported (Phase 3+4) only `agent-loop/switch.ts` reads
+ * AGENT_LOOP_ENABLED, and nothing on today's chat path imports it, so nothing a manager sees changes.
+ */
+
+/**
+ * AGENT_LOOP_ENABLED (same name as the sibling app): the HR chat answered by one model with tools, step by step, until
+ * it writes the reply (`lib/ai/agent-loop/`, ported later). Only for the signed-in users listed in AGENT_LOOP_USERS;
+ * with that list unset or empty, nobody (`agent-loop/switch.ts`). Off, every turn is answered exactly as before.
+ */
+export function agentLoopEnabled(): boolean {
+  return envFlag("AGENT_LOOP_ENABLED");
+}
+
+/**
+ * CURRENT_MANUAL_SCOPE_ENABLED (same name as the sibling app): after a match, keep the current JBA Policy Manual edition
+ * and collapse identical sections (`knowledge/current-manual-scope.ts`). Off, the rows the database returned are used as
+ * they are.
+ */
+export function currentManualScopeEnabled(): boolean {
+  return envFlag("CURRENT_MANUAL_SCOPE_ENABLED");
+}
+
+/**
+ * MANUAL_SECTION_DEDUPE_ENABLED (same name as the sibling app): one chunk per section heading among the current year's
+ * manuals. Off, two copies of the same section with different text both stay.
+ */
+export function manualSectionDedupeEnabled(): boolean {
+  return envFlag("MANUAL_SECTION_DEDUPE_ENABLED");
+}
+
+/**
+ * NEAR_MISS_NEVER_SEATED_ENABLED (same name as the sibling app): in the agent loop's find_staff, a close spelling is
+ * never seated as the person; it is asked about, with the option to keep the name as typed. Off, as before.
+ */
+export function nearMissNeverSeatedEnabled(): boolean {
+  return envFlag("NEAR_MISS_NEVER_SEATED_ENABLED");
+}
+
+/**
+ * CARD_PERSON_THIS_REQUEST_ENABLED (port from the sibling app; the outside audit's wrong-person risk, approved by Pau,
+ * 21 Nov 2026; same flag in both apps; default off). The agent loop seated a card's or form's person when ANY manager turn
+ * in the chat held their name, or any earlier card was theirs: a name from an unrelated turn four turns back could put a
+ * form on the wrong person (this app, 18 Nov 2026). On: the person must be named by the manager in this request: the turn
+ * that asks for the form, or a manager turn after the chat's last card, after the last turn that named a different roster
+ * person, or after a "who is this for?" (never a name only in the app's reply or a tool note); an earlier card for them
+ * counts only while no different person was named since. Otherwise the loop asks who the form is for
+ * (`ai/agent-loop/person-in-request.ts`). Off, as before.
+ */
+export function cardPersonThisRequestEnabled(): boolean {
+  return envFlag("CARD_PERSON_THIS_REQUEST_ENABLED");
 }

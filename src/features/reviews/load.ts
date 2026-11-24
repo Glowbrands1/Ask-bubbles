@@ -7,11 +7,13 @@ import {
   type GoalTone,
   type RankMetric,
 } from "@/lib/google-reviews/goals";
+import type { MonthlyProgress } from "@/lib/google-reviews/monthly-progress";
 import {
   PAGE_SIZE,
   parseReviewQuery,
   readGoalData,
   readGoalDataForMonth,
+  readMonthlyProgress,
   readPeriodTrend,
   readReviewPage,
   readStoreSummaries,
@@ -36,6 +38,11 @@ export interface ReviewsData {
   rank: RankMetric;
   /** Search text and status chip for the goal table and leaderboard. Optional: absent means no filter. */
   goalFilter?: GoalFilter;
+  /**
+   * Qualifying reviews per store per month, with L3, L6 and YTD (Overview
+   * only). Null when it could not be read; absent when not loaded.
+   */
+  monthly?: MonthlyProgress | null;
   /** The month the leaderboard shows (`yyyy-mm`, Central). Absent or the current month: the live month. */
   month?: string;
 }
@@ -107,13 +114,16 @@ export async function loadReviewsData(
       (Array.isArray(periodParam) ? periodParam[0] : periodParam) === "week"
         ? "week"
         : "month";
-    const [trend, page, goals] = await Promise.all([
+    const overview = !params.tab || params.tab === "overview";
+    const [trend, page, goals, monthly] = await Promise.all([
       readPeriodTrend(period, query.store),
       withList ? readReviewPage(query) : Promise.resolve(null),
       (month === monthOptions()[0]
         ? readGoalData()
         : readGoalDataForMonth(month)
       ).catch(() => null),
+      // Its own failure is its own: the rest of the page still renders.
+      overview ? readMonthlyProgress().catch(() => null) : Promise.resolve(undefined),
     ]);
     // Weekly is the latest year of weeks; monthly is every month held.
     return {
@@ -126,6 +136,7 @@ export async function loadReviewsData(
       rank,
       goalFilter: parseGoalFilter(params),
       month,
+      monthly,
     };
   } catch {
     return null;

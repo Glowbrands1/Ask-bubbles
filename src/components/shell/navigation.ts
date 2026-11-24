@@ -5,6 +5,7 @@ import {
   History,
   LayoutDashboard,
   LayoutTemplate,
+  GraduationCap,
   Library,
   LineChart,
   MessageCircle,
@@ -133,6 +134,17 @@ const ALL_SECTIONS: NavSection[] = [
         permission: "view_knowledge",
         adminOnly: true,
         feature: "knowledge",
+      },
+      {
+        /*
+         * THE AI TRAINING PROGRAM, rebuilt here from its own app. The label
+         * is the client's own wording, in capitals as they asked for it.
+         */
+        label: "AI TRAINING",
+        href: "/ai-training",
+        icon: GraduationCap,
+        permission: "view_ai_training",
+        feature: "aiTraining",
       },
     ],
   },

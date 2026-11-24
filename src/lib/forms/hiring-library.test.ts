@@ -6,8 +6,9 @@ import {
   firstRoundManagementInterviewDocument,
   prescreenPhoneInterviewDocument,
   secondRoundManagementInterviewDocument,
-  tanningConsultantInterviewDocument,
 } from "./hiring-library";
+import * as hiringLibrary from "./hiring-library";
+import { RETIRED_TEMPLATE_KEYS } from "@/config/company/forms/retired";
 import { TEMPLATE_SEEDS, coachingDocument } from "./library";
 
 /**
@@ -223,16 +224,17 @@ describe("the Coaching Form matches 01. Coaching Form.docx", () => {
       coaching: 2,
       "policy-review": 2,
       "follow-up-coaching": 2,
-      "asd-sdit-epp": 3,
-      "fttc-epp": 3,
+      // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): Buff City Soap titles and terms re-issue six templates.
+      "asd-sdit-epp": 4,
+      "fttc-epp": 4,
       "dmit-epp-tsd": 3,
       "dmit-epp-dmit": 3,
       "prescreen-phone-interview": 3, // Salon -> Store, then the removal of the uniform question (D14, Phase 2B)
-      // 4: the core-values heading names no company (QA, 25 Oct 2026; seed-sibling-brand.test.ts).
-      "tanning-consultant-interview": 4,
-      "management-interview-round-1": 4,
-      "management-interview-round-2": 3,
-      "tsd-epp": 5,
+      // Back as the Team Member Interview Form (removed 21 Nov 2026 at 4; restored at 5, Pau, 23 Nov 2026).
+      "tanning-consultant-interview": 5,
+      "management-interview-round-1": 5,
+      "management-interview-round-2": 4,
+      "tsd-epp": 6,
       // 4: Steps to Finish Termination without sibling-company system names (QA, 25 Oct 2026).
       "resignation-exit": 4,
       demotion: 2,
@@ -261,7 +263,7 @@ describe("the Coaching Form matches 01. Coaching Form.docx", () => {
      * Revision 6 (District Manager feedback, 21 Oct 2026) makes the Action
      * Plan two sentences and its closing "may result in".
      */
-    expect(TEMPLATE_SEEDS.find((seed) => seed.key === "dpoa")?.revision).toBe(7); // Revision 7 (4 Nov 2026, client request, template approved): Type of Offense is four boxes.
+    expect(TEMPLATE_SEEDS.find((seed) => seed.key === "dpoa")?.revision).toBe(8); // CHANGED ON PURPOSE, revision 8 (HR via Pau, 19 Nov 2026): two required history boxes; revision 7 (4 Nov 2026) made Type of Offense four boxes.
   });
 });
 
@@ -322,12 +324,14 @@ describe("the First Round Management Interview matches its source", () => {
       "What systems or processes have you used to manage staffing, scheduling, and labor costs?",
       "This role involves hands-on work like cleaning the Makery and equipment and keeping the workspace organized. How do you lead by example in these tasks?",
       "How do you ensure your team is consistently trained to meet both performance expectations and company compliance standards?",
-      "A client approaches the counter upset because the tanning bed they reserved is unavailable due to a mechanical issue. They are raising their voice and demanding a refund, while other clients are in the store. Show how you would handle the client in the moment and explain the steps you would take afterward to address the root cause.",
+      // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms; QA's final pick): Buff City Soap's role play replaces the reference platform's equipment scenario.
+      "A guest approaches the counter upset because the product they came in for is out of stock. They are raising their voice and demanding a refund, while other guests are in the store. Show how you would handle the guest in the moment and explain the steps you would take afterward to address the root cause.",
       "Why should we select you for this position?",
       "1. Job Description and Job Requirements and Duties: Have printed to review.",
       "2. Pay Structure: Explain the pay structure and the earning potential with bonuses. Let the applicant know that bonuses depend on reaching certain levels of sales performance.",
       "3. Review the Dress Code with the applicant.",
-      "4. Core Values Speech: While reviewing the Core Values Speech with the candidate, ask for examples (personally or professionally) that they have demonstrated each of the 4 Core Values.",
+      // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms; QA's printed-form review): no count that disagrees with the five values.
+      "4. Core Values Speech: While reviewing the Core Values Speech with the candidate, ask for examples (personally or professionally) that they have demonstrated each of our Core Values.",
       "5. Questions: Give the applicant a chance to ask any questions. Ask the applicant if they understand the job requirements, if they can perform the job duties required and if they see themselves able to embody our Core Values.",
       "6. Notification: Notify the applicant that we will contact them if we choose to offer them the position and provide them with a timeline of hiring decisions to be made.",
     ]);
@@ -396,11 +400,12 @@ describe("the Second Round Management Interview matches its source", () => {
       "Describe your approach to setting and communicating performance goals for your team.",
       "How do you identify and develop future leaders within your store team?",
       "How do you ensure all team members follow company policies, procedures, and safety guidelines?",
-      "If you were given direction as a Store Director to reduce expenses, what would be the first three areas you would focus on, and why?",
+      // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): Buff City Soap's roles, guests, add-on products and Buff Rewards (KB "Buff Rewards – Talk Track and FAQ") in the next three.
+      "If you were given direction as a General Manager to reduce expenses, what would be the first three areas you would focus on, and why?",
       "Tell me about a time you used performance results or key metrics to adjust your approach and improve outcomes.",
       "Scenario 1: Let’s pretend that during your walkthrough in the store, a staff member fails to greet a guest promptly. Demonstrate how you would address this in real-time.",
-      "Scenario 2: Customer visits have dropped 20% over the past month and lotions and memberships sales are at their lowest in six months. One long-time team member is resistant to promoting add-ons, saying, “Customers don’t want to be pushed.” What are your next steps?",
-      "How would you create a 30–60–90 day training plan for a new Assistant Store Director or Tanning Consultant?",
+      "Scenario 2: Guest visits have dropped 20% over the past month and add-on product sales and Buff Rewards sign-ups are at their lowest in six months. One long-time team member is resistant to recommending related products, saying, “Guests don’t want to be pushed.” What are your next steps?",
+      "How would you create a 30–60–90 day training plan for a new Assistant General Manager or Team Member?",
       "How do you follow up to ensure training is being applied consistently?",
     ]);
   });
@@ -429,74 +434,35 @@ describe("the Second Round Management Interview matches its source", () => {
   });
 });
 
-/* ====================================================== tanning consultant === */
+/* ========================================================= team member === */
 
-describe("the Tanning Consultant Interview matches its source", () => {
-  const document = tanningConsultantInterviewDocument();
+/*
+ * THE TEAM MEMBER INTERVIEW FORM (Pau, 23 Nov 2026): the consultant interview removed on 21 Nov 2026 is back under its
+ * old key as Buff City Soap's Team Member Interview Form, restored from its last published version (v4) with the new
+ * title. CHANGED ON PURPOSE: what was asserted gone is asserted present, with no tanning word anywhere.
+ */
+describe("the Team Member Interview Form", () => {
+  const seed = hiringLibrary.HIRING_TEMPLATE_SEEDS.find((entry) => entry.key === "tanning-consultant-interview")!;
+  const document = hiringLibrary.teamMemberInterviewDocument();
 
-  it("has the source's sections, in the source's order", () => {
-    expect(sections(document)).toEqual([
-      "Applicant Information",
-      "Qualities to Observe Throughout Interview",
-      "Interview Questions",
-      "Closing",
-    ]);
+  it("is seeded under the old key, with its Buff City Soap title, and not retired", () => {
+    expect(seed.name).toBe("Team Member Interview Form");
+    expect(seed.shortName).toBe("TM Interview");
+    expect(RETIRED_TEMPLATE_KEYS).not.toContain("tanning-consultant-interview");
+    expect(document.blocks[0]).toMatchObject({ kind: "letterhead", title: "Team Member Interview Form" });
   });
 
-  it("lists the four qualities to observe", () => {
-    expect(options(document, "qualities_observed")).toEqual([
-      "Outgoing",
-      "Competitive",
-      "Likeable",
-      "Hard Working",
-    ]);
+  it("asks the twelve questions and keeps the five core values", () => {
+    const printed = JSON.stringify(document);
+    for (let number = 1; number <= 12; number += 1) expect(printed, String(number)).toContain(`${number}. `);
+    for (const value of ["Nothing’s Impossible", "Work Hard, Have Fun", "We Speak Up", "Own the Outcome", "Win Together"]) {
+      expect(printed, value).toContain(value);
+    }
   });
 
-  it("asks all twelve numbered questions, numbered as the source numbers them", () => {
-    expect(paragraphs(document)).toEqual([
-      "1. Tell me about yourself and why you’re interested in working at Buff City Soap.",
-      "2. Can you walk me through your resume and highlight your most recent roles?",
-      "3. Describe your availability and any scheduling restrictions.",
-      "4. Describe a time you delivered excellent guest service and what made it stand out.",
-      "5. Think back to a busy day when you were helping several guests at once. How did you keep things running smoothly and make sure everyone felt taken care of?",
-      "6. This role includes recommending products and services to guests. How comfortable are you with sales, and what’s your approach?",
-      "7. Give me an example of a time you were accountable for your results—what was the situation and outcome?",
-      "8. Our company has five core values. Id like to hear about a time in your past experiences--work, school, or personal where youve shown one of these in action.",
-      "9. Give me an example of a time when you and a teammate disagreed on how to get something done. How did you handle it, and what was the outcome?",
-      "10. Give me an example of when you faced a challenge without your manager immediately available. How did you handle it, and what was the outcome?",
-      "11. What skills or experiences make you confident you’ll succeed in this role?",
-      "12. This position requires key functions such as standing for extended periods, lifting up to 25 lbs., operating a computer, and overseeing daily store operations. Are you able to perform these essential functions, with or without reasonable accommodation?",
-    ]);
-  });
-
-  it("prints the five core values in the source's words, under a heading that names no company", () => {
-    const reference = parseFormDocument(document).blocks.find(
-      (block) => block.kind === "reference",
-    );
-    expect(reference).toMatchObject({
-      // The source printed the sibling company's name before "Core Values" (QA, 25 Oct 2026):
-      // the heading is now the JBA Policy Manual's own, and the five values are unchanged.
-      label: "Core Values",
-      body: [
-        "Nothing’s Impossible – We approach challenges with creativity and determination instead of excuses.",
-        "Work Hard, Have Fun – We bring energy, positivity, and joy to doing our best work.",
-        "We Speak Up – We share ideas, concerns, and feedback openly and respectfully.",
-        "Own the Outcome – We take responsibility for results, not just tasks.",
-        "Win Together – We succeed as a team, celebrating collective achievements over individual credit.",
-      ],
-    });
-  });
-
-  it("keeps the two closing checks", () => {
-    expect(options(document, "closing_checklist")).toEqual([
-      "Reviewed job duties, cleaning requirements, and sales expectations",
-      "Reviewed pay structure and bonus potential",
-    ]);
-  });
-
-  it("closes on Hire / No Hire and the CareerPlug line", () => {
-    expect(options(document, "final_recommendation")).toEqual(["Hire", "No Hire"]);
-    expect(options(document, "update_in_careerplug")).toEqual(["Yes"]);
+  it("carries no tanning or consultant word", () => {
+    // The stored key ("tanning-consultant-interview") is kept on purpose (Pau, 23 Nov 2026); nothing printed carries it.
+    expect(JSON.stringify(seed, (name, value) => (name === "key" && value === seed.key ? undefined : value))).not.toMatch(/tanning|consultant|sun tan/i);
   });
 });
 
@@ -557,10 +523,11 @@ describe("the Prescreen / Phone Interview matches its source", () => {
 describe("the Hiring & Interview category", () => {
   const hiring = TEMPLATE_SEEDS.filter((seed) => seed.category === "hiring");
 
+  // Four again (Pau, 23 Nov 2026): the Team Member Interview Form is back.
   it("contains exactly the four supplied forms, and nothing invented", () => {
     expect(hiring.map((seed) => seed.name)).toEqual([
       "Prescreen / Phone Interview Form",
-      "Tanning Consultant Interview Form",
+      "Team Member Interview Form",
       "First Round Management Interview Form",
       "Second Round Management Interview Form",
     ]);
@@ -580,7 +547,7 @@ describe("the Hiring & Interview category", () => {
     expect(grouped[0].templates).toHaveLength(10);
     expect(grouped[1].templates).toHaveLength(1);
     expect(grouped[2].templates).toHaveLength(2);
-    expect(grouped[3].templates).toHaveLength(4);
+    expect(grouped[3].templates).toHaveLength(4); // 4 again: the Team Member Interview Form is back (Pau, 23 Nov 2026)
   });
 
   it("leaves Coaching where it was", () => {

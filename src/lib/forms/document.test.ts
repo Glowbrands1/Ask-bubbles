@@ -303,6 +303,8 @@ describe("responsibility is per template, not per field name", () => {
 });
 
 describe("the library matches the verified inventory", () => {
+  // Seventeen again (Pau, 23 Nov 2026): the consultant interview removed on 21 Nov is back as the Team Member Interview
+  // Form, under its old key, after the prescreen. CHANGED ON PURPOSE.
   it("has exactly the seventeen templates, once each", () => {
     expect(TEMPLATE_SEEDS).toHaveLength(17);
     const keys = TEMPLATE_SEEDS.map((entry) => entry.key);
@@ -354,7 +356,7 @@ describe("the library matches the verified inventory", () => {
      * one the honest answer is "none, it comes from the framework".
      */
     const paper = TEMPLATE_SEEDS.filter((entry) => entry.provenance === undefined);
-    expect(paper).toHaveLength(16);
+    expect(paper).toHaveLength(16); // 16 again: the Team Member Interview Form is back (Pau, 23 Nov 2026)
 
     const framework = TEMPLATE_SEEDS.filter((entry) => entry.provenance !== undefined);
     expect(framework.map((entry) => entry.key)).toEqual(["follow-up-coaching"]);
@@ -384,7 +386,7 @@ describe("the library matches the verified inventory", () => {
       corrective: 2,
       epp: 4,
       dmit_epp: 2,
-      interview: 4,
+      interview: 4, // 4 again: the Team Member Interview Form is back (Pau, 23 Nov 2026)
       // The Resignation/Exit Form. Not a rung of the ladder, so not `corrective`.
       exit: 1,
     });
@@ -456,9 +458,11 @@ describe("the library matches the verified inventory", () => {
        * areas is the SD currently succeeding?" about a Training Salon
        * Director — the same wrong-role defect the SDIT plan had.
        */
-      "District Manager/TSD",
-      "Training Store Director/ASD",
-      "Store Director/TC",
+      // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): Buff City Soap's General Manager, Assistant General Manager and Team
+      // Member plans, each reviewed by the next role up.
+      "District Manager/GM",
+      "General Manager/AGM",
+      "General Manager/TM",
     ]);
   });
 
@@ -620,7 +624,7 @@ describe("the library matches the verified inventory", () => {
    */
   it("fills the applicant, the date and the salon on every hiring form", () => {
     const hiring = TEMPLATE_SEEDS.filter((entry) => entry.category === "hiring");
-    expect(hiring).toHaveLength(4);
+    expect(hiring).toHaveLength(4); // 4 again: the Team Member Interview Form is back (Pau, 23 Nov 2026)
     for (const template of hiring) {
       const parsed = stored(template.document);
       const map = responsibilityMap(parsed, defaultVariantKey(template.key));

@@ -148,7 +148,8 @@ describe("the permission model is unchanged", () => {
      * library adds one permission per form family (coaching, corrective
      * action, policy review, EPP, hiring, exit, employment change), as the
      * reference platform gates them; `create_exit_form` also gates reading
-     * exit records.
+     * exit records. `view_ai_training` (Nov 2026) opens the AI Training
+     * program's lessons and the reader's own submissions; it reads no chat.
      */
     expect([...PERMISSIONS].sort()).toEqual(
       [
@@ -156,6 +157,7 @@ describe("the permission model is unchanged", () => {
         "view_overview",
         "view_knowledge",
         "manage_knowledge",
+        "view_ai_training",
         "view_forms_workspace",
         "create_forms",
         "create_coaching_form",

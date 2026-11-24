@@ -14,7 +14,7 @@ import { answerInventoryQuestion, buildFormInventoryBlock } from "./form-answers
  * server-written lists Bubbles gives when a manager asks which form to use, and
  * the block the model is handed for every other turn.
  *
- * The rule being pinned is the same one either way. The four Hiring &
+ * The rule being pinned is the same one either way. The three Hiring &
  * Interview forms are withheld from what Bubbles OFFERS — and they are still
  * published, still named honestly when somebody asks after one, and still in
  * the library whose categories the location answer describes.
@@ -52,17 +52,6 @@ const PRESCREEN = summary({
   displayOrder: 10,
 });
 
-const TANNING_CONSULTANT = summary({
-  key: "tanning-consultant-interview",
-  name: "Tanning Consultant Interview Form",
-  shortName: "TC Interview",
-  description: "The in-salon interview for a Tanning Consultant.",
-  category: "hiring",
-  layoutFamily: "interview",
-  requiredPermission: "create_hiring_form",
-  displayOrder: 11,
-});
-
 const MANAGEMENT_ROUND_1 = summary({
   key: "management-interview-round-1",
   name: "First Round Management Interview Form",
@@ -85,7 +74,13 @@ const MANAGEMENT_ROUND_2 = summary({
   displayOrder: 13,
 });
 
-const HIRING = [PRESCREEN, TANNING_CONSULTANT, MANAGEMENT_ROUND_1, MANAGEMENT_ROUND_2];
+/*
+ * CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the two management interviews are no longer withheld; the Prescreen still is.
+ * The library still holds all three hiring forms.
+ */
+const HIRING = [PRESCREEN, MANAGEMENT_ROUND_1, MANAGEMENT_ROUND_2];
+const WITHHELD = [PRESCREEN];
+const OFFERED_INTERVIEWS = [MANAGEMENT_ROUND_1, MANAGEMENT_ROUND_2];
 
 const LIBRARY: TemplateSummary[] = [
   summary(),
@@ -104,7 +99,7 @@ const inventory = () =>
   buildFormInventory(LIBRARY, { role: "location_manager", scope: null });
 
 describe('"which form should I use?"', () => {
-  it("lists what a Salon Director can start, without the withheld four", () => {
+  it("lists what a Salon Director can start, without the withheld Prescreen", () => {
     const answer = answerInventoryQuestion({
       question: { kind: "list" },
       inventory: inventory(),
@@ -114,11 +109,14 @@ describe('"which form should I use?"', () => {
 
     expect(answer!.content).toContain("Coaching Form");
     expect(answer!.content).toContain("Corrective Action Form");
-    for (const entry of HIRING) {
+    for (const entry of WITHHELD) {
       expect(answer!.content, entry.name).not.toContain(entry.name);
     }
-    // The category heading goes with its forms rather than printing empty.
-    expect(answer!.content).not.toContain("Hiring & Interview Forms");
+    for (const entry of OFFERED_INTERVIEWS) {
+      expect(answer!.content, entry.name).toContain(entry.name);
+    }
+    // The category heading goes with its forms; the management interviews are under it now.
+    expect(answer!.content).toContain("Hiring & Interview Forms");
   });
 });
 
@@ -144,7 +142,7 @@ describe('"do we have a prescreen form?"', () => {
     });
 
     expect(answer!.content).toMatch(/no published template for that/i);
-    for (const entry of HIRING) {
+    for (const entry of WITHHELD) {
       expect(answer!.content, entry.name).not.toContain(entry.name);
     }
   });
@@ -174,7 +172,7 @@ describe('"where are the forms?"', () => {
 describe("the FORMS LIBRARY block the model is given", () => {
   const block = () => buildFormInventoryBlock(inventory());
 
-  it("still lists all four, because they still exist", () => {
+  it("still lists all three, because they still exist", () => {
     for (const entry of HIRING) {
       expect(block(), entry.name).toContain(entry.name);
     }
@@ -186,8 +184,11 @@ describe("the FORMS LIBRARY block the model is given", () => {
       .filter((line) => line.includes("NOT OFFERED —"))
       .join("\n");
 
-    for (const entry of HIRING) {
+    for (const entry of WITHHELD) {
       expect(marked, entry.name).toContain(entry.name);
+    }
+    for (const entry of OFFERED_INTERVIEWS) {
+      expect(marked, entry.name).not.toContain(entry.name);
     }
     expect(marked).not.toContain("Coaching Form");
     expect(marked).not.toContain("Corrective Action Form");

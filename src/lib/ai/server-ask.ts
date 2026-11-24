@@ -12,7 +12,7 @@ import { ACTIVE_BRAND } from "@/lib/brand";
 import { CLAUDE_MAX_TOKENS, RETRIEVAL } from "@/lib/config/models";
 import { MissingConfigurationError, liveReadiness } from "@/lib/config/server-env";
 import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
-import { asksOnlyAboutFormsOnFile, isFormRangeQuestion, isFormRecordsQuestion, loadFormRecords } from "@/lib/forms/chat-form-records";
+import { asksOnlyAboutFormsOnFile, isFormListQuestion, isFormRangeQuestion, isFormRecordsQuestion, loadFormRecords } from "@/lib/forms/chat-form-records";
 import { namesAPerson } from "@/lib/forms/names-a-person";
 import { priorFormsReadingForChat } from "@/lib/forms/prior-forms";
 import { answersFormClarification } from "@/lib/forms/form-clarification";
@@ -56,6 +56,7 @@ import { withTerseSlots } from "./terse-slots";
 import { loadFewShotBlock } from "./feedback-examples";
 import { applySelfCheck } from "./self-check-repair";
 import { applyIntentExtraction } from "./intent-extraction";
+import { turnPlanSteps, withPlanStepsTurn } from "./plan-steps-turn";
 import { isQuestionNotForm } from "./question-not-form";
 import { pinnedManualBlock, printedPageFromRetrieval } from "./policy-citation-fields";
 import { recallMemory, rememberFact } from "./chat-memory-store";
@@ -66,6 +67,7 @@ import {
   chatMemoryEnabled,
   chatStyleRulesEnabled,
   chatTraceEnabled,
+  statedPlanStepsEnabled,
   fieldAccuracyEnabled,
   formToolsEnabled,
   hybridSearchEnabled,
@@ -104,7 +106,8 @@ import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./fo
 import { loadConversationFormState, saveConversationFormState } from "./form-state-store";
 import { formCommandBypassesSearch, routeUnderstoodFormTurn } from "./form-tool-route";
 import { understandFormTurn } from "./form-tool-understand";
-import { remapFormTurn, remapShouldRun, type FormRemapSlots } from "./form-full-remap";
+import { formNameNotInLibrary, namesFormNotInLibrary, remapFormTurn, remapShouldRun, type FormRemapSlots } from "./form-full-remap";
+import { formNotInLibraryReply, libraryOffersForm, namedFormsNotInChatReply } from "./form-not-in-library";
 import { historyForRemap } from "./form-remap-scope";
 import { withRemapDraftSources } from "./remap-draft-sources";
 import { augmentIntakeQuestion } from "./intake-augment";
@@ -179,6 +182,7 @@ import { withoutLetterSigner } from "./letter-signer";
 import { withFirstNameAnswerFor, withFirstNameSuggestFor } from "./first-name-suggest";
 import { withManagerStatedTitle } from "./manager-title";
 import { withReplyMatchesCard } from "./reply-matches-card";
+import { withStarterFollowUp } from "./starter-follow-up";
 import { withTitleOfTheEmployee } from "./title-of-the-employee";
 import { withUnderPerformanceExplained } from "./under-performance-explained";
 import { withProposalEditRules } from "./proposal-edit-rules";
@@ -266,7 +270,8 @@ export async function answerQuestion(
   // FORM_NAME_FROM_ROSTER_ENABLED, last: only roster people are the employee or a choice (`forms/roster-only-names.ts`).
   // REPLY_MATCHES_CARD_ENABLED, the very last step: the reply agrees with the finished card (`ai/reply-matches-card.ts`).
   // EXIT_OTHER_PERSON_NOT_SUBJECT_ENABLED: the letter's other person ("your General Manager, <B>") is never offered as the exit form's subject (`ai/exit-other-person.ts`).
-  return withReplyMatchesCard(withRosterOnlyNames(withExitOtherPersonNotOffered(noticed, asked)));
+  // STARTER_FOLLOW_UP_EXAMPLE_ENABLED: outermost — a home starter's "who?" / "which?" carries one example answer (`ai/starter-follow-up.ts`).
+  return withStarterFollowUp(withReplyMatchesCard(withRosterOnlyNames(withExitOtherPersonNotOffered(noticed, asked))), asked);
 }
 
 async function answerQuestionAnyPath(
@@ -373,8 +378,24 @@ async function answerQuestionTraced(
   return finishChatTrace(draft, () => answerQuestionBody(read, actor, memory));
 }
 
+/*
+ * STATED_PLAN_STEPS_ENABLED (ported from the sibling app's f062, Pau via QA, 20 Nov 2026): the turn keeps the plan
+ * steps its intent reader kept, and a Corrective Action card built this turn carries them (`planSteps`); Create adds
+ * them to the plan. Off, the turn is answered exactly as before (`answerQuestionTurn`).
+ */
+function answerQuestionBody(request: AskRequest, actor: ChatActor, memory: { memoryOwnerId?: string } = {}): Promise<AskResponse> {
+  if (!statedPlanStepsEnabled()) return answerQuestionTurn(request, actor, memory);
+  return withPlanStepsTurn(async () => withTurnPlanSteps(await answerQuestionTurn(request, actor, memory)));
+}
+
+/** STATED_PLAN_STEPS_ENABLED: a Corrective Action card built this turn carries the steps its intent reader kept. */
+function withTurnPlanSteps(answered: AskResponse): AskResponse {
+  const steps = turnPlanSteps();
+  return answered.formProposal?.templateKey === "dpoa" && steps.length > 0 ? { ...answered, formProposal: { ...answered.formProposal, planSteps: steps } } : answered;
+}
+
 /** Last on every path: the Corrective Action card's Action Plan is the manager's or none. */
-async function answerQuestionBody(
+async function answerQuestionTurn(
   request: AskRequest,
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
@@ -445,7 +466,9 @@ async function answerQuestionCore(
   const takeOffOnCard = takeOffStaysCard(request);
   // LIST_POLICY_IS_EDIT_ENABLED: "please list the policy" with only a card open is a card turn, never a question.
   const listPolicyCard = listPolicyOnCard(request);
-  const askedQuestion = !takeOffOnCard && !listPolicyCard && questionNotFormEnabled() && isQuestionNotForm(request.question, request.history);
+  /* FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, f081): "list ca for the month" lists forms on file; it never starts a new form. */
+  const listsForms = isFormListQuestion(request.question, request.context.todayIso);
+  const askedQuestion = listsForms || (!takeOffOnCard && !listPolicyCard && questionNotFormEnabled() && isQuestionNotForm(request.question, request.history));
   if (intentExtractionEnabled() && !askedQuestion) {
     markStage("intent_extraction");
     const prepared = await applyIntentExtraction({ request, actor });
@@ -526,7 +549,9 @@ async function answerQuestionCore(
     spokenIntent.kind !== "none" ||
     Boolean(request.continueProposalTemplateKey) ||
     // "The form", answering "guidance, or a … Form?".
-    answersFormClarification(request.history, request.question);
+    answersFormClarification(request.history, request.question) ||
+    // Board f099: "create a store manager interview for …" asks for a form the library has no title for.
+    namesFormNotInLibrary(request.question);
 
   if (formsTurn) {
     const settled = await summariesPromise;
@@ -546,6 +571,16 @@ async function answerQuestionCore(
       namedTemplateKey: spokenIntent.kind === "explicit" ? spokenIntent.templateKey : null,
     });
     if (inventoryAnswer) return inventoryAnswer;
+
+    // Board f099: a form the library has no title for is said so, with the forms that exist; an open card stays as it was.
+    if (namesFormNotInLibrary(request.question) && !libraryOffersForm(summaries, actor, formNameNotInLibrary(request.question))) {
+      return formNotInLibraryReply(summaries, actor, formNameNotInLibrary(request.question), request.continueProposalTemplateKey ?? null);
+    }
+    // f099 with the interviews published (Pau, 23 Nov: BCS terms in the forms): forms found by name that the chat cannot start are said so.
+    const notInChat = namesFormNotInLibrary(request.question)
+      ? namedFormsNotInChatReply(summaries, actor, formNameNotInLibrary(request.question), request.continueProposalTemplateKey ?? null)
+      : null;
+    if (notInChat) return notInChat;
 
     // Hidden templates are already left out of `summaries`; one listed but not published is not filled by the remap either.
     const unpublished = buildFormInventory(summaries, actor)
@@ -835,6 +870,7 @@ async function answerQuestionCore(
    * coaching jba manual 11-1-26"), and each row says who created it.
    */
   const readsFormRecords =
+    listsForms ||
     pastFormsFirst ||
     ((isFormRecordsQuestion(request.question) ||
       (formsOnFileDateRangeEnabled() && isFormRangeQuestion(request.question, request.context.todayIso))) &&
@@ -846,7 +882,7 @@ async function answerQuestionCore(
         previousQuestion: previousManagerTurn(request),
         today: request.context.todayIso,
         ...(crossChatGuard ? { markCreator: true } : {}),
-        ...(formsOnFileDateRangeEnabled() ? { narrowFromQuestion: true } : {}),
+        ...(formsOnFileDateRangeEnabled() || listsForms ? { narrowFromQuestion: true } : {}),
       })
     : Promise.resolve(null);
 
@@ -1128,6 +1164,12 @@ async function answerQuestionCore(
     ? await loadGoogleReviewsChatBlock({ question: request.question, role: actor.role, scope: actor.scope })
     : null;
 
+  /*
+   * Ported from the sibling app (board f066, 20 Nov 2026): "who deleted <name>'s form?" reads the append-only deletion record,
+   * administrators only (`form-deletions-chat-read.ts`). Null for any other turn.
+   */
+  const deletionsBlock = await (await import("./form-deletions-chat-read")).loadFormDeletionsChatBlock({ question: request.question, role: actor.role });
+
   markStage("summaries_memory");
   const settledSummaries = await summariesPromise;
   const personMemory = await memoryPromise;
@@ -1246,7 +1288,7 @@ async function answerQuestionCore(
     prompt: redactTraceText(system),
   });
   const reportData =
-    [briefing?.text ?? null, reviewBlock?.text ?? null, dataAddition.data].filter((part) => part && part.length > 0).join("\n\n") || null;
+    [briefing?.text ?? null, reviewBlock?.text ?? null, deletionsBlock, dataAddition.data].filter((part) => part && part.length > 0).join("\n\n") || null;
   const claudeBase = {
     system,
     reportData,

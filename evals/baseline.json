@@ -35,15 +35,13 @@
     },
     {
       "id": "b12",
-      "pass": false,
-      "misses": [
-        "policy"
-      ],
+      "pass": true,
+      "misses": [],
       "card": {
         "employee": "maisie quillfeather",
-        "salon": null,
+        "salon": "loc-225",
         "date": "2026-10-22",
-        "status": "needs_location"
+        "status": "ready"
       }
     },
     {

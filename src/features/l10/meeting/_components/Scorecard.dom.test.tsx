@@ -120,7 +120,8 @@ describe("Bloom-style scorecard (the owner's feedback)", () => {
     const heads = within(table).getAllByRole("columnheader");
     const col = heads.findIndex((h) => h.hasAttribute("data-current-week"));
     expect(heads[col].textContent).toBe("9 Nov / 15 Nov");
-    for (const r of within(table).getAllByRole("row").slice(1)) {
+    // The group divider rows (19 Nov 2026) are one heading cell across the table; the metric rows are checked.
+    for (const r of within(table).getAllByRole("row").slice(1).filter((x) => !x.hasAttribute("data-group-row"))) {
       const cells = within(r).getAllByRole("cell");
       expect(cells[col].hasAttribute("data-current-week")).toBe(true);
       expect(cells.filter((c) => c.hasAttribute("data-current-week"))).toHaveLength(1);
@@ -176,5 +177,22 @@ describe("Scorecard accents in Ask Bubbles' teal (inside .hub-l10)", () => {
       [t("charcoal"), t("tokyo-mist")], // the current week's header
     ];
     for (const [fg, bg] of pairs) expect(contrast(fg, bg), `${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+describe("GM L10 scorecard: a divider around each store (QA, 19 Nov 2026, port from Ask Sunny)", () => {
+  // "Is there also a way we can create some distinction around each salon, maybe a divider? It will make it easier to
+  // view-- and we will want that on bubbles too." On the GM L10 each store owns its metrics. Invented store names.
+  it("each store's metrics start with a divider row naming the store", () => {
+    const doc = {
+      weekEndings: ["11/01/2026", "11/08/2026"],
+      scorecard: [row("a1", "N - AOV PTD", "Store North", [null, null]), row("a2", "N - Store Fullness %", "Store North", [null, null]), row("b1", "S - AOV PTD", "Store South", [null, null])],
+    } as unknown as MeetingDoc;
+    render(<Scorecard doc={doc} edit={() => {}} people={["Store North", "Store South"]} bloom today="2026-11-05" />);
+    const table = screen.getByTestId("bloom-scorecard");
+    expect([...table.querySelectorAll("[data-group-row]")].map((r) => r.textContent)).toEqual(["Store North", "Store South"]);
+    const north = within(screen.getByRole("rowgroup", { name: "Store North's metrics" })).getAllByRole("row");
+    expect(north[0].hasAttribute("data-group-row")).toBe(true);
+    expect(north).toHaveLength(3);
   });
 });

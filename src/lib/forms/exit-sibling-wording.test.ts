@@ -4,6 +4,7 @@ import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { ChatFormProposal } from "@/types";
 
 import { HIDDEN_TEMPLATE_KEYS } from "@/config/company/forms/hidden";
+import { RETIRED_TEMPLATE_KEYS } from "@/config/company/forms/retired";
 import { buildFormInventoryBlock } from "@/lib/ai/form-answers";
 import { proposeFormForTurn } from "@/lib/ai/form-proposal";
 
@@ -35,7 +36,8 @@ import { TEMPLATE_SEEDS } from "./library";
  * Pau's answers (via QA, same day): Buff City Soap uses Sunlync too, so the
  * Sunlync step and mentions stay, without the tanning clause; Buff City Soap
  * uses MyGlow too, so that step reads as the source printed it
- * (`config/company/forms/exit-systems.ts`). The three interviews are hidden.
+ * (`config/company/forms/exit-systems.ts`). The three interviews are hidden (the
+ * Tanning Consultant Interview was later removed and its key retired, 21 Nov 2026).
  *
  * Every string below is the exported text or a builder's real output — not a
  * grep of the source — so a word that reaches a manager through a template
@@ -202,14 +204,28 @@ describe("the chooser and the template library the chat reads", () => {
     }
   });
 
-  const HIDDEN = ["tanning-consultant-interview", "management-interview-round-1", "management-interview-round-2"];
+  /*
+   * CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): only the in-training plans stay hidden. The two
+   * management interviews, the Team Member Interview Form (the consultant interview's key, restored) and the Team
+   * Member, Assistant General Manager and General Manager Performance EPPs are listed, offered and created again, under
+   * Buff City Soap titles; the interviews are no longer withheld from the chooser.
+   */
+  const TCI = "tanning-consultant-interview";
+  const INTERVIEWS = ["management-interview-round-1", "management-interview-round-2"];
+  const HIDDEN = ["sdit-epp", "dmit-epp-tsd", "dmit-epp-dmit"];
+  const UNHIDDEN = [TCI, ...INTERVIEWS, "tsd-epp", "asd-sdit-epp", "fttc-epp"];
 
-  it("the Tanning Consultant Interview and both management interviews are hidden and never offered", () => {
+  it("only the in-training plans are hidden; the interviews are offered in the chooser again", () => {
     expect([...HIDDEN_TEMPLATE_KEYS].sort()).toEqual([...HIDDEN].sort());
-    for (const key of HIDDEN) {
-      expect(WITHHELD_FROM_CHOOSER).toContain(key);
-      expect(offeredInChooser(key)).toBe(false);
+    for (const key of [TCI, ...INTERVIEWS]) {
+      expect(WITHHELD_FROM_CHOOSER).not.toContain(key);
+      expect(offeredInChooser(key)).toBe(true);
     }
+  });
+
+  it("the Team Member Interview Form is in the library under the old key, and not retired", () => {
+    expect(TEMPLATE_SEEDS.find((seed) => seed.key === TCI)?.name).toBe("Team Member Interview Form");
+    expect(RETIRED_TEMPLATE_KEYS).not.toContain(TCI);
   });
 
   describe("read from the database", () => {
@@ -217,13 +233,14 @@ describe("the chooser and the template library the chat reads", () => {
       await ensureTemplateLibrary("system", PRODUCTION);
     });
 
-    it("the rows are still in the database (nothing is deleted)…", () => {
-      for (const key of HIDDEN) expect(store.form_templates!.some((row) => row.key === key && row.active === true), key).toBe(true);
+    it("the rows are in the database, active (nothing is deleted)", () => {
+      for (const key of [...HIDDEN, ...UNHIDDEN]) expect(store.form_templates!.some((row) => row.key === key && row.active === true), key).toBe(true);
     });
 
-    it("…but the template list leaves them out, and nothing listed carries sibling wording", async () => {
+    it("the template list leaves only the in-training plans out, and nothing listed carries sibling wording", async () => {
       const summaries = await listTemplateSummaries();
       for (const key of HIDDEN) expect(summaries.map((summary) => summary.key)).not.toContain(key);
+      for (const key of UNHIDDEN) expect(summaries.map((summary) => summary.key)).toContain(key);
       expect(summaries.length).toBe(TEMPLATE_SEEDS.length - HIDDEN.length);
       for (const summary of summaries) {
         expectClean(summary.name, `${summary.key} name`);
@@ -232,21 +249,23 @@ describe("the chooser and the template library the chat reads", () => {
       }
     });
 
-    it("the forms library block the model reads is clean and names none of them", async () => {
+    it("the forms library block the model reads is clean and names the unhidden forms by their Buff City Soap titles", async () => {
       const inventory = buildFormInventory(await listTemplateSummaries(), { role: "location_manager", scope: null });
       const block = buildFormInventoryBlock(inventory);
       expectClean(block, "buildFormInventoryBlock");
-      // The Prescreen / Phone Interview Form is not hidden and still listed; these three are not.
-      expect(block).not.toMatch(/Tanning Consultant Interview|Round Management Interview/);
+      expect(block).not.toMatch(/Tanning Consultant Interview/);
+      for (const name of ["Team Member Interview Form", "First Round Management Interview Form", "Second Round Management Interview Form"]) expect(block, name).toContain(name);
     });
 
-    /* Asked for by name in chat: the honest "not published" answer, no proposal card. */
+    /*
+     * The removed Tanning Consultant Interview, asked for in the words QA used: it is neither matched nor listed any
+     * more, so the reply is not "not published" (CHANGED ON PURPOSE, Pau, 21 Nov 2026) — but it still opens no card,
+     * offers no other form in its place, and carries no sibling wording.
+     */
     it.each([
       "Create a tanning consultant interview form for Jordan Testperson.",
       "TC interview for Sam Rivera",
-      "Create a first round management interview form for Jordan Testperson.",
-      "Create a second round management interview form for Jordan Testperson.",
-    ])("is not reachable by name: %s", async (question) => {
+    ])("opens no card when asked for by name: %s", async (question) => {
       const reply = await proposeFormForTurn({
         history: [],
         question,
@@ -256,9 +275,27 @@ describe("the chooser and the template library the chat reads", () => {
         today: TODAY,
       });
       expect(reply?.formProposal, reply?.content).toBeUndefined();
-      expect(reply?.content).toMatch(/not published in Ask Bubbles/);
       expectClean(reply?.content ?? "", "reply");
-      expect(reply?.content).not.toMatch(/Tanning Consultant Interview|Round Management Interview/);
+      expect(reply?.content ?? "").not.toMatch(/Tanning Consultant Interview/);
+    });
+
+    /* Asked for by name in chat: the card opens (Pau, 23 Nov: BCS terms in the forms), named and worded without sibling wording. CHANGED ON PURPOSE. */
+    it.each([
+      ["Create a first round management interview form for Jordan Testperson.", "management-interview-round-1"],
+      ["Create a second round management interview form for Jordan Testperson.", "management-interview-round-2"],
+      ["Create a team member interview form for Jordan Testperson.", TCI],
+    ])("is reachable by name: %s", async (question, key) => {
+      const reply = await proposeFormForTurn({
+        history: [],
+        question,
+        questionMessageId: "m-1",
+        actor: { role: "location_manager", scope: { level: "location", primaryAreaId: "loc-0310", alsoCoversAreaIds: [] } as never },
+        summaries: await listTemplateSummaries(),
+        today: TODAY,
+      });
+      expect(reply?.formProposal?.templateKey, reply?.content).toBe(key);
+      expectClean(reply?.content ?? "", "reply");
+      expect(reply?.content ?? "").not.toMatch(/tanning/i);
     });
   });
 });

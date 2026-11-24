@@ -41,9 +41,10 @@ import type { FormBlock, FormDocument } from "./document";
  *   3  Answers left behind in the Round 2 file by whoever last used it are not
  *      part of the blank form and are not reproduced. See that builder.
  *
- * Typos in the source are NOT corrected — see the core-values question in the
- * Tanning Consultant form. Rewriting the business's own words, even obviously
- * accidental ones, is a decision for the business.
+ * Typos in the source are NOT corrected. Rewriting the business's own words,
+ * even obviously accidental ones, is a decision for the business. (The
+ * reference platform's consultant interview, removed on 21 Nov 2026, is back as
+ * the Team Member Interview Form: Pau, 23 Nov 2026.)
  */
 
 /* -------------------------------------------------------------- helpers --- */
@@ -210,7 +211,8 @@ export function firstRoundManagementInterviewDocument(): FormDocument {
       { kind: "section", label: "Role Play Scenario" },
       ...question(
         "role_play",
-        "A client approaches the counter upset because the tanning bed they reserved is unavailable due to a mechanical issue. They are raising their voice and demanding a refund, while other clients are in the store. Show how you would handle the client in the moment and explain the steps you would take afterward to address the root cause.",
+        /* Pau, 23 Nov: BCS terms in the forms (QA's final pick): the product the guest came in for is out of stock; it replaces the reference platform's equipment scenario. */
+        "A guest approaches the counter upset because the product they came in for is out of stock. They are raising their voice and demanding a refund, while other guests are in the store. Show how you would handle the guest in the moment and explain the steps you would take afterward to address the root cause.",
       ),
       ...question("why_select_you", "Why should we select you for this position?"),
 
@@ -230,7 +232,7 @@ export function firstRoundManagementInterviewDocument(): FormDocument {
       { kind: "paragraph", text: "3. Review the Dress Code with the applicant." },
       {
         kind: "paragraph",
-        text: "4. Core Values Speech: While reviewing the Core Values Speech with the candidate, ask for examples (personally or professionally) that they have demonstrated each of the 4 Core Values.",
+        text: "4. Core Values Speech: While reviewing the Core Values Speech with the candidate, ask for examples (personally or professionally) that they have demonstrated each of our Core Values.",
       },
       {
         kind: "paragraph",
@@ -398,7 +400,7 @@ export function secondRoundManagementInterviewDocument(): FormDocument {
       ),
       ...question(
         "reduce_expenses",
-        "If you were given direction as a Store Director to reduce expenses, what would be the first three areas you would focus on, and why?",
+        "If you were given direction as a General Manager to reduce expenses, what would be the first three areas you would focus on, and why?",
       ),
       ...question(
         "metrics_adjustment",
@@ -412,13 +414,14 @@ export function secondRoundManagementInterviewDocument(): FormDocument {
       ),
       ...question(
         "scenario_two",
-        "Scenario 2: Customer visits have dropped 20% over the past month and lotions and memberships sales are at their lowest in six months. One long-time team member is resistant to promoting add-ons, saying, “Customers don’t want to be pushed.” What are your next steps?",
+        /* Pau, 23 Nov: BCS terms in the forms (QA's final pick): add-on product sales and Buff Rewards sign-ups (KB "Buff Rewards – Talk Track and FAQ"), guests, related products. */
+        "Scenario 2: Guest visits have dropped 20% over the past month and add-on product sales and Buff Rewards sign-ups are at their lowest in six months. One long-time team member is resistant to recommending related products, saying, “Guests don’t want to be pushed.” What are your next steps?",
       ),
 
       { kind: "section", label: "Training & Development" },
       ...question(
         "training_plan",
-        "How would you create a 30–60–90 day training plan for a new Assistant Store Director or Tanning Consultant?",
+        "How would you create a 30–60–90 day training plan for a new Assistant General Manager or Team Member?",
       ),
       ...question(
         "training_follow_up",
@@ -430,13 +433,20 @@ export function secondRoundManagementInterviewDocument(): FormDocument {
   };
 }
 
-/* ------------------------------------------------------ tanning consultant --- */
+/* --------------------------------------------------------- team member --- */
 
-export function tanningConsultantInterviewDocument(): FormDocument {
+/**
+ * THE TEAM MEMBER INTERVIEW (Pau, 23 Nov 2026): the in-store interview for a Team Member, full time, part time or
+ * seasonal, restored from the last published version of the seed removed on 21 Nov 2026 (#990) under its Buff City
+ * Soap title. Its questions were already Buff City Soap's ("guest", "store", and the five core values the JBA Policy
+ * Manual prints, p.7, which Pau approved); only the title named the reference platform's role. The key
+ * ("tanning-consultant-interview") stays, so the template's row and version history keep their name.
+ */
+export function teamMemberInterviewDocument(): FormDocument {
   return {
     paper: "letter",
     blocks: [
-      { kind: "letterhead", brand: BRAND, title: "Tanning Consultant Interview Form" },
+      { kind: "letterhead", brand: BRAND, title: "Team Member Interview Form" },
       ...applicantInformation(),
 
       { kind: "section", label: "Qualities to Observe Throughout Interview" },
@@ -483,15 +493,12 @@ export function tanningConsultantInterviewDocument(): FormDocument {
         "7. Give me an example of a time you were accountable for your results—what was the situation and outcome?",
       ),
       /*
-       * QUESTION 8 IS TRANSCRIBED AS WRITTEN, apostrophes and all. "Id like",
-       * "youve" and the double hyphen are in the source document. They are the
-       * business's own words on a form the business issues, and correcting them
-       * here would put a quiet edit into a hiring record; whoever owns the form
-       * can fix the Word file and this follows.
+       * QUESTION 8 was transcribed as written ("Id like", "youve"). Pau, 23 Nov: BCS terms in the forms, via QA: the
+       * apostrophes are fixed ("I'd", "you've"), a typo fix on the form's own text; the double hyphen stays.
        */
       {
         kind: "paragraph",
-        text: "8. Our company has five core values. Id like to hear about a time in your past experiences--work, school, or personal where youve shown one of these in action.",
+        text: "8. Our company has five core values. I’d like to hear about a time in your past experiences--work, school, or personal where you’ve shown one of these in action.",
       },
       /*
        * THE HEADING NAMES NO COMPANY (QA, 25 Oct 2026). The source printed the
@@ -653,23 +660,20 @@ export const HIRING_TEMPLATE_SEEDS: TemplateSeed[] = [
   },
   {
     key: "tanning-consultant-interview",
-    name: "Tanning Consultant Interview Form",
-    shortName: "TC Interview",
+    name: "Team Member Interview Form",
+    shortName: "TM Interview",
     description:
-      "The in-store interview for a Tanning Consultant. Twelve questions through service, sales, accountability, the core values and the essential job functions.",
+      "The in-store interview for a Team Member. Twelve questions through service, sales, accountability, the core values and the essential job functions.",
     category: "hiring",
     layoutFamily: "interview",
     requiredPermission: "create_hiring_form",
     displayOrder: 11,
-    document: tanningConsultantInterviewDocument(),
+    document: teamMemberInterviewDocument(),
     variants: [],
-    /*
-     * 4: the core-values heading names no company (QA, 25 Oct 2026). Hidden
-     * templates are still seeded, so the row gets the new wording too.
-     */
-    revision: 4,
-    revisionNote: "Published from the 03. Tanning Consultant Interview Form source document.",
-    bundledPdfName: "Tanning Consultant Interview Form.pdf",
+    /* 5 (Pau, 23 Nov 2026): restored as Buff City Soap's Team Member Interview Form; the key stays. */
+    revision: 5,
+    revisionNote: "Buff City Soap's Team Member Interview Form, restored from the last published version (v4) with its new title.",
+    bundledPdfName: "Team Member Interview Form.pdf",
   },
   {
     key: "management-interview-round-1",
@@ -683,7 +687,8 @@ export const HIRING_TEMPLATE_SEEDS: TemplateSeed[] = [
     displayOrder: 12,
     document: firstRoundManagementInterviewDocument(),
     variants: [],
-    revision: 4,
+    /* 5 (Pau, 23 Nov: BCS terms in the forms): the role play is Buff City Soap's (the product the guest came in for is out of stock). Offered in the chooser again. */
+    revision: 5,
     revisionNote: "Published from the 02. First Round Managment Interview Form source document.",
     bundledPdfName: "First Round Management Interview Form.pdf",
   },
@@ -699,7 +704,8 @@ export const HIRING_TEMPLATE_SEEDS: TemplateSeed[] = [
     displayOrder: 13,
     document: secondRoundManagementInterviewDocument(),
     variants: [],
-    revision: 3,
+    /* 4 (Pau, 23 Nov: BCS terms in the forms): General Manager, Assistant General Manager and Team Member; guest visits, add-on product sales and Buff Rewards sign-ups. Offered in the chooser again. */
+    revision: 4,
     revisionNote: "Published from the 03. Second Round Managment Interview Form source document.",
     bundledPdfName: "Second Round Management Interview Form.pdf",
   },

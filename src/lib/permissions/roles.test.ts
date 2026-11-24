@@ -27,8 +27,13 @@ import type { Permission, Role } from "@/types";
  * tests pin is the SHAPE that must survive any such change.
  */
 
-/** Exactly what frontline staff may do. Nothing else. */
-const EMPLOYEE_ALLOWED: Permission[] = ["ask_questions", "view_knowledge"];
+/**
+ * Exactly what frontline staff may do. Nothing else.
+ *
+ * `view_ai_training` joined on purpose (Nov 2026): the AI Training program is
+ * for every member of staff. Editing it stays with the admin console roles.
+ */
+const EMPLOYEE_ALLOWED: Permission[] = ["ask_questions", "view_knowledge", "view_ai_training"];
 
 describe("the Employee role", () => {
   it("holds exactly the capabilities it is specified to hold", () => {

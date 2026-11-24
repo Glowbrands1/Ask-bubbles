@@ -245,14 +245,25 @@ const TEMPLATE_INTENT: { key: string; matchers: string[] }[] = [
    * ORDER IS SIGNIFICANT: the first entry with a hit wins, so ASD-SDIT sits
    * ahead of SDIT and the DMIT readings ahead of the plain plans.
    */
+  /*
+   * Pau (23 Nov 2026): the Assistant General Manager, General Manager and Team Member Performance EPPs are named by
+   * their Buff City Soap titles (the Woven career ladder's positions and the short forms managers type: AGM, GM, TM).
+   * The reference platform's role names for them (ASD-SDIT, TSD, FTTC) are no longer read. The Assistant General
+   * Manager plan sits ahead of the General Manager one: its names hold the General Manager's.
+   */
   {
     key: "asd-sdit-epp",
     matchers: [
-      "asd-sdit performance epp",
-      "asd sdit performance epp",
-      "asd-sdit performance plan",
-      "asd-sdit epp",
-      "asd sdit epp",
+      "assistant general manager development epp",
+      "assistant general manager development plan",
+      "assistant general manager performance epp",
+      "assistant general manager performance plan",
+      "assistant general manager epp",
+      "agm development epp",
+      "agm development plan",
+      "agm performance epp",
+      "agm performance plan",
+      "agm epp",
     ],
   },
   {
@@ -305,18 +316,18 @@ const TEMPLATE_INTENT: { key: string; matchers: string[] }[] = [
      */
     key: "tsd-epp",
     matchers: [
-      "tsd epp",
-      "tsd performance plan",
-      "training salon director epp",
-      "training store director epp",
-      "training salon director performance plan",
-      "training store director performance plan",
+      "general manager performance epp",
+      "general manager performance plan",
+      "general manager epp",
+      "gm performance epp",
+      "gm performance plan",
+      "gm epp",
       "management performance plan",
     ],
   },
   {
     key: "fttc-epp",
-    matchers: ["fttc performance epp", "fttc epp", "fttc performance plan"],
+    matchers: ["team member performance epp", "team member performance plan", "team member epp", "tm performance epp", "tm epp"],
   },
   {
     key: "prescreen-phone-interview",
@@ -338,8 +349,9 @@ const TEMPLATE_INTENT: { key: string; matchers: string[] }[] = [
     ],
   },
   {
+    /* The Team Member Interview Form (Pau, 23 Nov 2026), by its Buff City Soap title. */
     key: "tanning-consultant-interview",
-    matchers: ["tanning consultant interview", "tc interview"],
+    matchers: ["team member interview form", "team member interview", "tm interview"],
   },
   {
     key: "management-interview-round-1",
@@ -1956,21 +1968,20 @@ function readTemplateIntent(rawQuestion: string): TemplateIntent {
  *          plan — so the role does not settle the form and asking is the
  *          honest answer.
  *
- *   ASD    appears as the SUBJECT of both the SDIT EPP and the ASD-SDIT
- *          Performance EPP. A manager saying "she's an ASD" has not chosen
- *          between them.
- *
- *   TC     could be the FTTC plan or a part-time consultant with no plan of
- *          their own. "FTTC" is unambiguous and is here; "TC" is not and
- *          is not.
+ *   ASD, TSD, FTTC, TC   the reference platform's roles. Buff City Soap's
+ *          plans are named by its own Woven positions (Pau, 23 Nov 2026):
+ *          Assistant General Manager / AGM, General Manager / GM, Team Member.
+ *          The SDIT plan stays hidden (no in-training position here).
  */
 const EPP_ROLE_TEMPLATES: { key: string; roles: string[] }[] = [
   {
     key: "sdit-epp",
     roles: ["sdit", "salon director in training", "salon director-in-training", "store director in training", "store director-in-training"],
   },
-  { key: "tsd-epp", roles: ["tsd", "training salon director", "training store director"] },
-  { key: "fttc-epp", roles: ["fttc", "full time tanning consultant", "full-time tanning consultant"] },
+  /* Pau (23 Nov 2026): the Woven career ladder's positions name their plans; the reference platform's (TSD, FTTC) no longer do. */
+  { key: "asd-sdit-epp", roles: ["assistant general manager", "agm"] },
+  { key: "tsd-epp", roles: ["general manager", "gm"] },
+  { key: "fttc-epp", roles: ["team member"] },
 ];
 
 /**
@@ -1983,10 +1994,14 @@ const EPP_ROLE_TEMPLATES: { key: string; roles: string[] }[] = [
  */
 export function eppTemplateForRole(text: string): string | null {
   const q = normalize(text);
-  const matched = EPP_ROLE_TEMPLATES.filter((entry) =>
-    entry.roles.some((role) => mentions(q, role)),
-  );
-  return matched.length === 1 ? matched[0]!.key : null;
+  /*
+   * A role inside a longer role the text names is that longer role, never a second plan: "assistant general manager"
+   * names the Assistant General Manager plan, not also the General Manager one. Each mention is read where it stands.
+   */
+  const spans = EPP_ROLE_TEMPLATES.flatMap((entry) => entry.roles.flatMap((role) => occurrences(q, role).map(([start, end]) => ({ key: entry.key, start, end }))));
+  const own = spans.filter((span) => !spans.some((other) => other !== span && other.start <= span.start && other.end >= span.end && other.end - other.start > span.end - span.start));
+  const matched = [...new Set(own.map((span) => span.key))];
+  return matched.length === 1 ? matched[0]! : null;
 }
 
 /**
@@ -1997,7 +2012,7 @@ export function eppTemplateForRole(text: string): string | null {
  * and Ask Bubbles asked who the form was about, having just been told. Capitalising
  * the form's name is the most natural way to ask for one, and it broke employee
  * resolution on every template that has two capitalised words in its name:
- * "Disciplinary Plan", "Policy Review", "Tanning Consultant Interview".
+ * "Disciplinary Plan", "Policy Review", "Prescreen Phone Interview".
  *
  * DERIVED FROM THE MATCHERS ABOVE rather than typed out again, so a template
  * whose naming is added there is protected here without a second edit. The
@@ -2009,7 +2024,10 @@ export function eppTemplateForRole(text: string): string | null {
  * stop list already holds the pronouns.
  */
 const LIBRARY_NAME_WORDS = [
-  "prescreen", "phone", "interview", "tanning", "consultant", "management",
+  "prescreen", "phone", "interview", "consultant", "management",
+  // "tc" came from the removed consultant-interview matcher (21 Nov 2026); it stays a word that is never a name, as
+  // QA F8 ("Write a CA for a TC <name> …") reads it.
+  "tc",
   "round", "first", "second", "performance", "epp", "sdit", "tsd", "dmit",
   "asd", "fttc", "employee", "plan", "report", "record", "template", "bubbles",
   "salon", "location", "store",

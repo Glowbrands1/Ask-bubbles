@@ -79,7 +79,7 @@ function revision4(): FormDocument {
 
 describe("the template", () => {
   it("is revision 6, published as a new version rather than over revision 5 or 4", () => {
-    expect(seed.revision).toBe(7); // Revision 7 (4 Nov 2026, client request, template approved): Type of Offense is four boxes.
+    expect(seed.revision).toBe(8); // CHANGED ON PURPOSE, revision 8 (HR via Pau, 19 Nov 2026): two required history boxes; revision 7 (4 Nov 2026) made Type of Offense four boxes.
     expect(seed.revisionNote).toMatch(/Revision 5/);
     expect(seed.revisionNote).toMatch(/Revision 6/);
     expect(seed.key).toBe("dpoa");
@@ -87,17 +87,30 @@ describe("the template", () => {
 
   it("has the new field, labelled exactly, under Type of Warning", () => {
     const index = document.blocks.findIndex((block) => block.kind === "section" && block.label === "Type of Warning");
-    const next = document.blocks.slice(index + 1, index + 3);
+    const next = document.blocks.slice(index + 1, index + 4);
     expect(next[0]).toMatchObject({ kind: "checkbox_group", key: "warning_type" });
+    // CHANGED ON PURPOSE, Corrective Action revision 8 (HR via Pau, 19 Nov 2026): two required boxes, in HR's words.
     expect(next[1]).toMatchObject({
       kind: "field",
       field: {
-        key: "prior_actions",
-        label: "List previously received coaching and/or corrective action with date signed",
+        key: "policy_manual_signed",
+        label: "List date of JBA policy manual signed by employee",
         input: "long_text",
-        responsibility: "ai",
+        responsibility: "manager",
+        required: true,
       },
     });
+    expect(next[2]).toMatchObject({
+      kind: "field",
+      field: {
+        key: "prior_actions",
+        label: "List previous coaching and corrective actions and include date signed by employee in past 90 days",
+        input: "long_text",
+        responsibility: "ai",
+        required: true,
+      },
+    });
+    // Revisions 5 to 7 keep their label.
     expect(PRIOR_ACTIONS_LABEL).toBe("List previously received coaching and/or corrective action with date signed");
   });
 
@@ -140,7 +153,9 @@ describe("the printed form", () => {
       META,
     );
     const text = await pdfText(bytes);
-    expect(text).toContain("List previously received coaching and/or corrective action with date signed");
+    // CHANGED ON PURPOSE, revision 8 (HR via Pau, 19 Nov 2026): the history box has a new label, and the manual box is beside it.
+    expect(text).toContain("List previous coaching and corrective actions and include date signed by employee in past 90 days");
+    expect(text).toContain("List date of JBA policy manual signed by employee");
     expect(text).toContain("Coaching - signed 09/02/2026");
     expect(text).toContain("Verbal warning - signed 09/21/2026");
     expect(text).toContain("Written warning - signed 09/28/2026");

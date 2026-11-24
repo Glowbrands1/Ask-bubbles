@@ -1,5 +1,7 @@
 import { execFileSync } from "node:child_process";
-import { readdirSync, readFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -196,6 +198,41 @@ const ALLOWED_UI = [
   "src/app/(app)/meetings/",
   "src/features/l10/",
   "src/app/globals.css",
+  // AI TRAINING tab (requested by Paulyne, 18 Nov 2026, both apps): the AI Training app rebuilt as new pages and
+  // components, with its own tables and permission. No existing page, chat or form behaviour changes. The stylesheet
+  // gains a section scoped to `.training-prose` and `.training-callout-*`.
+  "src/app/(app)/ai-training/",
+  "src/features/ai-training/",
+  // IN-APP BELL (Pau, 23 Nov 2026: "port the notification bell to Bubbles", for the HR form approval; port from Ask
+  // Sunny 30cac4c): a new bell component and its mark-read action. It renders only for someone with a notification:
+  // in the rail on desktop (sidebar.tsx), in the top bar on phones (app-shell.tsx), read by the (app) layout; all
+  // three are listed below. No chat or form behaviour changes.
+  "src/features/notifications/",
+  // ...and its × per row and Clear all (Pau, 23 Nov 2026: "able to delete notification all or clicking x by removing 1"):
+  // the viewer's own notifications only. The DM L10 bell (src/features/l10/, listed above) shows the same panel (Pau:
+  // "for dm meeting make this UI same with bubble"), with its out-of-app Settings link removed.
+  // HR APPROVAL OF FORMS (owner request, 23 Nov 2026, both apps), behind FORMS_HR_APPROVAL_ENABLED (off): the form card's
+  // "Finalize and send to HR for approval" and HR's approval panel, the Forms Register's Pending HR approval tab and "Your
+  // forms with HR" list, the Overview card, and the HR review page. Off, none of them renders and Finalize is as before.
+  "src/features/forms/hr-approval-lists.tsx",
+  "src/features/forms/hr-approval-panel.tsx",
+  "src/features/forms/hr-approval-screen.tsx",
+  "src/app/(app)/forms/hr-approval/",
+  "src/features/dashboard/overview.tsx",
+  // Then (Pau, via QA, 23 Nov 2026, QA approved, both apps; #1115, the same as Ask Sunny #1288): "when manager replies in
+  // note, there should be approve button here please and notify manager ... then the manager once sent back, will have
+  // option to print and save as PDF" — the panel's Approve and Send back after the manager's reply (hr-approval-panel.tsx),
+  // HR's "Needs your decision" list (hr-approval-lists.tsx), and the card's Print beside Download PDF (inline-form.tsx,
+  // listed below); "its so small pending approval, make it red button and animated shaking if theres a pending" — the
+  // Pending HR approval button (hr-approval-lists.tsx) and its .hr-pending-shake in globals.css (listed above), off under
+  // reduced motion; and the sibling app's approvals on the Forms Register (monitoring/page.tsx, listed below), first a
+  // "Sunny approvals ↗" link, then (owner: "i dont want the sunny approval in a different page and link, just a tab pls")
+  // an in-page tab next to Pending HR approval, for HR approvers only. The approval UI is behind FORMS_HR_APPROVAL_ENABLED: off, the server sends no approval data, so none of
+  // it renders. Print shows on any finalized form and opens the same server PDF as Download PDF.
+  "src/features/forms/hr-approval-manager-replied.dom.test.tsx",
+  // ...and its one sidebar entry, with the rail tests that list what an Employee sees.
+  "src/components/shell/navigation.ts",
+  "src/components/shell/navigation.test.ts",
   // NEXT_PUBLIC_REPLY_QUOTE_LINES_ENABLED (#839, QA's Bubbles 17p live check; QA round 17r, 13 Nov 2026): a run of "> "
   // lines in a reply is shown as a quote, a line each. Off, the renderer is unchanged.
   "src/components/rich-text.tsx",
@@ -316,29 +353,105 @@ function changedLines(patch: string): string[] {
   return patch.split("\n").filter((line) => /^[+-](?![+-]{2} )/.test(line));
 }
 
-function diff(ref: string, args: string[]): string {
-  return execFileSync("git", ["diff", ref, "--", ...args], { encoding: "utf8" });
+function diff(ref: string, args: string[], cwd: string = process.cwd()): string {
+  return execFileSync("git", ["diff", ref, "--", ...args], { encoding: "utf8", cwd });
 }
 
-function hasRef(ref: string): boolean {
+function hasRef(ref: string, cwd: string = process.cwd()): boolean {
   try {
-    execFileSync("git", ["rev-parse", "--verify", "--quiet", ref], { stdio: "pipe" });
+    execFileSync("git", ["rev-parse", "--verify", "--quiet", ref], { stdio: "pipe", cwd });
     return true;
   } catch {
     return false;
   }
 }
 
-function uiDiffBase(): string | null {
-  if (hasRef("origin/main")) return "origin/main";
-  if (!hasRef("main")) return null;
+function mergeBase(a: string, b: string, cwd: string): string | null {
   try {
-    const base = execFileSync("git", ["merge-base", "HEAD", "main"], { encoding: "utf8", stdio: "pipe" }).trim();
-    return base || null;
+    return execFileSync("git", ["merge-base", a, b], { encoding: "utf8", stdio: "pipe", cwd }).trim() || null;
   } catch {
     return null;
   }
 }
+
+function quietFetch(args: string[], cwd: string): void {
+  try {
+    execFileSync("git", ["fetch", ...args], { stdio: "pipe", timeout: 30_000, cwd, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" } });
+  } catch {
+    // The remote cannot give it. The caller falls back.
+  }
+}
+
+/**
+ * CHANGED ON PURPOSE (port of the sibling app's guard fix, QA, 23 Nov 2026): the UI diff is taken from this branch's
+ * MERGE BASE with main, so it checks only this pull request's own changes. It used the live `origin/main`: in the
+ * sibling app, whose CI fetches main, every open pull request went red when main moved during a run (a UI file main
+ * added read as deleted by branches that never touched it). Here the Actions checkout is a single commit and main was
+ * never fetched, so the UI diff was skipped in CI altogether; it now fetches main with some history (and deepens HEAD
+ * if the merge base is still unknown), so the check runs in CI, on this pull request's own changes only. Without any
+ * merge base, the old reference is used. Null means this checkout cannot see main at all: the UI diff is skipped.
+ */
+function uiDiffBase(cwd: string = process.cwd()): string | null {
+  if (!hasRef("origin/main", cwd)) quietFetch(["--depth=200", "origin", "main:refs/remotes/origin/main"], cwd);
+  if (hasRef("origin/main", cwd)) {
+    const base = mergeBase("HEAD", "origin/main", cwd);
+    if (base) return base;
+    const head = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", cwd }).trim();
+    quietFetch(["--depth=200", "origin", head], cwd);
+    quietFetch(["--deepen=200", "origin", "main:refs/remotes/origin/main"], cwd);
+    return mergeBase("HEAD", "origin/main", cwd) ?? "origin/main";
+  }
+  if (!hasRef("main", cwd)) return null;
+  return mergeBase("HEAD", "main", cwd);
+}
+
+describe("the UI diff checks only this branch's own changes (CHANGED ON PURPOSE, port of the sibling app's guard fix, QA, 23 Nov 2026)", () => {
+  /* A throwaway repository: main gains a UI file after the branch was cut (as the sibling app's main did during a run). */
+  function repo(): { dir: string; git: (...args: string[]) => string } {
+    const dir = mkdtempSync(join(tmpdir(), "ui-diff-base-"));
+    const git = (...args: string[]) =>
+      execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@example.invalid", "-c", "init.defaultBranch=main", "-c", "commit.gpgsign=false", ...args], { encoding: "utf8", cwd: dir, stdio: "pipe" });
+    git("init", "-q");
+    writeFileSync(join(dir, "ui.tsx"), "export const A = 1;\n");
+    writeFileSync(join(dir, "lib.ts"), "export const x = 1;\n");
+    git("add", "-A");
+    git("commit", "-q", "-m", "base");
+    git("checkout", "-q", "-b", "feature");
+    writeFileSync(join(dir, "lib.ts"), "export const x = 2;\n");
+    git("commit", "-q", "-am", "the branch's own change, no UI file");
+    git("checkout", "-q", "main");
+    writeFileSync(join(dir, "new-ui.tsx"), "export const B = 1;\n");
+    git("add", "-A");
+    git("commit", "-q", "-m", "main moves on: a new UI file");
+    git("update-ref", "refs/remotes/origin/main", "main");
+    git("checkout", "-q", "feature");
+    return { dir, git };
+  }
+
+  it("a UI file added only on main does not trip it", () => {
+    const { dir } = repo();
+    try {
+      const base = uiDiffBase(dir);
+      expect(base).not.toBeNull();
+      expect(diff(base!, ["new-ui.tsx", "ui.tsx"], dir)).toBe("");
+      // The old reference (the live origin/main) read main's new file as deleted by this branch.
+      expect(diff("origin/main", ["new-ui.tsx"], dir)).not.toBe("");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("a branch that edits a UI file itself still trips it", () => {
+    const { dir, git } = repo();
+    try {
+      writeFileSync(join(dir, "ui.tsx"), "export const A = 2;\n");
+      git("commit", "-q", "-am", "the branch edits a UI file");
+      expect(diff(uiDiffBase(dir)!, ["ui.tsx"], dir)).not.toBe("");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
 
 describe("new flags default off", () => {
   it("treats unset flags as off, including the anti-loop flag", () => {
@@ -415,20 +528,25 @@ function chatHalf(half: 0 | 1): string[] {
   return half === 0 ? all.slice(0, middle) : all.slice(middle);
 }
 /*
- * THE REPLAY PACK IN TWO HALVES (QA, 9 Nov 2026; the same as the sibling app's): the sibling's replay-pack child timed
- * out at 540 s on CI as its pack grew, and this pack grows the same way. Nearly all of its time is one file,
- * `replay-pack-e2e.test.ts`, so it is halved by case, not by file: the first child runs the whole folder with the first
- * half of the cases by id (`REPLAY_PACK_HALF` "0"; the pack's other test files run there, once), the second child that
- * one file with the second half ("1"). Every case and every file still runs exactly once, with every new flag off.
+ * THE REPLAY PACK IN THIRDS (QA, 9 Nov 2026 in halves, as the sibling app's; thirds since 21 Nov 2026): the sibling's
+ * replay-pack child timed out at 540 s on CI as its pack grew, and this pack grows the same way. Nearly all of its time
+ * is one file, `replay-pack-e2e.test.ts`, so it is split by case, not by file: the first child runs the whole folder
+ * with the first part of the cases by id (`REPLAY_PACK_PART` "0"; the pack's other test files run there, once), the
+ * others that one file with the next parts. Every case and every file still runs exactly once, with every new flag off.
+ * Halves held until the first took 504 s of its 540 s on CI (21 Nov 2026) and the next cases pushed it over.
  */
+const REPLAY_PACK_PARTS = 3;
 const REPLAY_PACK_E2E = `${REPLAY_PACK}/replay-pack-e2e.test.ts`;
 const CHILDREN: readonly { readonly name: string; readonly paths: () => readonly string[]; readonly env?: Readonly<Record<string, string>> }[] = [
   { name: "src/lib/ai, src/lib/forms", paths: () => ["src/lib/ai", "src/lib/forms"] },
   { name: `${CHAT} (without the replay pack), first half by name`, paths: () => chatHalf(0) },
   { name: `${CHAT} (without the replay pack), second half by name`, paths: () => chatHalf(1) },
   { name: "src/app/api/forms", paths: () => ["src/app/api/forms"] },
-  { name: `${REPLAY_PACK}, first half of the cases by id`, paths: () => [REPLAY_PACK], env: { REPLAY_PACK_HALF: "0" } },
-  { name: `${REPLAY_PACK}, second half of the cases by id`, paths: () => [REPLAY_PACK_E2E], env: { REPLAY_PACK_HALF: "1" } },
+  ...Array.from({ length: REPLAY_PACK_PARTS }, (_, part) => ({
+    name: `${REPLAY_PACK}, part ${part + 1} of ${REPLAY_PACK_PARTS} of the cases by id`,
+    paths: () => (part === 0 ? [REPLAY_PACK] : [REPLAY_PACK_E2E]),
+    env: { REPLAY_PACK_PART: String(part), REPLAY_PACK_PARTS: String(REPLAY_PACK_PARTS) },
+  })),
 ];
 
 describe("existing chat and form suites with every new flag off", () => {

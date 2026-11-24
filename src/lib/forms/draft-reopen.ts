@@ -6,7 +6,10 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { pickCrossChatOpenDraft, type CrossChatDraftRow } from "./cross-chat-draft";
 import { draftsFromChat, keepSameChat, type SameChat } from "./draft-same-chat";
 import { sameIncident as sameIncidentKey } from "./incident-key";
+import type { FormsActor } from "./access";
+import { visibleInstances } from "./instance-scope";
 import { DUPLICATE_DRAFT_WINDOW_HOURS, loadInstance, type InstanceRow } from "./instances";
+import { withoutAwaitingHr, withoutHeldForHr } from "./hr-approval-rules";
 
 /**
  * A resent create for the same incident.
@@ -29,8 +32,17 @@ export interface ResentDraftWanted {
 
 /**
  * An open draft for the same employee, template, and incident date, from
- * any chat and any manager. A different date does not match. The card-id
- * match stays in the route and runs first.
+ * any chat and any manager THE CALLER MAY SEE. A different date does not
+ * match. The card-id match stays in the route and runs first.
+ *
+ * ONLY A DRAFT THE CALLER MAY SEE (QA's audit of Ask Bubbles, P2, 20 Nov 2026):
+ * the read is service-role and filtered only by template, status and date, so
+ * it once handed back another manager's draft at a store the caller cannot
+ * open (its employee, store and creator, as JSON). A picked draft is returned
+ * only when `visibleInstances` lets the caller see it, the same rule as the
+ * Forms Register; otherwise the next match is tried. With
+ * DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED the chat is also keyed by the caller: a
+ * client-sent conversation id never reaches another user's draft.
  */
 export async function findCrossChatOpenDraft(input: {
   readonly templateKey: string;
@@ -38,6 +50,8 @@ export async function findCrossChatOpenDraft(input: {
   readonly formDate: string;
   /** DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED: only a draft this chat made. */
   readonly sameChat?: SameChat;
+  /** The caller: only a draft they may see is returned. */
+  readonly actor: FormsActor;
 }): Promise<InstanceRow | null> {
   try {
     const supabase = getSupabaseAdmin();
@@ -47,11 +61,14 @@ export async function findCrossChatOpenDraft(input: {
       .eq("key", input.templateKey)
       .maybeSingle();
     if (templateError || !template) return null;
-    const { data, error } = await supabase
+    // HR APPROVAL: not limited to the reader's own forms, so every form HR has not approved is left out.
+    const { data, error } = await withoutAwaitingHr(
+      supabase
       .from("form_instances")
       .select("id, employee_name, created_at, form_date, status, created_by")
       .eq("template_id", template.id)
       .eq("status", "draft")
+      )
       .eq("form_date", input.formDate)
       .order("created_at", { ascending: false })
       .limit(25);
@@ -74,11 +91,16 @@ export async function findCrossChatOpenDraft(input: {
       createdAt: String(row.created_at ?? ""),
       createdBy: typeof row.created_by === "string" ? row.created_by : undefined,
     }));
-    const rows = await keepSameChat(read, input.sameChat);
-    const id = pickCrossChatOpenDraft(rows, input);
-    if (!id) return null;
-    const loaded = await loadInstance(id);
-    return loaded?.instance.status === "draft" ? loaded.instance : null;
+    const sameChat = await keepSameChat(read, input.sameChat);
+    let rows = input.sameChat ? sameChat.filter((row) => row.createdBy === input.actor.id) : sameChat;
+    for (let tries = 0; tries < 25; tries += 1) {
+      const id = pickCrossChatOpenDraft(rows, input);
+      if (!id) return null;
+      const loaded = await loadInstance(id);
+      if (loaded?.instance.status === "draft" && visibleInstances(input.actor, [loaded.instance]).length === 1) return loaded.instance;
+      rows = rows.filter((row) => row.id !== id);
+    }
+    return null;
   } catch {
     return null;
   }
@@ -225,13 +247,16 @@ export async function findAccountResentDraft(input: {
       .maybeSingle();
     if (templateError || !template) return null;
     const since = new Date((input.now ?? new Date()).getTime() - DUPLICATE_DRAFT_WINDOW_HOURS * 3_600_000);
-    const { data, error } = await supabase
+    // HR APPROVAL: a form waiting for HR is not a draft the chat may pick up again.
+    const { data, error } = await withoutHeldForHr(
+      supabase
       .from("form_instances")
       .select("id, employee_name, location_id, created_at, form_date")
       .eq("template_id", template.id)
       .eq("created_by", input.createdBy)
       .eq("source", "assistant")
       .eq("status", "draft")
+      )
       .gte("created_at", since.toISOString())
       .order("created_at", { ascending: false })
       .limit(25);

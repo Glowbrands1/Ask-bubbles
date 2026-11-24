@@ -12,17 +12,21 @@ describe("job titles as managers type them survive the Salon -> Store wording", 
     ["salon director in training", "SDIT"],
     ["store director in training", "SDIT"],
     ["SDIT", "SDIT"],
-    ["training salon director", "TSD"],
-    ["training store director", "TSD"],
-    ["TSD", "TSD"],
-    ["assistant salon director", "ASD"],
-    ["assistant store director", "ASD"],
-    ["ASD", "ASD"],
+    // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): TSD and ASD are no longer titles here; Buff City Soap's are below.
+    ["general manager", "General Manager"],
+    ["GM", "General Manager"],
+    ["assistant general manager", "Assistant General Manager"],
+    ["AGM", "Assistant General Manager"],
     ["district manager", "District Manager"],
     ["store manager", "Store Manager"],
     ["assistant store manager", "Assistant Manager"],
   ])("reads %s as %s", (typed, title) => {
     expect(titleOf(typed)).toBe(title);
+  });
+
+  it("no longer reads the reference platform's TSD or ASD (Pau, 23 Nov 2026)", () => {
+    expect(titleOf("TSD")).toBeNull();
+    expect(titleOf("ASD")).toBeNull();
   });
 
   it("still reads the Woven position names this deployment actually has", () => {
@@ -35,11 +39,12 @@ describe("job titles as managers type them survive the Salon -> Store wording", 
 });
 
 describe("a job-title abbreviation, as a name-role-store line uses one", () => {
-  it.each(["ASM", "SD", "ASD", "DM", "RM", "asm"])("%s is one", (word) => {
+  // "ASD" left (Pau, 23 Nov 2026); "AGM" and "GM" are Buff City Soap's.
+  it.each(["ASM", "SD", "AGM", "GM", "DM", "RM", "asm"])("%s is one", (word) => {
     expect(isJobTitleAbbreviation(word)).toBe(true);
   });
 
-  it.each(["NE", "OT", "PTO", "Grand", "manager", "store manager", "A", "TC", "TCs", "tc"])("%s is not", (word) => {
+  it.each(["NE", "OT", "PTO", "Grand", "manager", "store manager", "A", "TC", "TCs", "tc", "TSD", "ASD"])("%s is not", (word) => {
     expect(isJobTitleAbbreviation(word)).toBe(false);
   });
 });

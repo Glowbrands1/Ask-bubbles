@@ -36,6 +36,7 @@ import type {
   ReviewRow,
   StoreSummary,
 } from "@/lib/google-reviews/views";
+import { quickRanges } from "@/lib/google-reviews/quick-ranges";
 import { cn } from "@/lib/utils/cn";
 
 import { monthOptions, type ReviewsData } from "./load";
@@ -179,6 +180,7 @@ export function LiveFilters({
             aria-label="To date"
             className={SELECT}
           />
+          <QuickRangeLinks data={data} />
         </>
       ) : null}
       <button
@@ -188,6 +190,44 @@ export function LiveFilters({
         Apply
       </button>
     </form>
+  );
+}
+
+/**
+ * L3 / L6 / YTD: one-click presets for the From/To dates on the Reviews view,
+ * keeping the location, rating and response filters. The one in force is
+ * marked current.
+ */
+export function QuickRangeLinks({ data }: { data: ReviewsData }) {
+  const q = data.query;
+  return (
+    <span className="flex items-center gap-1" role="group" aria-label="Quick date ranges">
+      {quickRanges().map((r) => {
+        const p = new URLSearchParams({ tab: "reviews" });
+        if (q.store) p.set("store", q.store);
+        if (q.rating) p.set("rating", String(q.rating));
+        if (q.reply) p.set("reply", q.reply);
+        p.set("from", r.from);
+        p.set("to", r.to);
+        const current = q.from === r.from && q.to === r.to;
+        return (
+          <Link
+            key={r.key}
+            href={`/reviews?${p.toString()}`}
+            title={r.description}
+            aria-label={r.description}
+            aria-current={current ? "true" : undefined}
+            className={cn(
+              SELECT,
+              "cursor-pointer",
+              current && "!border-selected !bg-selected !text-selected-foreground",
+            )}
+          >
+            {r.label}
+          </Link>
+        );
+      })}
+    </span>
   );
 }
 

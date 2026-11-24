@@ -2,6 +2,8 @@ import "server-only";
 
 import { anthropic, type AnthropicLanguageModelOptions } from "@ai-sdk/anthropic";
 import { convertToModelMessages, jsonSchema, stepCountIs, streamText, tool, type LanguageModelUsage, type SystemModelMessage, type ToolSet, type UIMessage } from "ai";
+import { logAiTimeout } from "@/lib/ai/time-limit";
+import { helperTimeoutMs } from "@/lib/config/ai-timeouts";
 
 import { persistSpendRow } from "@/lib/ai/chat-trace";
 import type { TokenUsage } from "@/lib/ai/model-prices";
@@ -247,24 +249,6 @@ function sumSteps(steps: readonly { usage: LanguageModelUsage }[]): LanguageMode
 /** The L10 assistant's whole answer, under its route's maxDuration (300 s). */
 export const L10_TOTAL_TIMEOUT_MS = 280_000;
 
-/*
- * ASK BUBBLES: the sibling app takes the chunk gap from its shared AI time limits (src/lib/config/ai-timeouts.ts,
- * AI_HELPER_TIMEOUT_MS, 30 s by default, 1–60 s) and logs a timeout with its time-limit module. Ask Bubbles has
- * neither module, so the same value, the same variable and the same log line are kept here (see PARITY.md).
- */
-const L10_CHUNK_GAP_DEFAULT_MS = 30_000;
-export function l10ChunkGapMs(env: Record<string, string | undefined> = process.env): number {
-  const raw = env.AI_HELPER_TIMEOUT_MS;
-  if (raw === undefined || raw.trim() === "") return L10_CHUNK_GAP_DEFAULT_MS;
-  const value = Number(raw);
-  return Number.isFinite(value) && value >= 1_000 && value <= 60_000 ? value : L10_CHUNK_GAP_DEFAULT_MS;
-}
-
-/** The server log line for a timed-out answer (the sibling app's `logAiTimeout` format). Counts and names of code only. */
-function logAiTimeout(call: string, durationMs: number, limitMs: number, route: string): void {
-  console.error(`[ai.timeout] route=${route} call=${call} duration_ms=${Math.round(durationMs)} limit_ms=${Math.round(limitMs)}`);
-}
-
 /** An abort the time limit caused (the AI SDK aborts with a TimeoutError or AbortError). */
 function isTimeoutError(error: unknown): boolean {
   const name = (error as { name?: unknown } | null)?.name;
@@ -299,7 +283,7 @@ export async function streamHubAssistant(input: { config: HubAssistantConfig; me
      * answer ends inside the route's 300 s. Not a 45 s step limit: a deep-think step can run past a minute while it
      * streams. The reply on a timeout is the onError message below; the log line is written there.
      */
-    timeout: { totalMs: L10_TOTAL_TIMEOUT_MS, chunkMs: l10ChunkGapMs() },
+    timeout: { totalMs: L10_TOTAL_TIMEOUT_MS, chunkMs: helperTimeoutMs() },
     onError: () => {},
     providerOptions: {
       anthropic: {

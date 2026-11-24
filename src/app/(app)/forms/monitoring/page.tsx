@@ -24,6 +24,10 @@ import {
   visibleInstances,
 } from "@/lib/forms/instance-scope";
 import { pageFormsAccess } from "@/lib/forms/page-scope";
+import { HrApprovalTabs, HrQueueList, MyFormsWithHr, SiblingHrQueueList } from "@/features/forms/hr-approval-lists";
+import { fetchSiblingHrQueue, type SiblingHrQueue } from "@/lib/partner/sibling-hr-queue";
+import { needsHrDecision } from "@/lib/forms/hr-approval-rules";
+import { hrQueueSummary, listHrQueue, listMyFormsWithHr, type HrQueueRow, type MyHrFormRow } from "@/lib/forms/hr-approval";
 import { supabaseSecretKeyConfigured } from "@/lib/config/server-env";
 import { privateAwareLimit } from "@/lib/forms/private-creators";
 import { parseShowCount } from "@/lib/forms/monitoring-page-size";
@@ -48,11 +52,11 @@ export const dynamic = "force-dynamic";
 export default async function FormMonitoringPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; followup?: string; show?: string }>;
+  searchParams: Promise<{ view?: string; followup?: string; app?: string; show?: string }>;
 }) {
   const identity = await requirePagePermission("view_form_monitoring");
 
-  const { view: requestedView, followup: requestedFollowUp, show: requestedShow } = await searchParams;
+  const { view: requestedView, followup: requestedFollowUp, app: requestedApp, show: requestedShow } = await searchParams;
   // How many forms to load; "Load more" adds a page. See `monitoring-page-size.ts`.
   const showCount = parseShowCount(requestedShow);
   /*
@@ -80,6 +84,40 @@ export default async function FormMonitoringPage({
   const connected = supabaseSecretKeyConfigured();
   const access = connected ? await pageFormsAccess(identity) : null;
   const noStore = access?.noStore === true;
+
+  /*
+   * HR APPROVAL (FORMS_HR_APPROVAL_ENABLED). HR gets a "Pending HR approval" tab (`?view=hr`) listing every form
+   * waiting for them; a manager sees their own forms HR has not approved yet. Nobody else sees either: a form waiting
+   * for HR is not in anybody else's list at all (`instanceListFilterFor`).
+   */
+  const isHr = access?.actor.hrApprover === true;
+  const hrView = isHr && requestedView === "hr";
+  let hrQueue: HrQueueRow[] = [];
+  let hrSummary: { pending: number; overdue: number } | null = null;
+  let myWithHr: MyHrFormRow[] = [];
+  /*
+   * THE SIBLING APP'S QUEUE, AS A TAB (owner, 23 Nov 2026: "1 tab for sunny 1 tab for bubbles"; then, of a link to the
+   * sibling's page: "i dont want the sunny approval in a different page and link, just a tab pls"). For a verified HR
+   * approver, asked of the sibling's server with this identity's email (`fetchSiblingHrQueue`), on every view so the
+   * tab carries its count; listed here, on `?view=hr&app=sibling`. "off" (no shared secret) shows no tab.
+   */
+  let sibling: SiblingHrQueue = { status: "off" };
+  const siblingView = hrView && requestedApp === "sibling";
+  if (access) {
+    try {
+      if (isHr) {
+        const email = access.actor.verified && identity?.verified === true && identity.email ? identity.email : null;
+        [hrSummary, hrQueue, sibling] = await Promise.all([
+          hrQueueSummary(access.actor),
+          hrView ? listHrQueue(access.actor) : Promise.resolve<HrQueueRow[]>([]),
+          email ? fetchSiblingHrQueue(email) : Promise.resolve<SiblingHrQueue>({ status: "off" }),
+        ]);
+      }
+      myWithHr = await listMyFormsWithHr(access.actor);
+    } catch {
+      // A failed approval read leaves the ordinary list as it is; the tab and the card simply do not show.
+    }
+  }
 
   if (connected && access && !noStore) {
     try {
@@ -160,7 +198,27 @@ export default async function FormMonitoringPage({
           description="Every form created in Ask Bubbles, the template version it was filled from, and what is still outstanding."
         />
 
-        {!connected ? (
+        {hrSummary ? (
+          <HrApprovalTabs
+            active={siblingView ? "sibling" : hrView ? "hr" : "all"}
+            pending={hrSummary.pending}
+            overdue={hrSummary.overdue}
+            sibling={
+              sibling.status === "off"
+                ? null
+                : sibling.status === "ok"
+                  ? { name: sibling.app, pending: sibling.approver ? sibling.forms.filter(needsHrDecision).length : 0 }
+                  : { name: null, pending: null }
+            }
+          />
+        ) : null}
+        {!hrView ? <MyFormsWithHr rows={myWithHr} /> : null}
+
+        {hrView && siblingView && sibling.status !== "off" ? (
+          <SiblingHrQueueList queue={sibling} />
+        ) : hrView ? (
+          <HrQueueList rows={hrQueue} />
+        ) : !connected ? (
           <Notice tone="neutral" title="Forms are not connected in this deployment">
             Forms are stored in the live database, and this deployment has none connected. Nothing here is sample data.
           </Notice>

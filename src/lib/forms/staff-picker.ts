@@ -53,7 +53,7 @@ const ANSWER = new RegExp(
 const FORM_WORD = /\b(?:forms?|coaching|corrective\s+action|ca|write[- ]?ups?|drafts?|cards?)\b/i;
 
 /** The marker on the "which location" question, read back from the next turn's history. */
-const ASKED_LOCATION = "Which location's staff should I list?";
+export const ASKED_LOCATION = "Which location's staff should I list?";
 const LISTED = "Who is this form for?";
 
 /** "a coaching form for my whole staff", "for everyone" — the staff as the form's subject. */
@@ -94,7 +94,7 @@ export interface StaffLocation {
   readonly name: string;
 }
 
-function formName(text: string): string {
+export function formName(text: string): string {
   if (/\bcoach/i.test(text)) return "Coaching Form";
   if (/\b(?:corrective\s+action|ca)\b/i.test(text)) return "Corrective Action Form";
   return "form";
@@ -121,8 +121,9 @@ export function storeStaff(person: RosterEmployee): boolean {
   return !title || STORE_TITLES.has(title.toLowerCase());
 }
 
-function listStaff(location: StaffLocation, roster: readonly RosterEmployee[], form: string): string {
-  const people = roster
+/** One store's staff by name and position only (store titles with STAFF_PICKER_STORE_TITLES), as listed below. */
+export function storeStaffRows(location: StaffLocation, roster: readonly RosterEmployee[]): { name: string; position: string }[] {
+  return roster
     .filter((person) => person.locationIds.includes(location.id))
     .filter((person) => !staffPickerStoreTitlesEnabled() || storeStaff(person))
     .map((person) => ({
@@ -130,6 +131,10 @@ function listStaff(location: StaffLocation, roster: readonly RosterEmployee[], f
       position: person.positionName?.trim() || "Position not on file",
     }))
     .sort((a, b) => a.position.localeCompare(b.position) || a.name.localeCompare(b.name));
+}
+
+function listStaff(location: StaffLocation, roster: readonly RosterEmployee[], form: string): string {
+  const people = storeStaffRows(location, roster);
   const one = form === "form" ? "A form" : `A ${form}`;
   if (people.length === 0) {
     return `${one} is for one person at a time. I couldn't find anyone on the directory for **${location.name}**. Tell me the name of the person it is for.`;
@@ -246,6 +251,11 @@ function alreadyListed(
   const one = form === "form" ? "a form" : `a **${form}**`;
   const next = form === "form" ? "the same form" : `the same ${form}`;
   return `The staff at **${location.name}** is listed above. To go on, name one person from that list and I'll start ${one} for them; once it's created, say **do ${next} for <next name>** and I'll copy it onto the next person's card.`;
+}
+
+/** STAFF_PICKER_NO_REPEAT: this store's staff was already listed in this chat (the agent loop's list_staff). */
+export function staffListedBefore(history: readonly Pick<ChatMessage, "role" | "content">[], storeName: string): boolean {
+  return staffPickerNoRepeatEnabled() && history.some((turn) => turn.role === "assistant" && typeof turn.content === "string" && LISTED_AT.exec(turn.content)?.[1] === storeName);
 }
 
 export function staffPickerAnswer(content: string): AskResponse {
