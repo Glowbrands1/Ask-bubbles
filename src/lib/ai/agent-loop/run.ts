@@ -572,7 +572,7 @@ function buildAgentLoopTools(config: AppConfig, planSteps = false) {
         exit_reason_evidence: evidence("With exit_reason: the manager message of this request and its words that give the reason (e.g. \"she is resigning due to second job\")."),
         job_title: { type: "string", description: "Only when the manager tells you which job title to put on this form (\"no, use Shift Lead\", \"put her title as <title>\"): that title. Never a title they only used to refer to the person (\"my <title> <first name>\"); left out, the card uses " + config.staffSystem + "'s title." },
         job_title_evidence: evidence("With job_title: the manager message from this request and their words from it that tell you the form's title, holding the title."),
-        effective_date: { type: "string", description: "Employee Exit Form termination only: the effective or termination date as the manager typed it (e.g. 11/28)." },
+        effective_date: { type: "string", description: "Employee Exit Form termination only: the date the manager states as the effective date (\"effective 11/28\"), as typed. Never a no-show date or the last day worked; \"effective immediately\" states none: leave it out and the form is dated today." },
         payroll_deduct: { type: "string", enum: ["yes", "no"], description: "Only when the manager said whether payroll deduct applies." },
         payroll_amount: { type: "string", description: "The deduction amount the manager stated, digits." },
         prior_actions: { type: "string", description: "Earlier steps only as the manager stated them (\"verbal on 10/2\", \"coached last month\"); never from records on file." },

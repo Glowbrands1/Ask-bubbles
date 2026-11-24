@@ -5665,11 +5665,18 @@ export async function proposeForm(
    * the stated last day, is always kept; today only when no date was stated.
    */
   const askedExitTermination = template.key === appConfig().formKeys.exit && input.exit_type === "termination";
+  /*
+   * Pau's ruling (24 Nov 2026, via QA): "effective immediately for termination - should be dated today". A termination
+   * is dated the effective date the manager's words state ("effective 11/20": `statedEffectiveDates`, the exit form's own
+   * reading); the model's effective_date counts only when it is one of those. Never a no-show date, never the last day
+   * worked (item 7: that is its own line); with none stated ("effective immediately"), today, said in one line.
+   */
   const exitTermination = askedExitTermination && (await import("@/lib/forms/termination-word")).saysTerminationWord(ownRequestWords)
     ? await (async () => {
-        const effective = lockedExitDate(input.effective_date, requestWords, today);
-        const lastDay = effective ? null : (await import("@/lib/forms/exit-facts")).readExitFacts(requestWords, today).lastDayWorked;
-        return { date: effective ?? lastDay ?? today, dated_today: !effective && !lastDay };
+        const stated = (await import("@/lib/forms/exit-facts")).statedEffectiveDates(requestWords, today);
+        const asked = lockedExitDate(input.effective_date, requestWords, today);
+        const effective = asked && stated.includes(asked) ? asked : stated.length === 1 ? stated[0]! : null;
+        return { date: effective ?? today, dated_today: !effective };
       })()
     : null;
   /*

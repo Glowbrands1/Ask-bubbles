@@ -542,6 +542,17 @@ export function terminationEffectiveDate(rawText: string, today: string): string
   return terminated ? effectiveDate(text, dateTokens(text, today), terminated) : null;
 }
 
+/**
+ * Pau's ruling (24 Nov 2026, via QA): "effective immediately for termination - should be dated today". Every date the
+ * manager's words state as an effective date ("effective 11/20", "effective as of 11/20"), read with the same shape as a
+ * stated termination's ("effective <date>", `EFFECTIVE_BEFORE`), in any sentence. A no-show date or the last day worked
+ * is never one; "effective immediately" states none, so the termination is dated today.
+ */
+export function statedEffectiveDates(rawText: string, today: string): string[] {
+  const text = normalize(rawText);
+  return [...new Set(dateTokens(text, today).filter((token) => token.iso && EFFECTIVE_BEFORE.test(text.slice(Math.max(0, token.index - 24), token.index).toLowerCase())).map((token) => token.iso!))];
+}
+
 function completedInvoluntary(q: string): boolean {
   if (statedTermination(q)) return true;
   for (const pattern of COMPLETED_INVOLUNTARY) {
