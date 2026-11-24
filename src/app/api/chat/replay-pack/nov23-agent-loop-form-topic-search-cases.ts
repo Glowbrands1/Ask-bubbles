@@ -25,10 +25,10 @@ const offline = process.env.AGENT_LOOP_LIVE !== "1";
 type Out = { forms?: { instance_id?: string; employee?: string; form_date?: string }[]; counts?: { total: number; people: number }; listed?: number; of?: number; reason_code?: string };
 
 /** One CA made through the chat for `employeeId`, its Observation the drafting model's `observation`. */
-async function caOnFile(t: ReplayContext, employeeId: string, said: string, observation: string): Promise<string> {
+async function caOnFile(t: ReplayContext, employeeId: string, said: string, observation: string, incidentDate = "2026-11-12"): Promise<string> {
   t.loopModel!(loopStandIn((view): LoopDecision => (view.results.some((result) => result.tool === "propose_form")
     ? { text: "Here's the card." }
-    : { tool: "propose_form", input: { template_key: "dpoa", employee_id: employeeId, what_happened: observation, incident_date: "2026-11-12" } })));
+    : { tool: "propose_form", input: { template_key: "dpoa", employee_id: employeeId, what_happened: observation, incident_date: incidentDate } })));
   const thread = t.thread();
   await thread.say(said);
   t.draftWrites({ observation: `Observed:\n${observation}` });
@@ -52,7 +52,12 @@ async function seed(t: ReplayContext) {
   const cash = await caOnFile(t, LOOP_FENNA.id, "ca for fenna prewitt, cash handling at close", "Fenna Prewitt left the cash drawer open at close; cash handling steps were skipped.");
   const dress = await caOnFile(t, LOOP_OZREN.id, "ca for ozren brack, dress code", "Ozren Brack wore a hoodie on shift, against the dress code.");
   const elsewhere = await caOnFile(t, LOOP_THADDEA.id, "ca for thaddea kroll, dress code", "Thaddea Kroll wore ripped jeans on shift, against the dress code.");
-  const late = await caOnFile(t, LOOP_THADDEA.id, "ca for thaddea kroll, late to open", "Thaddea Kroll opened the store 20 minutes late.");
+  /*
+   * CHANGED ON PURPOSE (Pau's review via QA, 23 Nov 2026: a CA for a person and date that already has one on file asks
+   * "open that one, or is this a separate incident?" before any card): Thaddea's second CA is dated the day before, so
+   * the seed makes two cards with no question. What the topic search is checked on is unchanged (both are this month).
+   */
+  const late = await caOnFile(t, LOOP_THADDEA.id, "ca for thaddea kroll, late to open", "Thaddea Kroll opened the store 20 minutes late.", "2026-11-11");
   /* Another store's form: this store manager cannot see it in the Forms Register, so it must never reach the model. */
   const moved = (t.forms() as Record<string, unknown>[]).find((row) => row.id === elsewhere)!;
   Object.assign(moved, { location_id: "loc-67", location_name: "Bellevue, NE" });

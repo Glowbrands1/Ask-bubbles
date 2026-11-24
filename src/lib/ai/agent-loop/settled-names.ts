@@ -1,3 +1,4 @@
+import { appConfig } from "./app-config";
 import { personKey, readLoopRecords } from "./card-record";
 
 /**
@@ -25,6 +26,10 @@ export interface LoopCardSettlement {
   readonly isSettledName: (name: string) => boolean;
   /** QA's Bubbles round 2 (22 Nov 2026, U09): the warning level the loop locked on this card (its server record), or null. */
   readonly level: "verbal" | "written" | null;
+  /** Pau's review (24 Nov 2026 PHT): the incident date this card's same-incident check cleared (its server record), or null. */
+  readonly sameIncidentChecked: string | null;
+  /** The card's person by roster id (a one-way key), or null: Create's same-incident check reads it. */
+  readonly employeeKey: string | null;
 }
 
 export async function loopCardSettlement(input: {
@@ -41,7 +46,7 @@ export async function loopCardSettlement(input: {
   if (card.employeeKey) {
     for (const asked of records.nameQuestions) if (asked.offeredKeys.includes(card.employeeKey)) keys.add(asked.typedKey);
   }
-  return { messageId: card.messageId, questionKey: card.questionKey ?? null, isSettledName: (name: string) => keys.has(personKey(name)), level: card.level ?? null };
+  return { messageId: card.messageId, questionKey: card.questionKey ?? null, isSettledName: (name: string) => keys.has(personKey(name)), level: card.level ?? null, sameIncidentChecked: card.sameIncidentChecked ?? null, employeeKey: card.employeeKey ?? null };
 }
 
 /**
@@ -58,4 +63,9 @@ export function turnsAfterCard<T extends { readonly id?: string; readonly role: 
   if (at < 0) return conversation;
   const reply = conversation.findIndex((turn, index) => index > at && turn.role === "assistant");
   return conversation.slice(reply > at ? reply + 1 : at + 1);
+}
+
+/** Pau's review (24 Nov 2026 PHT): the form kinds Create's same-incident check reads (the Corrective Action and the Coaching Form), by this app's keys. */
+export function sameIncidentKinds(): ReadonlySet<string> {
+  return new Set([appConfig().formKeys.corrective, appConfig().formKeys.coaching]);
 }
