@@ -6,7 +6,7 @@ import { envFlag } from "@/lib/config/chat-quality-flags";
  * ============================================================================
  *
  * Owner request, 23 Nov 2026: every form except the Coaching Form waits for HR
- * after the manager presses "Finalize and send to HR for approval". HR approves (the
+ * after the manager presses "Finalize and send for approval". HR approves (the
  * form is then finalized exactly as before), rejects, or sends it back for
  * changes, each with a note, and may edit it meanwhile.
  *
@@ -120,6 +120,63 @@ export const HR_STATE_LABEL: Record<HrApprovalState, string> = {
   changes_requested: "Sent back by HR for changes",
   rejected: "Rejected by HR",
   approved: "Approved by HR",
+};
+
+/*
+ * ============================================================================
+ * MANAGER REPLIED TO CHANGES (owner, 23 Nov 2026)
+ * ============================================================================
+ *
+ * "colene sent to marissa, marissa replied and it shows … 'sent back for changes' still. it should be Manager Replied
+ * to changes. then view then approve." A form HR sent back whose creator or sender has written a note since HR's latest
+ * send-back is the manager's answer: it is HR's turn again. It is read from the approval history, not stored, so the
+ * stored state stays `changes_requested` (the manager may still change it and send it again).
+ *
+ *   stage              who acts next                         counts in "Pending HR approval (N)"
+ *   pending            HR                                    yes
+ *   manager_replied    HR (approve, or send back again)      yes
+ *   changes_requested  the manager        no
+ *   rejected           the manager        no
+ */
+export type HrStage = HrApprovalState | "manager_replied";
+
+export interface HrHistoryStep {
+  action: string;
+  actor: string;
+}
+
+/**
+ * Whether the creator or a sender wrote a note after HR's latest send-back, on a form still sent back. `steps` in the
+ * order they happened.
+ */
+export function approvableFromSentBack(
+  instance: { createdBy: string; hrApprovalState?: HrApprovalState | null; hrApprovalRequestedBy?: string | null; hrApprovalSenders?: readonly string[] },
+  steps: readonly HrHistoryStep[],
+): boolean {
+  if (instance.hrApprovalState !== "changes_requested") return false;
+  let sentBackAt = -1;
+  steps.forEach((step, index) => {
+    if (step.action === "changes_requested") sentBackAt = index;
+  });
+  if (sentBackAt < 0) return false;
+  return steps.slice(sentBackAt + 1).some((step) => step.action === "commented" && isCreatorOrSender({ id: step.actor }, instance));
+}
+
+export function hrStage(state: HrApprovalState, managerReplied: boolean): HrStage {
+  return state === "changes_requested" && managerReplied ? "manager_replied" : state;
+}
+
+/**
+ * A row that needs HR's decision now: waiting for them, or sent back and replied to. What "Pending HR approval (N)" and
+ * "Needs your decision (N)" count, so the number always equals those rows (the sibling app's name, #1288).
+ */
+export function needsHrDecision(row: { state: HrApprovalState; managerReplied: boolean }): boolean {
+  return row.state === "pending" || row.managerReplied;
+}
+
+export const HR_STAGE_LABEL: Record<HrStage, string> = {
+  ...HR_STATE_LABEL,
+  manager_replied: "Manager replied to changes",
 };
 
 /*
@@ -271,4 +328,48 @@ export const HELD_FOR_HR = "HELD_FOR_HR";
 
 export function isHeldForHr(error: unknown): error is Error & { code: typeof HELD_FOR_HR } {
   return error instanceof Error && (error as { code?: unknown }).code === HELD_FOR_HR;
+}
+
+/*
+ * ============================================================================
+ * WHAT THE API SENDS ABOUT HR, TO WHOM (owner, 23 Nov 2026: "are u sure this doesnt leak information, that other
+ * people cant see what a certain manager created?")
+ * ============================================================================
+ *
+ * Every form row carries its approval columns. A reader who may not see HR's decision (anyone but the creator, a
+ * sender or HR: `mayReadHrDecision`) gets them blank, so an approved form reads as an ordinary finalized one in
+ * the JSON too, not only on screen. Applied at every forms route that returns a row.
+ */
+export interface HrApprovalColumns {
+  createdBy: string;
+  hrApprovalState?: HrApprovalState | null;
+  hrApprovalRequestedAt?: string | null;
+  hrApprovalRequestedBy?: string | null;
+  hrApprovalSenders?: readonly string[];
+}
+
+export function redactHrApproval<T extends HrApprovalColumns>(reader: HrReader, row: T): T {
+  if (mayReadHrDecision(reader, row)) return row;
+  const carries = Boolean(row.hrApprovalState || row.hrApprovalRequestedAt || row.hrApprovalRequestedBy || row.hrApprovalSenders?.length);
+  if (!carries) return row;
+  return { ...row, hrApprovalState: null, hrApprovalRequestedAt: null, hrApprovalRequestedBy: null, hrApprovalSenders: [] };
+}
+
+/** The same, for a loaded form (`{ instance, … }`). */
+export function redactLoadedHrApproval<L extends { instance: HrApprovalColumns }>(reader: HrReader, loaded: L): L {
+  const instance = redactHrApproval(reader, loaded.instance);
+  return instance === loaded.instance ? loaded : { ...loaded, instance };
+}
+
+/**
+ * THE ONE ANSWER for a form this reader may not see (owner, 23 Nov 2026). An open revision of a form they can see
+ * may be waiting for HR, sent by someone else; "Edit as new draft" and the chat used to hand that revision back, or
+ * say why it could not be opened. They now get this, which names nobody and nothing about HR.
+ */
+export class FormNotEditableNowError extends Error {
+  readonly code = "FORM_NOT_EDITABLE_NOW";
+  constructor() {
+    super("This form can't be edited right now.");
+    this.name = "FormNotEditableNowError";
+  }
 }

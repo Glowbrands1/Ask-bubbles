@@ -37,6 +37,7 @@ import type {
   StoreSummary,
 } from "@/lib/google-reviews/views";
 import { quickRanges } from "@/lib/google-reviews/quick-ranges";
+import { LEADERBOARD_WINDOWS } from "@/lib/google-reviews/leaderboard-window";
 import { cn } from "@/lib/utils/cn";
 
 import { monthOptions, type ReviewsData } from "./load";
@@ -127,18 +128,30 @@ export function LiveFilters({
         ))}
       </select>
       {tab === "leaderboard" ? (
+        /*
+         * PERIOD: the current month, L3, L6, YTD, then each month before (ported
+         * from the sibling app; Pau, 23 Nov 2026: "pls do in bubbles too but pls add the
+         * per month for both like September october november").
+         */
         <select
           name="month"
           defaultValue={data.month ?? monthOptions()[0]}
-          aria-label="Month"
+          aria-label="Period"
           className={SELECT}
         >
-          {monthOptions().map((m, i) => (
-            <option key={m} value={m}>
-              {monthName(m)}
-              {i === 0 ? " (current)" : ""}
+          <option value={monthOptions()[0]}>{monthName(monthOptions()[0]!)} (current)</option>
+          {LEADERBOARD_WINDOWS.map((w) => (
+            <option key={w.key} value={w.key}>
+              {w.label}
             </option>
           ))}
+          {monthOptions()
+            .slice(1)
+            .map((m) => (
+              <option key={m} value={m}>
+                {monthName(m)}
+              </option>
+            ))}
         </select>
       ) : null}
       {tab === "reviews" ? (
@@ -864,7 +877,10 @@ const STATUS_ICON: Record<GoalStatus, typeof Check> = {
   before_counting: Minus,
 };
 
-export function StatusChip({ status }: { status: GoalStatus }) {
+/** "Below goal" on an L3 / L6 / YTD board, where "Goal missed" would read as a closed month. */
+export const BELOW_GOAL_LABEL = "Below goal";
+
+export function StatusChip({ status, window = false }: { status: GoalStatus; window?: boolean }) {
   const Icon = STATUS_ICON[status];
   return (
     <span
@@ -875,7 +891,7 @@ export function StatusChip({ status }: { status: GoalStatus }) {
       )}
     >
       <Icon aria-hidden className="size-3" strokeWidth={3} />
-      {GOAL_STATUS_LABEL[status]}
+      {window && status === "missed" ? BELOW_GOAL_LABEL : GOAL_STATUS_LABEL[status]}
     </span>
   );
 }
@@ -1270,7 +1286,7 @@ export function Leaderboard({
                 </b>
               </span>
               <span>
-                Month{" "}
+                {context.window ? context.window.toUpperCase() : "Month"}{" "}
                 <b className="text-foreground">
                   {counting
                     ? `${row.qualifyingMonthToDate} / ${row.monthlyTarget}`
@@ -1293,7 +1309,7 @@ export function Leaderboard({
               <Meter row={row} context={context} />
             </span>
             <span className="col-span-2 lg:col-span-1">
-              <StatusChip status={status} />
+              <StatusChip status={status} window={Boolean(context.window)} />
             </span>
           </li>
         );

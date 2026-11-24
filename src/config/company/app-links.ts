@@ -31,3 +31,18 @@ export function leadershipHubUrl(): string {
   // Read at call time (not the module-load constant above), so a server reads its deployment's value.
   return urlFrom(process.env.NEXT_PUBLIC_LEADERSHIP_HUB_URL, DEFAULT_LEADERSHIP_HUB_URL).replace(/\/+$/, "");
 }
+
+/**
+ * HR'S QUEUE IN THE SIBLING APP (owner, 23 Nov 2026; `src/lib/partner/sibling-hr-queue.ts`). This app's id, which it
+ * signs its requests with, and the sibling's id and address, the one caller `/api/partner/hr-queue` answers. Ids only:
+ * the sibling's display name comes from its own answer.
+ */
+export const SIBLING_HR_APP = {
+  thisAppId: "ask-bubbles",
+  siblingAppId: "ask-sunny",
+} as const;
+
+/** The sibling app's address without a trailing slash, read at call time (server only). */
+export function siblingAppUrl(): string {
+  return urlFrom(process.env.NEXT_PUBLIC_ASK_SUNNY_URL, DEFAULT_ASK_SUNNY_URL).replace(/\/+$/, "");
+}

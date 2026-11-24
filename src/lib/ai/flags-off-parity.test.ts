@@ -208,14 +208,28 @@ const ALLOWED_UI = [
   // in the rail on desktop (sidebar.tsx), in the top bar on phones (app-shell.tsx), read by the (app) layout; all
   // three are listed below. No chat or form behaviour changes.
   "src/features/notifications/",
+  // ...and its × per row and Clear all (Pau, 23 Nov 2026: "able to delete notification all or clicking x by removing 1"):
+  // the viewer's own notifications only. The DM L10 bell (src/features/l10/, listed above) shows the same panel (Pau:
+  // "for dm meeting make this UI same with bubble"), with its out-of-app Settings link removed.
   // HR APPROVAL OF FORMS (owner request, 23 Nov 2026, both apps), behind FORMS_HR_APPROVAL_ENABLED (off): the form card's
-  // "Finalize and send to HR for approval" and HR's approval panel, the Forms Register's Pending HR approval tab and "Your
+  // "Finalize and send for approval" and HR's approval panel, the Forms Register's Pending HR approval tab and "Your
   // forms with HR" list, the Overview card, and the HR review page. Off, none of them renders and Finalize is as before.
   "src/features/forms/hr-approval-lists.tsx",
   "src/features/forms/hr-approval-panel.tsx",
   "src/features/forms/hr-approval-screen.tsx",
   "src/app/(app)/forms/hr-approval/",
   "src/features/dashboard/overview.tsx",
+  // Then (Pau, via QA, 23 Nov 2026, QA approved, both apps; #1115, the same as Ask Sunny #1288): "when manager replies in
+  // note, there should be approve button here please and notify manager ... then the manager once sent back, will have
+  // option to print and save as PDF" — the panel's Approve and Send back after the manager's reply (hr-approval-panel.tsx),
+  // HR's "Needs your decision" list (hr-approval-lists.tsx), and the card's Print beside Download PDF (inline-form.tsx,
+  // listed below); "its so small pending approval, make it red button and animated shaking if theres a pending" — the
+  // Pending HR approval button (hr-approval-lists.tsx) and its .hr-pending-shake in globals.css (listed above), off under
+  // reduced motion; and the sibling app's approvals on the Forms Register (monitoring/page.tsx, listed below), first a
+  // "Sunny approvals ↗" link, then (owner: "i dont want the sunny approval in a different page and link, just a tab pls")
+  // an in-page tab next to Pending HR approval, for HR approvers only. The approval UI is behind FORMS_HR_APPROVAL_ENABLED: off, the server sends no approval data, so none of
+  // it renders. Print shows on any finalized form and opens the same server PDF as Download PDF.
+  "src/features/forms/hr-approval-manager-replied.dom.test.tsx",
   // ...and its one sidebar entry, with the rail tests that list what an Employee sees.
   "src/components/shell/navigation.ts",
   "src/components/shell/navigation.test.ts",
@@ -237,6 +251,11 @@ const ALLOWED_UI = [
   // it is a data correction, identical for every store whose number is its code.
   "src/features/reviews/reviews-data.tsx",
   "src/features/admin/google-reviews/google-reviews-screen.tsx",
+  // STORE LEADERBOARD PERIOD (Pau, 23 Nov 2026: "pls do in bubbles too but pls add the per month for both like September
+  // october november"): the Reviews page's leaderboard picker offers L3, L6 and YTD beside the months, and the board's
+  // header and column follow it. Reviews page only, unflagged like the store-number fix above: no chat or form behaviour.
+  "src/features/reviews/reviews-dashboard.tsx",
+  "src/features/reviews/reviews-parts.tsx",
   "src/features/chat/message-bubble.tsx",
   "src/features/chat/composer.tsx",
   "src/features/chat/inline-form.tsx",
