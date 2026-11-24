@@ -24,9 +24,9 @@ import {
   visibleInstances,
 } from "@/lib/forms/instance-scope";
 import { pageFormsAccess } from "@/lib/forms/page-scope";
-import { HrApprovalTabs, HrQueueList, MyFormsWithHr } from "@/features/forms/hr-approval-lists";
-import { ASK_SUNNY_URL } from "@/config/company/app-links";
-import { pageShowsAppSwitcher } from "@/lib/auth/app-switcher";
+import { HrApprovalTabs, HrQueueList, MyFormsWithHr, SiblingHrQueueList } from "@/features/forms/hr-approval-lists";
+import { fetchSiblingHrQueue, type SiblingHrQueue } from "@/lib/partner/sibling-hr-queue";
+import { needsHrDecision } from "@/lib/forms/hr-approval-rules";
 import { hrQueueSummary, listHrQueue, listMyFormsWithHr, type HrQueueRow, type MyHrFormRow } from "@/lib/forms/hr-approval";
 import { supabaseSecretKeyConfigured } from "@/lib/config/server-env";
 import { privateAwareLimit, privateCreatorsActive } from "@/lib/forms/private-creators";
@@ -51,11 +51,11 @@ export const dynamic = "force-dynamic";
 export default async function FormMonitoringPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; followup?: string }>;
+  searchParams: Promise<{ view?: string; followup?: string; app?: string }>;
 }) {
   const identity = await requirePagePermission("view_form_monitoring");
 
-  const { view: requestedView, followup: requestedFollowUp } = await searchParams;
+  const { view: requestedView, followup: requestedFollowUp, app: requestedApp } = await searchParams;
   /*
    * Both filters come from the URL so a view survives a refresh and can be
    * linked to, and both are narrowed here rather than trusted — an unknown
@@ -92,16 +92,22 @@ export default async function FormMonitoringPage({
   let hrSummary: { pending: number; overdue: number } | null = null;
   let myWithHr: MyHrFormRow[] = [];
   /*
-   * "Sunny approvals ↗" (owner, 23 Nov 2026): the sibling app's Pending HR approval view, for people who already get the
-   * app switcher (access to both apps). Only a link: no data crosses between the apps, and the other app checks its own
-   * sign-in. No count.
+   * THE SIBLING APP'S QUEUE, AS A TAB (owner, 23 Nov 2026: "1 tab for sunny 1 tab for bubbles"; then, of a link to the
+   * sibling's page: "i dont want the sunny approval in a different page and link, just a tab pls"). For a verified HR
+   * approver, asked of the sibling's server with this identity's email (`fetchSiblingHrQueue`), on every view so the
+   * tab carries its count; listed here, on `?view=hr&app=sibling`. "off" (no shared secret) shows no tab.
    */
-  const sunnyApprovalsHref = (await pageShowsAppSwitcher()) ? `${ASK_SUNNY_URL.replace(/\/+$/, "")}/forms/monitoring?view=hr` : null;
+  let sibling: SiblingHrQueue = { status: "off" };
+  const siblingView = hrView && requestedApp === "sibling";
   if (access) {
     try {
       if (isHr) {
-        hrSummary = await hrQueueSummary(access.actor);
-        if (hrView) hrQueue = await listHrQueue(access.actor);
+        const email = access.actor.verified && identity?.verified === true && identity.email ? identity.email : null;
+        [hrSummary, hrQueue, sibling] = await Promise.all([
+          hrQueueSummary(access.actor),
+          hrView ? listHrQueue(access.actor) : Promise.resolve<HrQueueRow[]>([]),
+          email ? fetchSiblingHrQueue(email) : Promise.resolve<SiblingHrQueue>({ status: "off" }),
+        ]);
       }
       myWithHr = await listMyFormsWithHr(access.actor);
     } catch {
@@ -185,18 +191,25 @@ export default async function FormMonitoringPage({
           description="Every form created in Ask Bubbles, the template version it was filled from, and what is still outstanding."
         />
 
-        {hrSummary || sunnyApprovalsHref ? (
+        {hrSummary ? (
           <HrApprovalTabs
-            active={hrView ? "hr" : "all"}
-            pending={hrSummary?.pending ?? 0}
-            overdue={hrSummary?.overdue ?? 0}
-            showPending={hrSummary !== null}
-            sunnyHref={sunnyApprovalsHref}
+            active={siblingView ? "sibling" : hrView ? "hr" : "all"}
+            pending={hrSummary.pending}
+            overdue={hrSummary.overdue}
+            sibling={
+              sibling.status === "off"
+                ? null
+                : sibling.status === "ok"
+                  ? { name: sibling.app, pending: sibling.approver ? sibling.forms.filter(needsHrDecision).length : 0 }
+                  : { name: null, pending: null }
+            }
           />
         ) : null}
         {!hrView ? <MyFormsWithHr rows={myWithHr} /> : null}
 
-        {hrView ? (
+        {hrView && siblingView && sibling.status !== "off" ? (
+          <SiblingHrQueueList queue={sibling} />
+        ) : hrView ? (
           <HrQueueList rows={hrQueue} />
         ) : !connected ? (
           <Notice tone="neutral" title="Forms are not connected in this deployment">

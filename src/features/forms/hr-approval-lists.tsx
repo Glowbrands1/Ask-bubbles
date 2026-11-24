@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ExternalLink } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { formatBusinessTime } from "@/lib/business-date";
@@ -63,58 +63,138 @@ function hrHref(id: string): string {
 /**
  * The Forms Register's views. The owner (23 Nov 2026): "its so small pending approval, make it red button and animated
  * shaking if theres a pending". "Pending HR approval (N)" is a real button; with N > 0 it is red and shakes briefly every
- * few seconds (`hr-pending-shake`, off under prefers-reduced-motion); with N = 0 it is the normal style. Shown to HR only,
- * as before. "Sunny approvals ↗" (owner, 23 Nov 2026) opens the sibling app's Pending HR approval view: a plain link for
- * people who already get the app switcher, no data from the other app and no count.
+ * few seconds (`hr-pending-shake`, off under prefers-reduced-motion); with N = 0 it is the normal style. Shown to HR only.
+ *
+ * THE SIBLING APP'S APPROVALS ARE A TAB HERE, NOT A LINK AWAY (owner, 23 Nov 2026: "i dont want the sunny approval in a
+ * different page and link, just a tab pls"). "<sibling> approvals (N)" sits next to Pending HR approval and lists, on
+ * this page, the forms waiting for this approver in the sibling app, read from its server. Its name is the one that
+ * server answered with, never spelled here; while it cannot be read the tab says "Other app approvals". `sibling: null`
+ * (no shared secret) hides it.
  */
 export function HrApprovalTabs({
   active,
   pending,
   overdue,
-  showPending = true,
-  sunnyHref = null,
+  sibling = null,
 }: {
-  active: "all" | "hr";
+  active: "all" | "hr" | "sibling";
   pending: number;
   overdue: number;
-  /** HR approvers only (the page passes false for anybody else). */
-  showPending?: boolean;
-  /** The sibling app's Pending HR approval view, for app-switcher users only; null hides the tab. */
-  sunnyHref?: string | null;
+  sibling?: { name: string | null; pending: number | null } | null;
 }) {
   const tab = (selected: boolean) =>
     `inline-flex min-h-9 items-center gap-1.5 rounded-[var(--radius-md)] border px-4 py-2 text-sm font-medium ${
       selected ? "border-foreground bg-foreground text-background" : "border-border text-muted-foreground hover:text-foreground"
     }`;
+  const waitingTab = (count: number | null, selected: boolean) =>
+    count !== null && count > 0
+      ? `hr-pending-shake inline-flex min-h-9 items-center gap-1.5 rounded-[var(--radius-md)] border border-status-failed bg-status-failed px-4 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90 ${
+          selected ? "ring-2 ring-status-failed ring-offset-2" : ""
+        }`
+      : tab(selected);
   const waiting = pending > 0;
-  const pendingClass = waiting
-    ? `hr-pending-shake inline-flex min-h-9 items-center gap-1.5 rounded-[var(--radius-md)] border border-status-failed bg-status-failed px-4 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90 ${
-        active === "hr" ? "ring-2 ring-status-failed ring-offset-2" : ""
-      }`
-    : tab(active === "hr");
+  const siblingWaiting = (sibling?.pending ?? 0) > 0;
   return (
     <nav aria-label="Forms Register views" className="mb-4 flex flex-wrap items-center gap-2">
       <Link href="/forms/monitoring" className={tab(active === "all")} aria-current={active === "all" ? "page" : undefined}>
         All forms
       </Link>
-      {showPending ? (
+      <Link
+        href="/forms/monitoring?view=hr"
+        className={waitingTab(pending, active === "hr")}
+        aria-current={active === "hr" ? "page" : undefined}
+        data-testid="hr-pending-tab"
+        data-waiting={waiting ? "true" : "false"}
+      >
+        Pending HR approval ({pending})
+        {overdue > 0 ? <span className={waiting ? "font-semibold" : "font-semibold text-status-attention"}>· {overdue} overdue</span> : null}
+      </Link>
+      {sibling ? (
         <Link
-          href="/forms/monitoring?view=hr"
-          className={pendingClass}
-          aria-current={active === "hr" ? "page" : undefined}
-          data-testid="hr-pending-tab"
-          data-waiting={waiting ? "true" : "false"}
+          href="/forms/monitoring?view=hr&app=sibling"
+          className={waitingTab(sibling.pending, active === "sibling")}
+          aria-current={active === "sibling" ? "page" : undefined}
+          data-testid="sibling-approvals-tab"
+          data-waiting={siblingWaiting ? "true" : "false"}
         >
-          Pending HR approval ({pending})
-          {overdue > 0 ? <span className={waiting ? "font-semibold" : "font-semibold text-status-attention"}>· {overdue} overdue</span> : null}
+          {sibling.name ?? "Other app"} approvals{sibling.pending === null ? "" : ` (${sibling.pending})`}
         </Link>
       ) : null}
-      {sunnyHref ? (
-        <a href={sunnyHref} target="_blank" rel="noopener noreferrer" className={tab(false)} data-testid="sunny-approvals-tab">
-          Sunny approvals ↗
-        </a>
-      ) : null}
     </nav>
+  );
+}
+
+export interface SiblingHrQueueListRow {
+  line: string;
+  from: string;
+  state: HrQueueListRow["state"];
+  requestedAt: string | null;
+  waiting: string;
+  overdue: boolean;
+  /** Sent back, and the manager replied since: the sibling counts it as needing HR's decision. */
+  managerReplied?: boolean;
+  href: string;
+}
+
+/**
+ * THE SIBLING APP'S FORMS WAITING FOR THIS APPROVER. Each opens the form's review page IN THE SIBLING APP, where its own
+ * sign-in applies and where Approve / Send back / Reject happen: nothing is decided from here.
+ */
+export function SiblingHrQueueList({
+  queue,
+}: {
+  queue: { status: "error" } | { status: "ok"; app: string; approver: boolean; forms: SiblingHrQueueListRow[] };
+}) {
+  if (queue.status === "error") {
+    return (
+      <p className="text-sm text-muted-foreground" data-testid="sibling-hr-queue-error">
+        The other app&apos;s forms could not be read just now. Try again in a minute, or open the other app from the app switcher.
+      </p>
+    );
+  }
+  if (!queue.approver) {
+    return (
+      <p className="text-sm text-muted-foreground" data-testid="sibling-hr-queue-not-approver">
+        Your account is not set up as the HR approver in {queue.app}, so it has no forms waiting for you there.
+      </p>
+    );
+  }
+  if (queue.forms.length === 0) {
+    return <p className="text-sm text-muted-foreground">No forms are waiting for your approval in {queue.app}.</p>;
+  }
+  return (
+    <div data-testid="sibling-hr-queue">
+      <p className="mb-2 text-xs text-subtle-foreground">
+        Each form opens in {queue.app}, where you approve, send back or reject it. Sign in there if it asks.
+      </p>
+      <ul className="divide-y divide-border rounded-[var(--radius-md)] border border-border">
+        {queue.forms.map((row) => (
+          <li key={row.href}>
+            <a href={row.href} className="flex items-center gap-3 px-3 py-2.5 hover:bg-surface-muted">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-foreground">{row.line}</p>
+                <p className="text-xs text-subtle-foreground">
+                  From {row.from}
+                  {formatBusinessTime(row.requestedAt) ? ` · sent ${formatBusinessTime(row.requestedAt)}` : ""}
+                </p>
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                <Badge tone={row.state === "pending" || row.managerReplied === true ? "accent" : "outline"} size="sm">
+                  {row.managerReplied === true ? STAGE_WORDS.manager_replied : STAGE_WORDS[row.state]}
+                </Badge>
+                {row.state === "pending" ? <span className="text-xs text-subtle-foreground">{row.waiting}</span> : null}
+                {row.overdue ? (
+                  <Badge tone="attention" size="sm">
+                    Overdue
+                  </Badge>
+                ) : null}
+              </div>
+              <ExternalLink className="size-4 shrink-0 text-subtle-foreground" aria-hidden />
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
