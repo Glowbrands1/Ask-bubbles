@@ -6127,4 +6127,12 @@ export function typedEmployeeEveryCardEnabled(): boolean {
  */
 export function adminCardAsksSalonEnabled(): boolean {
   return envFlag("ADMIN_CARD_ASKS_SALON_ENABLED");
+ * LOOP_CARD_CITES_CONDUCT_LINE (port from Ask Sunny; its QA's live test, 24 Nov 2026; default off; same flag in both
+ * apps): a loop card citing the Standards of Conduct for an incident the manual lists on its own line (a register
+ * shortage, theft, insubordination, disrespect, absence from the work area) names that line beside the heading, at the
+ * line's printed page: "Standards of Conduct — <the line>, JBA Policy Manual p.<n>" (`forms/specific-policy-topics.ts`
+ * conductLineCitation), as the saved draft quotes it. Off, as before (the line's page, the heading's name).
+ */
+export function loopCardCitesConductLineEnabled(): boolean {
+  return envFlag("LOOP_CARD_CITES_CONDUCT_LINE_ENABLED");
 }
