@@ -9,6 +9,7 @@ import {
   stepDatesNotFormDateEnabled,
   formDateSaidSettlesEnabled,
   futureIncidentDateAskEnabled,
+  formDateIsTodayEnabled,
 } from "@/lib/config/chat-quality-flags";
 
 /** DATE_ANSWER_KEEPS_OPEN_ENABLED, on top of the live DATE_ANSWER_APPLIED_ENABLED. */
@@ -300,7 +301,37 @@ export function futureDateQuestion(iso: string, today: string): string {
   return `The date you gave, **${longDate(iso)}**, ${FUTURE_DATE_TAG} (${longDate(today)}), and a form records something that already happened. What date did it happen? Say "today" for today — until you do, the form is dated the day it is created.`;
 }
 
-export function decideFormDate(input: {
+/**
+ * FORM_DATE_IS_TODAY_ENABLED (Pau, 24 Nov 2026; default off). "the form date is wrong i told it Paulyne was late to
+ * work on September 11, 2026. but it put the date …, should be today right": the Corrective Action was dated
+ * 09/11/2026, the day she was late, so the Corrective Action finalized on 09/12 was "after" it and was left off
+ * "List previously received coaching and/or corrective action with date signed". On: a form's Date is the day it is
+ * written. The incident's date stays in the account (the Observation); it never dates the form, and "which date?" is
+ * not asked. The manager still sets the Date in words ("date it 11/20", "make the date 11/20"), a Coaching Form is
+ * still dated by the coaching it documents ("I coached her on 11/20"), and an incident after today is still asked
+ * about. Off, `decideFormDateFromDates` as before.
+ */
+export function decideFormDate(input: Parameters<typeof decideFormDateFromDates>[0]): FormDateDecision {
+  const decided = decideFormDateFromDates(input);
+  if (!formDateIsTodayEnabled() || !DATED_TEMPLATES.has(input.templateKey)) return decided;
+  // A future incident is still asked about (FUTURE_INCIDENT_DATE_ASK); the form is never dated by it.
+  if (decided.question?.includes(FUTURE_DATE_TAG)) return { formDate: null, question: decided.question };
+  return { formDate: formDateGiven(input.text, input.templateKey, input.today) };
+}
+
+/**
+ * FORM_DATE_IS_TODAY: the date the manager gave the form itself ("date it 11/20", "make the date 11/20"), or on a
+ * Coaching Form the day the coaching was held; null (the day the form is written) otherwise. Never after today.
+ */
+export function formDateGiven(text: string, templateKey: string, today: string): string | null {
+  const given =
+    explicitFormDate(text, today) ??
+    (formDateSaidSettlesEnabled() ? saidFormDate(text, today) : null) ??
+    (COACHING_TEMPLATES.has(templateKey) ? (heldCoachingDates(text, today).at(-1) ?? null) : null);
+  return given && given <= today ? given : null;
+}
+
+function decideFormDateFromDates(input: {
   readonly text: string;
   readonly templateKey: string;
   readonly history: readonly Turn[];
