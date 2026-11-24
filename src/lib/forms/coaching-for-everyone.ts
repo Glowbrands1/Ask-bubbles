@@ -10,7 +10,7 @@ import { authorizeLocation } from "@/lib/forms/location-scope";
 import { samePerson } from "@/lib/forms/proposal";
 import { copyFormContent } from "@/lib/forms/same-form-copy";
 import { storeStaff } from "@/lib/forms/staff-picker";
-import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
+import { activePermissionMatrix, hasPermission } from "@/lib/permissions";
 import type { ChatMessage } from "@/types";
 
 /**
@@ -172,7 +172,7 @@ async function everyoneTurn(input: TurnInput): Promise<AskResponse | null> {
   } catch {
     return null;
   }
-  if (!actor.role || !hasPermission(DEFAULT_PERMISSION_MATRIX, actor.role, "create_coaching_form")) return null;
+  if (!actor.role || !hasPermission(activePermissionMatrix(), actor.role, "create_coaching_form")) return null;
   const form = source.instance;
   if (form.templateKey !== "coaching") {
     return answer(

@@ -48,13 +48,13 @@ beforeEach(() => {
 describe("the overview's folded name (f072)", () => {
   it("matches each name word against the stored name and the folded one", async () => {
     db.migrated = true;
-    await expect(listInstances("all", 50, { employeeNameWords: ["lucia", "ramirez"] })).resolves.toEqual([]);
+    await expect(listInstances(50, { employeeNameWords: ["lucia", "ramirez"] })).resolves.toEqual([]);
     expect(db.filters).toEqual(["employee_name.ilike.*lucia*,employee_name.ilike.*ramirez*,employee_name_folded.ilike.*lucia*,employee_name_folded.ilike.*ramirez*"]);
   });
 
   it("before the migration is applied, reads again by the stored name only, never an error", async () => {
     db.migrated = false;
-    await expect(listInstances("all", 50, { employeeNameWords: ["lucia"] })).resolves.toEqual([]);
+    await expect(listInstances(50, { employeeNameWords: ["lucia"] })).resolves.toEqual([]);
     expect(db.filters).toEqual(["employee_name.ilike.*lucia*,employee_name_folded.ilike.*lucia*", "employee_name.ilike.*lucia*"]);
   });
 });

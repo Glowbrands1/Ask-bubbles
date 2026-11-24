@@ -2,7 +2,7 @@ import { loadFormDeletionsChatBlock } from "@/lib/ai/form-deletions-chat-read";
 import { isGoogleReviewQuestion } from "@/lib/ai/google-reviews-chat";
 import { loadGoogleReviewsChatBlock } from "@/lib/ai/google-reviews-chat-read";
 import { assignmentTrackerText, canSeeAssignmentTracker, type AssignmentTracker } from "@/lib/ai-training/assignments";
-import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
+import { activePermissionMatrix, hasPermission } from "@/lib/permissions";
 
 import { formatBusinessTime } from "@/lib/business-date";
 
@@ -147,7 +147,7 @@ export async function readFormDeletions(context: DataToolContext, input: { emplo
  * tab's grid shows it. ONLY FOR THE TRACKER'S NAMED PEOPLE: anyone else is refused and nothing is read.
  */
 export async function readAiAssignments(context: DataToolContext, deps: DataToolDeps = DEFAULT_DATA_TOOL_DEPS): Promise<ToolResult> {
-  if (context.actor.role === null || !hasPermission(DEFAULT_PERMISSION_MATRIX, context.actor.role, "view_ai_training") || !canSeeAssignmentTracker(context.actor)) {
+  if (context.actor.role === null || !hasPermission(activePermissionMatrix(), context.actor.role, "view_ai_training") || !canSeeAssignmentTracker(context.actor)) {
     return {
       source: AI_ASSIGNMENTS_SOURCE,
       refused: "The AI assignment tracker is only for the people it was set up for. Nothing was read; say so plainly, in one line, and give nothing from it.",

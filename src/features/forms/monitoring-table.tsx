@@ -3,8 +3,6 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
-  Archive,
-  ArchiveRestore,
   CalendarPlus,
   CheckCircle2,
   Download,
@@ -20,7 +18,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Notice } from "@/components/ui/feedback";
 import { AlarmBar } from "@/components/ui/marquee";
 import { ScrollTable } from "@/components/ui/layout";
-import { Input, Label, Select } from "@/components/ui/field";
+import { Input, Select } from "@/components/ui/field";
 import {
   Dialog,
   DialogActions,
@@ -70,8 +68,6 @@ import { RegisterRowActions } from "@/form-revisions/register-row-actions";
  * date. Nothing is stored as "overdue" and nothing is hard-coded.
  */
 
-export type MonitoringView = "active" | "archived" | "all";
-
 export interface MonitoredForm {
   id: string;
   templateName: string;
@@ -91,7 +87,6 @@ export interface MonitoredForm {
   finalizedAt: string | null;
   exportedAt: string | null;
   revisesInstanceId: string | null;
-  archivedAt: string | null;
   /**
    * True when the row carries `demo:` provenance — a fact written by the
    * server when it was created, not a guess from the employee's name.
@@ -132,7 +127,6 @@ const PINNED =
  *   followed_up  the success token: the conversation happened
  *   drafted      neutral: unfinished, not late
  *   untracked    outline: no commitment exists to be late for
- *   archived     neutral: off the active list entirely
  *
  * Making every follow-up state pink would leave the manager no way to see which
  * one needs them.
@@ -143,7 +137,6 @@ const FOLLOW_UP_TONE: Record<FollowUpState, BadgeTone> = {
   followed_up: "ready",
   drafted: "neutral",
   untracked: "outline",
-  archived: "neutral",
 };
 
 /** The document's own lifecycle, shown small under the form name. */
@@ -156,7 +149,6 @@ const DOC_STATUS_LABEL = {
 export function MonitoringTable({
   forms,
   notice,
-  view,
   followUp,
   today,
   attention,
@@ -164,8 +156,6 @@ export function MonitoringTable({
 }: {
   forms: MonitoredForm[];
   notice: string | null;
-  /** Which shelf the server read. Changing it re-reads on the server. */
-  view: MonitoringView;
   /** Which follow-up state the pills are filtered to. */
   followUp: FollowUpFilter;
   /**
@@ -180,14 +170,13 @@ export function MonitoringTable({
   /**
    * Outstanding work across the ACTIVE set, counted on the server by the same
    * query the Overview uses. Not derived from the rows on screen: those are
-   * shelf- and pill-filtered, so a banner taken from them would say "nothing
+   * pill-filtered, so a banner taken from them would say "nothing
    * needs attention" the moment somebody looked at Followed up.
    */
   attention: AttentionSummary;
   /**
-   * What a demo sweep would do, counted on the SERVER across every shelf — not
-   * from the rows on screen, which are filtered and would give a wrong number
-   * the moment somebody switches to Archived.
+   * What a demo sweep would do, counted on the SERVER — not
+   * from the rows on screen, which are filtered and could give a wrong number.
    */
   demo: { deletable: number; protected: number };
 }) {
@@ -198,11 +187,18 @@ export function MonitoringTable({
   const [busy, setBusy] = React.useState<string | null>(null);
   /** The row a confirmation dialog is open for, and what it would do. */
   const [confirming, setConfirming] = React.useState<
-    { kind: "delete" | "archive" | "restore"; form: MonitoredForm } | null
+    { kind: "delete"; form: MonitoredForm } | null
   >(null);
   const [sweeping, setSweeping] = React.useState(false);
   /** The row whose empty date box is being filled in, after Start tracking. */
   const [starting, setStarting] = React.useState<string | null>(null);
+  /** Drafts ticked for a bulk delete (ids), the last one ticked (for shift-click), and the dialog/progress. */
+  const [selected, setSelected] = React.useState<Set<string>>(() => new Set());
+  const [anchor, setAnchor] = React.useState<string | null>(null);
+  const [bulkConfirming, setBulkConfirming] = React.useState(false);
+  const [bulkProgress, setBulkProgress] = React.useState<{ done: number; total: number } | null>(
+    null,
+  );
   const { role, user, can, demoMode } = useSession();
   const router = useRouter();
 
@@ -254,25 +250,10 @@ export function MonitoringTable({
    */
   const removeForm = (form: MonitoredForm) =>
     run(form.id, `Deleted the ${form.templateShortName} for ${form.employeeName}.`, () =>
-      // `formsFetch` turns the route's 409 — "this form is finalized, archive
-      // it instead" — into a thrown message shown as the problem notice, so
+      // `formsFetch` turns the route's 409 — "this form is finalized, so it
+      // cannot be deleted" — into a thrown message shown as the problem notice, so
       // the refusal reaches the person in the server's own words.
       call(`/api/forms/instances/${form.id}`, { method: "DELETE" }),
-    );
-
-  /** Archive, or put back. Never touches status or a single filled value. */
-  const setArchived = (form: MonitoredForm, archived: boolean) =>
-    run(
-      form.id,
-      archived
-        ? `Archived the ${form.templateShortName} for ${form.employeeName}. The record is kept.`
-        : `Restored the ${form.templateShortName} for ${form.employeeName}.`,
-      () =>
-        call(`/api/forms/instances/${form.id}`, {
-          method: "PUT",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ archived }),
-        }),
     );
 
   /** Set or move the follow-up date. Persists immediately — there is no Save. */
@@ -366,11 +347,9 @@ export function MonitoringTable({
    * linked to — which is what lets the Overview send somebody straight to
    * `?followup=overdue`.
    */
-  function go(next: { view?: MonitoringView; followUp?: FollowUpFilter }) {
+  function go(next: { followUp?: FollowUpFilter }) {
     const params = new URLSearchParams();
-    const nextView = next.view ?? view;
     const nextFollowUp = next.followUp ?? followUp;
-    if (nextView !== "active") params.set("view", nextView);
     if (nextFollowUp !== "all") params.set("followup", nextFollowUp);
     const query = params.toString();
     router.push(query ? `/forms/monitoring?${query}` : "/forms/monitoring");
@@ -378,12 +357,99 @@ export function MonitoringTable({
 
   const banner = attentionSentence(attention);
 
+  /*
+   * BULK DELETE. A row can be ticked only when the per-row Delete would be
+   * offered: a draft, and the viewer may manage form records. The server still
+   * decides each one (DELETE /api/forms/instances/{id}), so store scoping, HR
+   * approval withdrawal and the deletion record are exactly as for one delete.
+   */
+  const deletable = shown.filter((form) => mayManage && form.status === "draft");
+  const deletableIds = deletable.map((form) => form.id);
+  const selectedShown = deletable.filter((form) => selected.has(form.id));
+  const allTicked = deletable.length > 0 && selectedShown.length === deletable.length;
+  const someTicked = selectedShown.length > 0 && !allTicked;
+  const headerBox = React.useRef<HTMLInputElement>(null);
+  React.useEffect(() => {
+    if (headerBox.current) headerBox.current.indeterminate = someTicked;
+  }, [someTicked]);
+
+  // A different view is a different list: a tick must never follow a row off screen.
+  const viewKey = `${templateName}|${followUp}`;
+  const [selectedView, setSelectedView] = React.useState(viewKey);
+  if (selectedView !== viewKey) {
+    setSelectedView(viewKey);
+    setSelected(new Set());
+    setAnchor(null);
+  }
+
+  function toggleRow(id: string, shift: boolean) {
+    setSelected((current) => {
+      const next = new Set(current);
+      const turnOn = !current.has(id);
+      const from = shift && anchor ? deletableIds.indexOf(anchor) : -1;
+      const to = deletableIds.indexOf(id);
+      if (from >= 0 && to >= 0) {
+        const [lo, hi] = from < to ? [from, to] : [to, from];
+        for (const rangeId of deletableIds.slice(lo, hi + 1)) {
+          if (turnOn) next.add(rangeId);
+          else next.delete(rangeId);
+        }
+      } else if (turnOn) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+    setAnchor(id);
+  }
+
+  function toggleAll() {
+    setSelected(allTicked ? new Set() : new Set(deletableIds));
+    setAnchor(null);
+  }
+
+  async function deleteSelected() {
+    const targets = selectedShown;
+    setBusy("bulk");
+    setProblem(null);
+    setMessage(null);
+    setBulkProgress({ done: 0, total: targets.length });
+    const failed: { form: MonitoredForm; reason: string }[] = [];
+    let done = 0;
+    let next = 0;
+    // Three at a time: quick for a clean-up, gentle on the server.
+    const worker = async () => {
+      while (next < targets.length) {
+        const form = targets[next++];
+        try {
+          await call(`/api/forms/instances/${form.id}`, { method: "DELETE" });
+        } catch (error) {
+          failed.push({ form, reason: (error as Error).message });
+        }
+        done += 1;
+        setBulkProgress({ done, total: targets.length });
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(3, targets.length) }, worker));
+
+    const deletedCount = targets.length - failed.length;
+    const failedIds = new Set(failed.map((item) => item.form.id));
+    setSelected((current) => new Set([...current].filter((id) => failedIds.has(id))));
+    setAnchor(null);
+    if (failed.length === 0) {
+      setMessage(`Deleted ${deletedCount} draft${deletedCount === 1 ? "" : "s"}.`);
+    } else {
+      const reasons = [...new Set(failed.map((item) => item.reason))].join("; ");
+      setProblem(`Deleted ${deletedCount}. ${failed.length} could not be deleted: ${reasons}`);
+    }
+    setBulkProgress(null);
+    setBulkConfirming(false);
+    setBusy(null);
+    router.refresh();
+  }
+
   const emptyMessage =
     followUp !== "all"
       ? `Nothing is ${FOLLOW_UP_LABEL[followUp as FollowUpState].toLowerCase()}.`
-      : view === "archived"
-        ? "Nothing is archived."
-        : null;
+      : null;
 
   return (
     <div className="space-y-4">
@@ -461,21 +527,6 @@ export function MonitoringTable({
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="monitoring-view" className="text-muted-foreground">
-                Show
-              </Label>
-              <Select
-                id="monitoring-view"
-                value={view}
-                onChange={(event) => go({ view: event.target.value as MonitoringView })}
-                className="h-9 w-36"
-              >
-                <option value="active">Active forms</option>
-                <option value="archived">Archived</option>
-                <option value="all">All</option>
-              </Select>
-            </div>
             <Select
               aria-label="Form"
               value={templateName}
@@ -507,6 +558,31 @@ export function MonitoringTable({
         </CardContent>
       </Card>
 
+      {selectedShown.length > 0 ? (
+        <div
+          role="region"
+          aria-label="Selected drafts"
+          className="sticky top-2 z-20 flex flex-wrap items-center gap-3 rounded-[var(--radius-xs)] border border-border-strong bg-surface px-4 py-2 shadow-md"
+        >
+          <p className="text-[13px] font-medium text-foreground">
+            {selectedShown.length} selected
+          </p>
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="ghost" onClick={() => setSelected(new Set())} disabled={busy === "bulk"}>
+              Clear
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => setBulkConfirming(true)}
+              disabled={busy === "bulk"}
+            >
+              <Trash2 />
+              Delete selected
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       {shown.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center text-[13px] text-muted-foreground">
@@ -525,6 +601,22 @@ export function MonitoringTable({
               <table className="w-full min-w-[900px] border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-border">
+                    {mayManage ? (
+                      <th className="w-11 px-1 py-0 text-left">
+                        {deletable.length > 0 ? (
+                          <label className="flex size-11 cursor-pointer items-center justify-center">
+                            <input
+                              ref={headerBox}
+                              type="checkbox"
+                              aria-label="Select all drafts that can be deleted"
+                              checked={allTicked}
+                              onChange={toggleAll}
+                              className="size-5 cursor-pointer accent-[var(--foreground)]"
+                            />
+                          </label>
+                        ) : null}
+                      </th>
+                    ) : null}
                     {[
                       "Employee",
                       "Form",
@@ -556,6 +648,22 @@ export function MonitoringTable({
 
                     return (
                       <tr key={form.id} className="border-b border-border last:border-0">
+                        {mayManage ? (
+                          <td className="w-11 px-1 py-0">
+                            {form.status === "draft" ? (
+                              <label className="flex size-11 cursor-pointer items-center justify-center">
+                                <input
+                                  type="checkbox"
+                                  aria-label={`Select ${form.employeeName}'s ${form.templateShortName} draft`}
+                                  checked={selected.has(form.id)}
+                                  onChange={() => undefined}
+                                  onClick={(event) => toggleRow(form.id, event.shiftKey)}
+                                  className="size-5 cursor-pointer accent-[var(--foreground)]"
+                                />
+                              </label>
+                            ) : null}
+                          </td>
+                        ) : null}
                         <td className="px-2.5 py-2 whitespace-nowrap text-foreground">
                           {form.employeeName}
                         </td>
@@ -610,7 +718,7 @@ export function MonitoringTable({
                           * Changing the date is the common act, so it is a date
                           * box in the row rather than something behind a dialog
                           * — it persists on change, and there is no Save to
-                          * forget. Deleting and archiving live in the menu,
+                          * forget. Deleting a draft lives in the menu,
                           * where a destructive action belongs.
                           */}
                         <td className="px-2.5 py-2 whitespace-nowrap">
@@ -629,7 +737,7 @@ export function MonitoringTable({
                                 type="date"
                                 aria-label={`Follow-up date for ${form.employeeName}`}
                                 defaultValue={form.followUpDate ?? ""}
-                                disabled={working || !mayTrack || Boolean(form.archivedAt)}
+                                disabled={working || !mayTrack}
                                 autoFocus={tracking}
                                 onChange={(event) => {
                                   const value = event.target.value;
@@ -649,7 +757,7 @@ export function MonitoringTable({
                                 </span>
                               ) : null}
                             </span>
-                          ) : mayTrack && !form.archivedAt ? (
+                          ) : mayTrack ? (
                             <button
                               type="button"
                               onClick={() => setStarting(form.id)}
@@ -699,7 +807,7 @@ export function MonitoringTable({
                               {downloading === form.id ? "Preparing…" : "PDF"}
                             </button>
 
-                            {mayManage || (form.followedUpAt && mayTrack) ? (
+                            {(mayManage && form.status === "draft") || (form.followedUpAt && mayTrack) ? (
                               <DropdownMenu>
                                 <DropdownMenuTrigger
                                   aria-label={`More actions for ${form.employeeName}`}
@@ -714,46 +822,23 @@ export function MonitoringTable({
                                       Reopen follow-up
                                     </DropdownMenuItem>
                                   ) : null}
-                                  {mayManage ? (
+                                  {mayManage && form.status === "draft" ? (
                                     <>
                                       {form.followedUpAt && mayTrack ? (
                                         <DropdownMenuSeparator />
                                       ) : null}
                                       {/*
-                                        * DELETE OR ARCHIVE — decided by status,
-                                        * not offered as a pair one of which the
-                                        * server will refuse. A draft can be
-                                        * deleted; anything finalized or revised
-                                        * is a signed HR document, so the only
-                                        * offer is Archive.
+                                        * A DRAFT can be deleted. A finalized form is a signed HR
+                                        * document: it stays on file and the menu offers nothing for
+                                        * it. There is no archive (Pau, 23 Nov 2026).
                                         */}
-                                      {form.archivedAt ? (
-                                        <DropdownMenuItem
-                                          onSelect={() => setArchived(form, false)}
-                                        >
-                                          <ArchiveRestore />
-                                          Restore
-                                        </DropdownMenuItem>
-                                      ) : form.status === "draft" ? (
-                                        <DropdownMenuItem
-                                          tone="danger"
-                                          onSelect={() =>
-                                            setConfirming({ kind: "delete", form })
-                                          }
-                                        >
-                                          <Trash2 />
-                                          Delete
-                                        </DropdownMenuItem>
-                                      ) : (
-                                        <DropdownMenuItem
-                                          onSelect={() =>
-                                            setConfirming({ kind: "archive", form })
-                                          }
-                                        >
-                                          <Archive />
-                                          Archive
-                                        </DropdownMenuItem>
-                                      )}
+                                      <DropdownMenuItem
+                                        tone="danger"
+                                        onSelect={() => setConfirming({ kind: "delete", form })}
+                                      >
+                                        <Trash2 />
+                                        Delete
+                                      </DropdownMenuItem>
                                     </>
                                   ) : null}
                                 </DropdownMenuContent>
@@ -786,12 +871,8 @@ export function MonitoringTable({
       >
         {confirming ? (
           <DialogContent
-            title={confirming.kind === "delete" ? "Delete this form?" : "Archive this form?"}
-            description={
-              confirming.kind === "delete"
-                ? "This removes the form instance and its draft data."
-                : "The form leaves the active list. Nothing it says changes, and it stays on the record."
-            }
+            title="Delete this form?"
+            description="This removes the form instance and its draft data."
           >
             <dl className="space-y-3 text-[13px]">
               <div>
@@ -815,28 +896,55 @@ export function MonitoringTable({
               <Button variant="ghost" onClick={() => setConfirming(null)}>
                 Cancel
               </Button>
-              {confirming.kind === "delete" ? (
-                <Button
-                  variant="destructive"
-                  onClick={() => removeForm(confirming.form)}
-                  disabled={busy === confirming.form.id}
-                >
-                  {busy === confirming.form.id ? <Loader2 className="animate-spin" /> : <Trash2 />}
-                  Delete
-                </Button>
-              ) : (
-                <Button
-                  variant="primary"
-                  onClick={() => setArchived(confirming.form, true)}
-                  disabled={busy === confirming.form.id}
-                >
-                  {busy === confirming.form.id ? <Loader2 className="animate-spin" /> : <Archive />}
-                  Archive
-                </Button>
-              )}
+              <Button
+                variant="destructive"
+                onClick={() => removeForm(confirming.form)}
+                disabled={busy === confirming.form.id}
+              >
+                {busy === confirming.form.id ? <Loader2 className="animate-spin" /> : <Trash2 />}
+                Delete
+              </Button>
             </DialogActions>
           </DialogContent>
         ) : null}
+      </Dialog>
+
+      {/* BULK DELETE: the same confirmation, for several drafts at once. */}
+      <Dialog
+        open={bulkConfirming}
+        onOpenChange={(open) => {
+          if (!open && busy !== "bulk") setBulkConfirming(false);
+        }}
+      >
+        <DialogContent
+          title={`Delete ${selectedShown.length} draft${selectedShown.length === 1 ? "" : "s"}?`}
+          description="Drafts are removed for good. A deletion record is kept."
+        >
+          <ul className="space-y-1 text-[13px] text-foreground">
+            {selectedShown.slice(0, 5).map((form) => (
+              <li key={form.id}>
+                {form.employeeName} <span className="text-muted-foreground">· {form.templateShortName}</span>
+              </li>
+            ))}
+            {selectedShown.length > 5 ? (
+              <li className="text-muted-foreground">and {selectedShown.length - 5} more</li>
+            ) : null}
+          </ul>
+          {bulkProgress ? (
+            <p role="status" className="text-[13px] text-muted-foreground">
+              Deleting {bulkProgress.done} of {bulkProgress.total}…
+            </p>
+          ) : null}
+          <DialogActions>
+            <Button variant="ghost" onClick={() => setBulkConfirming(false)} disabled={busy === "bulk"}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={deleteSelected} disabled={busy === "bulk"}>
+              {busy === "bulk" ? <Loader2 className="animate-spin" /> : <Trash2 />}
+              Delete {selectedShown.length}
+            </Button>
+          </DialogActions>
+        </DialogContent>
       </Dialog>
 
       {/*
@@ -862,7 +970,7 @@ export function MonitoringTable({
             {demo.protected > 0 ? (
               <p>
                 {demo.protected} finalized demo form{demo.protected === 1 ? " is" : "s are"} kept.
-                Finalized forms are archived, never deleted.
+                Finalized forms are kept on file and cannot be deleted.
               </p>
             ) : null}
           </div>

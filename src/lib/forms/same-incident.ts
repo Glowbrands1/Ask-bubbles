@@ -29,9 +29,9 @@ export async function formsOnFileSameDay(
   input: { readonly nameWords: readonly string[]; readonly isPerson: (employeeName: string) => boolean; readonly templateKey: string; readonly formDate: string; readonly except?: readonly (string | null | undefined)[] },
 ): Promise<SameDayOnFile[]> {
   if (input.nameWords.length === 0 || !/^\d{4}-\d{2}-\d{2}$/.test(input.formDate)) return [];
-  const rows = await listInstances("all", 200, { ...instanceListFilterFor(actor), employeeNameWords: [...input.nameWords], formDateFrom: input.formDate, formDateTo: input.formDate }).catch(() => []);
+  const rows = await listInstances(200, { ...instanceListFilterFor(actor), employeeNameWords: [...input.nameWords], formDateFrom: input.formDate, formDateTo: input.formDate }).catch(() => []);
   return visibleInstances(actor, rows)
-    .filter((row) => row.templateKey === input.templateKey && row.formDate === input.formDate && !row.archivedAt && (row.status === "draft" || row.status === "finalized") && !(input.except ?? []).includes(row.id))
+    .filter((row) => row.templateKey === input.templateKey && row.formDate === input.formDate && (row.status === "draft" || row.status === "finalized") && !(input.except ?? []).includes(row.id))
     .filter((row) => input.isPerson(row.employeeName ?? ""))
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
     .map((row) => ({ id: row.id, form: row.templateName, status: row.status as "draft" | "finalized", formDate: row.formDate!, finalizedAt: row.finalizedAt ?? null }));

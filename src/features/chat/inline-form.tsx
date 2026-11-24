@@ -441,7 +441,7 @@ export function InlineForm({
    * The follow-up date, through its own canonical route.
    *
    * `PUT /api/forms/instances/[id]/follow-up` validates the calendar date,
-   * refuses an archived or already-completed follow-up, and records
+   * refuses an already-completed follow-up, and records
    * `follow_up_started` or `follow_up_date_changed` so the history says which
    * happened. None of that is re-implemented here.
    */

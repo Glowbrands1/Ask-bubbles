@@ -3,6 +3,8 @@ import localFont from "next/font/local";
 
 import { ACTIVE_BRAND, brandStyle } from "@/lib/brand";
 import { pageAuthorizationEnforced, pageIdentity } from "@/lib/auth/page";
+import { activePermissionOverrides } from "@/lib/permissions";
+import { ensurePermissionsLoaded } from "@/lib/permissions/store";
 import { RECOVERY_FORWARD_SCRIPT } from "@/lib/auth/recovery-forward";
 import { Providers } from "./providers";
 import "./globals.css";
@@ -177,6 +179,8 @@ export default async function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const productionAuth = pageAuthorizationEnforced();
   const identity = productionAuth ? await pageIdentity() : null;
+  // The saved permissions, so the first paint's navigation already matches what the server enforces.
+  if (identity) await ensurePermissionsLoaded();
 
   return (
     <html
@@ -200,6 +204,7 @@ export default async function RootLayout({
         </a>
         <Providers
           productionAuth={productionAuth}
+          initialPermissionOverrides={identity ? activePermissionOverrides() : undefined}
           session={
             identity
               ? {

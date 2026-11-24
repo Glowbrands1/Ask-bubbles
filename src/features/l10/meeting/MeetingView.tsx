@@ -64,6 +64,7 @@ export function MeetingView({
   debounceMs,
   pollMs,
   recaps = [],
+  loadProblems = [],
 }: {
   /** Open on a reference view (from a link such as ?view=accountability). */
   initialView?: "accountability" | "business-plan";
@@ -91,6 +92,8 @@ export function MeetingView({
   pollMs?: number;
   /** This meeting's recaps, newest first, for "Last meeting's summary" (Bloom-style meetings only). */
   recaps?: RecapRow[];
+  /** What the page could not load beside the meeting ("the last meeting"): said, never shown as empty. */
+  loadProblems?: string[];
 }) {
   const key = info.key as MeetingKey;
   // The Hub's agenda and hints, served with the roster (Ask Bubbles: so a change in the Hub's config reaches this page).
@@ -380,6 +383,11 @@ export function MeetingView({
         </div>
         )}
       </header>
+      {loadProblems.length > 0 && (
+        <p role="status" data-testid="load-problems" className="m-0 rounded-lg bg-warn/30 px-4 py-2 text-sm font-semibold">
+          Couldn&rsquo;t load {loadProblems.join(" or ")} &mdash; refresh to try again.
+        </p>
+      )}
       {offline && !readOnly && (
         <p role="status" data-testid="sync-offline" className="m-0 rounded-lg bg-warn/30 px-4 py-2 text-sm font-semibold">
           Not live: this page cannot reach the meeting right now, so other people&rsquo;s changes are not showing. Your changes are kept and will save when it is back.

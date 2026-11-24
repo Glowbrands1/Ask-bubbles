@@ -11,7 +11,7 @@ import { COMPANY_REPORT_LOADERS } from "@/config/company/reports.server";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { CLAUDE_MAX_TOKENS, RETRIEVAL } from "@/lib/config/models";
 import { MissingConfigurationError, liveReadiness } from "@/lib/config/server-env";
-import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
+import { activePermissionMatrix, hasPermission } from "@/lib/permissions";
 import { asksOnlyAboutFormsOnFile, isFormListQuestion, isFormRangeQuestion, isFormRecordsQuestion, loadFormRecords } from "@/lib/forms/chat-form-records";
 import { namesAPerson } from "@/lib/forms/names-a-person";
 import { priorFormsReadingForChat } from "@/lib/forms/prior-forms";
@@ -1214,7 +1214,7 @@ async function answerQuestionCore(
      */
     canViewReports:
       actor.role !== null &&
-      hasPermission(DEFAULT_PERMISSION_MATRIX, actor.role, "view_reports"),
+      hasPermission(activePermissionMatrix(), actor.role, "view_reports"),
     /* Read from the instance by the route, never from the body. */
     openForm: request.openForm ?? null,
     styleRules: chatStyleRulesEnabled(),
