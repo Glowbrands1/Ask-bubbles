@@ -7,7 +7,7 @@
       "card": {
         "employee": "Test Employee",
         "salon": null,
-        "date": "2026-10-15",
+        "date": null,
         "status": "ready"
       }
     },
@@ -18,7 +18,7 @@
       "card": {
         "employee": "Testy Testerson",
         "salon": "loc-264",
-        "date": "2026-10-16",
+        "date": null,
         "status": "ready"
       }
     },
@@ -29,7 +29,7 @@
       "card": {
         "employee": "Testy Testerson",
         "salon": "loc-264",
-        "date": "2026-10-20",
+        "date": null,
         "status": "ready"
       }
     },
@@ -40,7 +40,7 @@
       "card": {
         "employee": "maisie quillfeather",
         "salon": "loc-225",
-        "date": "2026-10-22",
+        "date": null,
         "status": "ready"
       }
     },
@@ -51,7 +51,7 @@
       "card": {
         "employee": "Test Employee",
         "salon": "loc-66",
-        "date": "2026-10-20",
+        "date": null,
         "status": "ready"
       }
     },
@@ -62,7 +62,7 @@
       "card": {
         "employee": "Test Employee",
         "salon": "loc-66",
-        "date": "2026-10-15",
+        "date": null,
         "status": "ready"
       }
     },
@@ -95,7 +95,7 @@
       "card": {
         "employee": "RJ Vantassel",
         "salon": "loc-66",
-        "date": "2026-10-11",
+        "date": null,
         "status": "ready"
       }
     },
@@ -117,7 +117,7 @@
       "card": {
         "employee": "juniper halvorsrud",
         "salon": null,
-        "date": "2026-10-20",
+        "date": null,
         "status": "ready"
       }
     },
@@ -128,7 +128,7 @@
       "card": {
         "employee": "juniper halvorsrud",
         "salon": null,
-        "date": "2026-10-20",
+        "date": null,
         "status": "ready"
       }
     },
@@ -139,7 +139,7 @@
       "card": {
         "employee": "juniper halvorsrud",
         "salon": null,
-        "date": "2026-10-20",
+        "date": null,
         "status": "ready"
       }
     },
@@ -150,7 +150,7 @@
       "card": {
         "employee": "juniper halvorsrud",
         "salon": null,
-        "date": "2026-10-20",
+        "date": null,
         "status": "ready"
       }
     },
@@ -161,7 +161,7 @@
       "card": {
         "employee": "juniper halvorsrud",
         "salon": null,
-        "date": "2026-10-20",
+        "date": null,
         "status": "ready"
       }
     },
@@ -172,7 +172,7 @@
       "card": {
         "employee": "juniper halvorsrud",
         "salon": null,
-        "date": "2026-10-01",
+        "date": null,
         "status": "ready"
       }
     },
