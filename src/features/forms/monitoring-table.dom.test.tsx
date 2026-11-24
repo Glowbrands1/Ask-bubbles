@@ -421,7 +421,9 @@ describe("delete still works as it did, and there is no archive", () => {
     expect(menu.queryByRole("menuitem", { name: /archive/i })).toBeNull();
   });
 
-  it("offers nothing to remove on a finalized form: no menu at all", () => {
+  it("offers nothing to remove on a finalized form to someone who is not an administrator: no menu at all", () => {
+    // 24 Nov 2026: only an administrator may delete a finalized form (see "an administrator may delete a finalized form").
+    mockSession.value = { role: "district_manager", user: { name: "QA" }, can: () => true, demoMode: false };
     table([form({ employeeName: "Filed One" })]);
     expect(rowFor("Filed One").ui.queryByRole("button", { name: /more actions/i })).toBeNull();
   });
@@ -592,10 +594,64 @@ describe("the row menu \"…\" opens with something in it", () => {
     expect(await screen.findByRole("menuitem", { name: /delete/i })).toBeTruthy();
   });
 
-  it("an admin gets no \"…\" on a finalized form: it is kept on file, not archived or deleted", () => {
+  it("an admin gets no \"…\" on a form that was replaced by a newer version: it is the older half of a chain", () => {
     admin();
+    table([form({ employeeName: "Filed One", status: "revised" })]);
+    expect(rowFor("Filed One").ui.queryByRole("button", { name: "More actions for Filed One" })).toBeNull();
+  });
+
+  it("a manager who may delete drafts but is not an administrator gets no \"…\" on a finalized form", () => {
+    mockSession.value = { role: "regional_manager", user: { name: "QA" }, can: () => true, demoMode: false };
     table([form({ employeeName: "Filed One" })]);
     expect(rowFor("Filed One").ui.queryByRole("button", { name: "More actions for Filed One" })).toBeNull();
+  });
+
+  /*
+   * Pau, 24 Nov 2026, with a screenshot of the Forms Register: "why cant delete? in bubbles — fix and merge". The row was
+   * a finalized Corrective Action (the employee's name is invented here: Corwin Ashby), "v4 · finalized", and had no "…" because only drafts could be deleted. Decision (Pau,
+   * asked in the session): administrators may delete a finalized form; nobody else.
+   */
+  it("why cant delete? in bubbles: an administrator gets Delete on a finalized Corrective Action, after a warning", async () => {
+    admin();
+    table([
+      form({
+        employeeName: "Corwin Ashby",
+        templateName: "Corrective Action",
+        templateShortName: "Corrective Action",
+        templateVersion: 4,
+        status: "finalized",
+      }),
+    ]);
+    await userEvent.click(rowFor("Corwin Ashby").ui.getByRole("button", { name: "More actions for Corwin Ashby" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: /^delete$/i }));
+
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.getByText("Corwin Ashby")).toBeTruthy();
+    expect(dialog.getByText("finalized")).toBeTruthy();
+    expect(dialog.getByTestId("delete-finalized-warning").textContent).toMatch(/cannot be undone/i);
+    expect(dialog.getByTestId("delete-finalized-warning").textContent).toMatch(/recorded with your name/i);
+    // Nothing is sent until the administrator confirms.
+    expect(calls.list).toHaveLength(0);
+
+    await userEvent.click(dialog.getByRole("button", { name: /^delete$/i }));
+    await waitFor(() => expect(calls.list).toHaveLength(1));
+    expect(calls.list[0]).toMatchObject({ url: "/api/forms/instances/form-1", method: "DELETE" });
+  });
+
+  it("a draft's dialog is unchanged: no finalized warning", async () => {
+    admin();
+    table([form({ employeeName: "Draft One", status: "draft", finalizedAt: null })]);
+    await userEvent.click(rowFor("Draft One").ui.getByRole("button", { name: "More actions for Draft One" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: /^delete$/i }));
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.queryByTestId("delete-finalized-warning")).toBeNull();
+  });
+
+  it("a finalized form is still not ticked for the bulk delete, even by an administrator", () => {
+    admin();
+    table([form({ employeeName: "Filed One" }), form({ id: "d", employeeName: "Draft One", status: "draft", finalizedAt: null })]);
+    expect(rowFor("Filed One").ui.queryByRole("checkbox")).toBeNull();
+    expect(rowFor("Draft One").ui.getByRole("checkbox")).toBeTruthy();
   });
 
   it("the ... is not showing when clicked: a role that cannot manage gets no empty \"…\" on a draft", () => {
@@ -617,6 +673,20 @@ describe("the row menu \"…\" opens with something in it", () => {
     await userEvent.click(rowFor("Done One").ui.getByRole("button", { name: "More actions for Done One" }));
     const items = await screen.findAllByRole("menuitem");
     expect(items.map((item) => item.textContent)).toEqual(["Reopen follow-up"]);
+  });
+});
+
+/*
+ * Owner, 24 Nov 2026: "the manager will be able to see that in form monitoring with a note "approved"". The page sets
+ * `hrApproved` only for the form's creator, its senders and HR (`mayReadHrDecision`); the row says it.
+ */
+describe("a form HR approved", () => {
+  it("reads \"Approved by HR\" in its row; a form without it says nothing about HR", () => {
+    table([form({ id: "approved-1", hrApproved: true }), form({ id: "plain-1", employeeName: "Rowan Pike (test)" })]);
+    const notes = screen.getAllByTestId("hr-approved-note");
+    expect(notes).toHaveLength(1);
+    expect(notes[0]!.textContent).toBe(" · Approved by HR");
+    expect(notes[0]!.closest("tr")!.textContent).toContain("Morgan Blake (test)");
   });
 });
 

@@ -22,10 +22,11 @@ import {
   visibleInstances,
 } from "@/lib/forms/instance-scope";
 import { pageFormsAccess } from "@/lib/forms/page-scope";
-import { HrApprovalTabs, HrQueueList, MyFormsWithHr, SiblingHrQueueList } from "@/features/forms/hr-approval-lists";
+import { HrApprovalTabs, HrApprovedList, HrQueueList, MyFormsWithHr, SiblingHrQueueList } from "@/features/forms/hr-approval-lists";
 import { fetchSiblingHrQueue, type SiblingHrQueue } from "@/lib/partner/sibling-hr-queue";
-import { needsHrDecision } from "@/lib/forms/hr-approval-rules";
-import { hrQueueSummary, listHrQueue, listMyFormsWithHr, type HrQueueRow, type MyHrFormRow } from "@/lib/forms/hr-approval";
+import { mayReadHrDecision, needsHrDecision } from "@/lib/forms/hr-approval-rules";
+import { hrQueueSummary, listHrApproved, listHrQueue, listMyFormsWithHr, type HrApprovedRow, type HrQueueRow, type MyHrFormRow } from "@/lib/forms/hr-approval";
+import { ACTIVE_BRAND } from "@/lib/brand";
 import { supabaseSecretKeyConfigured } from "@/lib/config/server-env";
 import { privateAwareLimit, privateCreatorsActive } from "@/lib/forms/private-creators";
 
@@ -95,14 +96,18 @@ export default async function FormMonitoringPage({
    */
   let sibling: SiblingHrQueue = { status: "off" };
   const siblingView = hrView && requestedApp === "sibling";
+  // HR's Approved tab, this app's and the sibling's (owner, 24 Nov 2026), on `?view=hr&app=approved`.
+  const approvedView = hrView && requestedApp === "approved";
+  let hrApproved: HrApprovedRow[] = [];
   if (access) {
     try {
       if (isHr) {
         const email = access.actor.verified && identity?.verified === true && identity.email ? identity.email : null;
-        [hrSummary, hrQueue, sibling] = await Promise.all([
+        [hrSummary, hrQueue, sibling, hrApproved] = await Promise.all([
           hrQueueSummary(access.actor),
-          hrView ? listHrQueue(access.actor) : Promise.resolve<HrQueueRow[]>([]),
+          hrView && !approvedView ? listHrQueue(access.actor) : Promise.resolve<HrQueueRow[]>([]),
           email ? fetchSiblingHrQueue(email) : Promise.resolve<SiblingHrQueue>({ status: "off" }),
+          approvedView ? listHrApproved(access.actor) : Promise.resolve<HrApprovedRow[]>([]),
         ]);
       }
       myWithHr = await listMyFormsWithHr(access.actor);
@@ -148,6 +153,11 @@ export default async function FormMonitoringPage({
          * called "… (test)" is not demo data and is not marked as such here.
          */
         isDemo: isDemoInstance(instance),
+        /*
+         * "Approved by HR" for the form's creator, its senders and HR (owner, 24 Nov 2026: "the manager will be able to see
+         * that in form monitoring with a note "approved""). Nobody else is told it went through HR (`mayReadHrDecision`).
+         */
+        hrApproved: instance.hrApprovalState === "approved" && mayReadHrDecision(access.actor, instance),
         updatedAt: instance.updatedAt,
       }));
 
@@ -188,7 +198,7 @@ export default async function FormMonitoringPage({
 
         {hrSummary ? (
           <HrApprovalTabs
-            active={siblingView ? "sibling" : hrView ? "hr" : "all"}
+            active={approvedView ? "approved" : siblingView ? "sibling" : hrView ? "hr" : "all"}
             pending={hrSummary.pending}
             overdue={hrSummary.overdue}
             sibling={
@@ -202,7 +212,13 @@ export default async function FormMonitoringPage({
         ) : null}
         {!hrView ? <MyFormsWithHr rows={myWithHr} /> : null}
 
-        {hrView && siblingView && sibling.status !== "off" ? (
+        {approvedView ? (
+          <HrApprovedList
+            appName={ACTIVE_BRAND.productName}
+            rows={hrApproved.map((row) => ({ line: row.line, from: row.createdByName, approvedAt: row.approvedAt, approvedBy: row.approvedByName, href: `/forms/hr-approval/${row.id}` }))}
+            sibling={sibling}
+          />
+        ) : hrView && siblingView && sibling.status !== "off" ? (
           <SiblingHrQueueList queue={sibling} />
         ) : hrView ? (
           <HrQueueList rows={hrQueue} />

@@ -98,6 +98,15 @@ describe("the approval panel", () => {
     expect(JSON.parse(String(init.body))).toEqual({ action: "hr_approve" });
   });
 
+  // Owner, 24 Nov 2026: "can u keep the button "approve" there always" — also before the manager replies.
+  it("HR, on a form they sent back that the manager has not answered yet: Approve is still there", async () => {
+    const call = vi.fn(async () => ({}));
+    render(<HrApprovalPanel instanceId="f-1" view={view({ stage: "changes_requested", label: "Sent back by HR for changes" })} call={call} onChanged={() => undefined} />);
+    expect(screen.getByText("You sent this back for changes. You can approve it as it is now, or send it back again with a note.")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: /Approve/ }));
+    expect(JSON.parse(String((call.mock.calls[0] as unknown as [string, RequestInit])[1].body))).toEqual({ action: "hr_approve" });
+  });
+
   it("the manager, on the same form: no Approve", () => {
     render(<HrApprovalPanel instanceId="f-1" view={view({ canApproveSentBack: false })} call={async () => ({})} onChanged={() => undefined} />);
     expect(screen.queryByRole("button", { name: /Approve/ })).toBeNull();
