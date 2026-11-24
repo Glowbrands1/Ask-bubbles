@@ -28,6 +28,7 @@ import {
   finalizeGoesToHr,
   HrApprovalError,
   hrApprovalViewFor,
+  mayEditWhileWithHr,
   recordHrEdit,
   sendForHrApproval,
   withdrawnFromHr,
@@ -35,7 +36,6 @@ import {
 import {
   awaitingHr,
   FormNotEditableNowError,
-  heldForHr,
   isCreatorOrSender,
   isHeldForHr,
   redactHrApproval,
@@ -112,11 +112,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     } | null;
 
     /*
-     * HR APPROVAL: HR may edit a form waiting for them (owner, 23 Nov 2026); the change is written through the one path
-     * the database lets past the hold and is recorded in the approval history the creator reads. Anybody else's save
-     * of a waiting form is refused (`HeldForHrError`).
+     * HR APPROVAL: HR may edit a form waiting for them (owner, 23 Nov 2026), and so may its creator and anyone who sent
+     * it (port from the sibling app, owner 24 Nov 2026: "have the option to edit the form but also make sure the edited
+     * form carries over to [HR] so she sees the updated version"). The change is written through the one path the
+     * database lets past the hold, to the same form HR reviews, and is recorded in the approval history; a manager's
+     * change rings HR's bell. Anybody else's save of a waiting form is refused (`HeldForHrError`).
      */
-    const asHrApprover = actor.hrApprover === true && heldForHr(before.instance.hrApprovalState);
+    const pastHrHold = mayEditWhileWithHr(actor, before.instance);
     // HR's edit of a form with them in ANY state (sent back, rejected too) goes in the approval history only.
     const hrHistoryOnly =
       actor.hrApprover === true && awaitingHr(before.instance.hrApprovalState) && !isCreatorOrSender(actor, before.instance);
@@ -124,9 +126,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       id,
       { values: body?.values ?? {}, checked: body?.checked ?? {} },
       actor.id,
-      { asHrApprover, hrHistoryOnly },
+      { pastHrHold, hrHistoryOnly },
     );
-    if (asHrApprover || hrHistoryOnly) await recordHrEdit(id, actor);
+    if (pastHrHold || hrHistoryOnly) await recordHrEdit(id, actor);
     /*
      * CARD_CHANGE_PLAN_REBUILD_ENABLED (Pau, 28 Oct 2026): payroll deduct
      * changed from the Change something panel rebuilds the Corrective Action
