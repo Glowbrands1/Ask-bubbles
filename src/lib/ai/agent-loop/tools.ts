@@ -51,6 +51,7 @@ import {
   hybridSearchEnabled,
   manualSectionDedupeEnabled,
   retrievalRecallEnabled,
+  priorFormsUpToTodayEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { formDateGiven } from "@/lib/forms/incident-dates";
 import type { AskResponse } from "@/lib/ai/types";
@@ -5437,7 +5438,7 @@ export async function proposeForm(
    */
   const rosterPerson = caOnlyFields && employee.id && read.kind === "read" ? read.roster.find((row) => row.id === employee.id) ?? null : null;
   const onFileBefore = date ?? (effects.proposal && effects.proposal.employeeName === employee.name ? effects.proposal.formDate ?? null : null) ?? ownCard?.incidentDate ?? null;
-  const priorsOnFile = rosterPerson ? await finalizedPriorsOnFile(context, rosterPerson, read.kind === "read" ? read.roster : [], today, formDatedToday ? givenFormDate ?? today : onFileBefore) : [];
+  const priorsOnFile = rosterPerson ? await finalizedPriorsOnFile(context, rosterPerson, read.kind === "read" ? read.roster : [], today, priorFormsUpToTodayEnabled() ? null : formDatedToday ? givenFormDate ?? today : onFileBefore) : [];
   const onFileLine = priorsOnFile.length > 0 ? priorsOnFileLine(priorsOnFile) : null;
   /*
    * PAU'S RULING (23 Nov 2026, via QA; a manager did not like it): the forms on file are never added to Prior actions on
