@@ -6127,6 +6127,9 @@ export function typedEmployeeEveryCardEnabled(): boolean {
  */
 export function adminCardAsksSalonEnabled(): boolean {
   return envFlag("ADMIN_CARD_ASKS_SALON_ENABLED");
+}
+
+/**
  * LOOP_CARD_CITES_CONDUCT_LINE (port from Ask Sunny; its QA's live test, 24 Nov 2026; default off; same flag in both
  * apps): a loop card citing the Standards of Conduct for an incident the manual lists on its own line (a register
  * shortage, theft, insubordination, disrespect, absence from the work area) names that line beside the heading, at the
