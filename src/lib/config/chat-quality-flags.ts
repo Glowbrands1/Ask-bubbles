@@ -1011,6 +1011,8 @@ export function formsGuideEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  // FORM_DATE_IS_TODAY (Pau, 24 Nov 2026; default off; same flag in both apps).
+  "FORM_DATE_IS_TODAY_ENABLED",
   // Loop port, Phase 2 (ported from the sibling app at QA's direction, 21 Nov 2026; all default off, nothing reads them yet but switch.ts).
   "AGENT_LOOP_ENABLED",
   "CURRENT_MANUAL_SCOPE_ENABLED",
@@ -6079,4 +6081,13 @@ export function nearMissNeverSeatedEnabled(): boolean {
  */
 export function cardPersonThisRequestEnabled(): boolean {
   return envFlag("CARD_PERSON_THIS_REQUEST_ENABLED");
+}
+
+/**
+ * FORM_DATE_IS_TODAY (Pau, 24 Nov 2026; default off; same flag in both apps): a form's Date is the day it is written,
+ * never the incident's date, which stays in the account. A date the manager gives the form, and the day a Coaching
+ * Form's coaching was held, still date it. See `forms/incident-dates.ts` decideFormDate. Off, as before.
+ */
+export function formDateIsTodayEnabled(): boolean {
+  return envFlag("FORM_DATE_IS_TODAY_ENABLED");
 }
