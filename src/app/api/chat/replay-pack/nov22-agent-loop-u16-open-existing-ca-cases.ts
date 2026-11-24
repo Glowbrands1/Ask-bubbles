@@ -22,6 +22,20 @@ const T1 = "put up the verbal CA for Briony Kask";
 const T2 = "create a verbal CA for Briony Kask with all the same information given";
 const ADMIN = { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] };
 const ACCOUNT = "Briony did not complete the closing cleaning checklist on 11/14/26 and left the makery counters unwiped.";
+/*
+ * CHANGED ON PURPOSE (Pau's review, 24 Nov 2026 PHT, via QA: an employee had two finalized CAs for one no-show): a copy for
+ * the SAME person with the SAME incident date as a form on file is that duplicate, so propose_form first asks "Briony
+ * already has a Corrective Action for 11/14 (finalized …). Do you want to open that one, or is this a separate incident?"
+ * (same_incident_on_file). The copy cases on 11/14 now check that question at T2, and the copy itself after T3 below.
+ * A copy with another date (the 11/20 control) is never asked.
+ */
+const T3_SEPARATE = "it's a separate incident";
+const ASKED_SAME_DAY = /Briony already has a Corrective Action for 11\/14 \(finalized[^)]*\)\. Do you want to open that one, or is this a separate incident\?/;
+/** T3: the manager answered that it is separate; the same copy again, with their words and T2's quotes (one message back). */
+const proposeAfterSeparate = (view: LoopView, account: string, extra: Record<string, unknown> = {}): LoopDecision => ({
+  tool: "propose_form",
+  input: { template_key: "dpoa", employee_name: "Briony Kask", person_evidence: evidenceFrom(view, "Briony Kask", 1), warning_level: "verbal", level_evidence: evidenceFrom(view, "verbal", 1), what_happened: account, policy: "Care and Cleaning of Equipment and Facilities", separate_incident_evidence: evidenceFrom(view, T3_SEPARATE), ...extra },
+});
 
 /**
  * Briony's Corrective Actions on file, as the Forms Register holds them: a Verbal Warning on 11/14 revised once (the
@@ -76,8 +90,13 @@ function copyCase(id: string, title: string, second: string, expected: string): 
           if (!found) return { tool: "find_past_forms", input: { employee_name: "Briony Kask", form: "verbal CA", open: true, forms_on_file_evidence: evidenceFrom(view, T1) } };
           return { text: `${(found.forms ?? []).map((form) => `- ${form.choice}`).join("\n")}\n\n${found.which_form_question ?? ""}` };
         }
-        const proposed = lastResult(view, "propose_form") as { card?: unknown } | null;
+        const proposed = lastResult(view, "propose_form") as { card?: unknown; ask_exactly?: string } | null;
         if (proposed?.card) return { text: "Here's the Corrective Action Form for **Briony**." };
+        if (proposed) return { text: proposed.ask_exactly ?? `Stopped: ${JSON.stringify(proposed)}` };
+        if (users(view) === 3) {
+          if (!lastResult(view, "read_form")) return { tool: "read_form", input: { instance_id: "ca-briony-verbal-r1", forms_on_file_evidence: evidenceFrom(view, second, 1) } };
+          return proposeAfterSeparate(view, COPY_ACCOUNT);
+        }
         const read = lastResult(view, "read_form");
         if (!read) return { tool: "read_form", input: { instance_id: "ca-briony-verbal-r1", forms_on_file_evidence: evidenceFrom(view, second) } };
         /* The stand-in leaves incident_date out, as the live model did. */
@@ -86,7 +105,15 @@ function copyCase(id: string, title: string, second: string, expected: string): 
       t.loopModel!(model);
       const thread = t.thread();
       await thread.say(T1);
-      const copied = await thread.say(second);
+      let copied = await thread.say(second);
+      /* CHANGED ON PURPOSE (see T3_SEPARATE): a copy on the form on file's own date asks first; the manager says it is separate. */
+      if (expected === "2026-11-14") {
+        expect(copied.formProposal ?? null, `a second CA for 11/14 was put up with no word of the one on file:\n${copied.content}`).toBeNull();
+        expect(copied.content).toMatch(ASKED_SAME_DAY);
+        copied = await thread.say(T3_SEPARATE);
+      } else {
+        expect(copied.content, "a copy with a new date was asked about").not.toMatch(/separate incident/);
+      }
       expect(copied.formProposal?.templateKey, copied.content).toBe("dpoa");
       expect(copied.formProposal?.formDate ?? null, `the copy's date:\n${copied.content}`).toBe(expected);
     },
@@ -112,8 +139,13 @@ export const NOV22_AGENT_LOOP_U16_OPEN_EXISTING_CA_CASES: ReplayCase[] = [
           if (!found) return { tool: "find_past_forms", input: { employee_name: "Briony Kask", form: "verbal CA", open: true, forms_on_file_evidence: evidenceFrom(view, T1) } };
           return { text: `${(found.forms ?? []).map((form) => `- ${form.choice}`).join("\n")}\n\n${found.which_form_question ?? ""}` };
         }
-        const proposed = lastResult(view, "propose_form") as { card?: unknown } | null;
+        const proposed = lastResult(view, "propose_form") as { card?: unknown; ask_exactly?: string } | null;
         if (proposed?.card) return { text: "Here's the Corrective Action Form for **Briony**." };
+        if (proposed) return { text: proposed.ask_exactly ?? `Stopped: ${JSON.stringify(proposed)}` };
+        if (users(view) === 3) {
+          if (!lastResult(view, "read_form")) return { tool: "read_form", input: { instance_id: "ca-briony-verbal-r1", forms_on_file_evidence: evidenceFrom(view, T2, 1) } };
+          return proposeAfterSeparate(view, ACCOUNT);
+        }
         const read = lastResult(view, "read_form");
         if (!read) return { tool: "read_form", input: { instance_id: "ca-briony-verbal-r1", forms_on_file_evidence: evidenceFrom(view, T2) } };
         return { tool: "propose_form", input: { template_key: "dpoa", employee_name: "Briony Kask", person_evidence: evidenceFrom(view, "Briony Kask"), warning_level: "verbal", level_evidence: evidenceFrom(view, "verbal"), what_happened: ACCOUNT, policy: "Care and Cleaning of Equipment and Facilities" } };
@@ -129,8 +161,11 @@ export const NOV22_AGENT_LOOP_U16_OPEN_EXISTING_CA_CASES: ReplayCase[] = [
       expect([...new Set(offered)], JSON.stringify(lookups)).toEqual(["ca-briony-verbal-r1"]);
       const second = await thread.say(T2);
       expect(second.content, `T2 asked what happened instead of copying the form on file:\n${second.content}`).not.toMatch(/what happened\?/i);
-      expect(second.formProposal?.templateKey, second.content).toBe("dpoa");
-      expect(String((second.formProposal as { issue?: string } | undefined)?.issue ?? ""), second.content).toMatch(/closing cleaning checklist/);
+      /* CHANGED ON PURPOSE (see T3_SEPARATE): the copy on the form on file's own date asks first; the manager says it is separate. */
+      expect(second.content).toMatch(ASKED_SAME_DAY);
+      const third = await thread.say(T3_SEPARATE);
+      expect(third.formProposal?.templateKey, third.content).toBe("dpoa");
+      expect(String((third.formProposal as { issue?: string } | undefined)?.issue ?? ""), third.content).toMatch(/closing cleaning checklist/);
     },
   },
   copyCase(
@@ -163,7 +198,11 @@ export const NOV22_AGENT_LOOP_U16_OPEN_EXISTING_CA_CASES: ReplayCase[] = [
         }
         const proposed = lastResult(view, "propose_form") as { card?: unknown } | null;
         if (proposed?.card) return { text: "Here's the Corrective Action Form for **Briony**." };
-        if (proposed) return { text: `Stopped: ${JSON.stringify(proposed)}` };
+        if (proposed) return { text: (proposed as { ask_exactly?: string }).ask_exactly ?? `Stopped: ${JSON.stringify(proposed)}` };
+        if (users(view) === 3) {
+          if (!lastResult(view, "read_form")) return { tool: "read_form", input: { instance_id: "ca-briony-verbal-r1", forms_on_file_evidence: evidenceFrom(view, T2, 1) } };
+          return proposeAfterSeparate(view, ACCOUNT, { new_form_evidence: evidenceFrom(view, "create a verbal CA", 1) });
+        }
         /* T2: look the form up again with open: true (as the live model did), read it, then propose the copy. */
         const lookups = view.results.filter((result) => result.tool === "find_past_forms").length;
         if (lookups < 2) return { tool: "find_past_forms", input: { employee_name: "Briony Kask", form: "verbal CA", open: true, forms_on_file_evidence: evidenceFrom(view, T2) } };
@@ -173,7 +212,11 @@ export const NOV22_AGENT_LOOP_U16_OPEN_EXISTING_CA_CASES: ReplayCase[] = [
       t.loopModel!(model);
       const thread = t.thread();
       await thread.say(T1);
-      const copied = await thread.say(T2);
+      const asked = await thread.say(T2);
+      expect(asked.content).not.toMatch(/open_requested|open it with open_form/i);
+      /* CHANGED ON PURPOSE (see T3_SEPARATE): the copy on the form on file's own date asks first; the manager says it is separate. */
+      expect(asked.content).toMatch(ASKED_SAME_DAY);
+      const copied = await thread.say(T3_SEPARATE);
       expect(copied.formProposal?.templateKey, copied.content).toBe("dpoa");
       expect(copied.content).not.toMatch(/open_requested|open it with open_form/i);
     },

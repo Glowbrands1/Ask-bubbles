@@ -51,6 +51,12 @@ export interface CardRecord {
    */
   readonly accountKey?: string | null;
   /**
+   * Port from the sibling app (#1294; its live duplicate exit form, QA, 23 Nov 2026): how the person left, as the exit card showed
+   * it (an option key of the form, never the manager's words), so the same person's exit card proposed again keeps it when
+   * the new request does not say. Null when none or for an older record.
+   */
+  readonly exitType?: string | null;
+  /**
    * QA's Bubbles live re-run (22 Nov 2026, A7 T5; option 2): a one-way key of the account the card SHOWED (its Observation,
    * spacing aside, every character else kept: `shownTextKey`), never the text. A later turn reads the account on screen
    * from the reply's Observation line only when that line has this key, so the card keeps exactly what was shown
@@ -94,10 +100,16 @@ export interface CardRecord {
    * card checks the reply's "filed at <store>" against the card still shown. A store id, never a name. Null when none.
    */
   readonly storeId?: string | null;
+  /**
+   * Pau's review (24 Nov 2026 PHT, via QA): the incident date (ISO) the manager said is a separate incident although this
+   * person had that form on file that day, so Create's last check (`same-incident.ts`) does not ask again for that date.
+   * A date, never a name. Null when none or for an older record.
+   */
+  readonly sameIncidentChecked?: string | null;
 }
 
 /** What a turn writes into `slots.agent_loop.card`. */
-export type CardSlot = Omit<CardRecord, "messageId" | "asked" | "level" | "policyLine" | "payroll" | "payrollAmount" | "accountKey" | "issueKey" | "coachingTopic" | "incidentDate" | "teamStoreId" | "priorDates" | "onFileOffered" | "storeId"> & { readonly priorDates?: readonly string[]; readonly onFileOffered?: readonly string[]; readonly asked?: readonly string[]; readonly level?: "verbal" | "written"; readonly policyLine?: string; readonly payroll?: "yes" | "no"; readonly payrollAmount?: string; readonly accountKey?: string; readonly issueKey?: string; readonly coachingTopic?: string | null; readonly incidentDate?: string; readonly teamStoreId?: string; readonly storeId?: string };
+export type CardSlot = Omit<CardRecord, "messageId" | "asked" | "level" | "policyLine" | "payroll" | "payrollAmount" | "accountKey" | "exitType" | "issueKey" | "coachingTopic" | "incidentDate" | "teamStoreId" | "priorDates" | "onFileOffered" | "storeId" | "sameIncidentChecked"> & { readonly sameIncidentChecked?: string; readonly priorDates?: readonly string[]; readonly onFileOffered?: readonly string[]; readonly asked?: readonly string[]; readonly level?: "verbal" | "written"; readonly policyLine?: string; readonly payroll?: "yes" | "no"; readonly payrollAmount?: string; readonly accountKey?: string; readonly exitType?: string; readonly issueKey?: string; readonly coachingTopic?: string | null; readonly incidentDate?: string; readonly teamStoreId?: string; readonly storeId?: string };
 
 function isCardSlot(value: unknown): value is CardSlot {
   const row = value as Partial<CardSlot> | null;
@@ -140,6 +152,23 @@ export interface NameQuestionRecord extends NameQuestionSlot {
 function isNameQuestionSlot(value: unknown): value is NameQuestionSlot {
   const row = value as Partial<NameQuestionSlot> | null;
   return Boolean(row) && Array.isArray(row!.offeredKeys) && row!.offeredKeys.every((key) => typeof key === "string") && typeof row!.typedKey === "string";
+}
+
+/*
+ * THE SAME-INCIDENT QUESTION RECORD (Pau's review, 23 Nov 2026, via QA): a turn whose propose_form found this person's form
+ * of this kind already on file for the card's incident date asked "open that one, or is this a separate incident?" and
+ * made no card. It writes `slots.agent_loop.same_incident = { templateKey, employeeKey, date }`, so the next turn's request
+ * starts at the message the question answered (as a card's or "who is it for?" record does). One-way keys only.
+ */
+export interface SameIncidentSlot {
+  readonly templateKey: string;
+  readonly employeeKey: string;
+  readonly date: string;
+}
+
+export interface SameIncidentRecord extends SameIncidentSlot {
+  readonly messageId: string | null;
+  readonly questionKey?: string | null;
 }
 
 /*
@@ -189,7 +218,7 @@ export interface TeamConfirmRecord extends TeamConfirmSlot {
   readonly questionKey?: string | null;
 }
 
-type TraceRow = { message_id: string | null; slots: { agent_loop?: { card?: unknown; name_question?: unknown; person_asked?: unknown; exit_offer?: unknown; team_confirm?: unknown; which_form?: unknown; steps?: unknown; question_key?: unknown } } | null };
+type TraceRow = { message_id: string | null; slots: { agent_loop?: { card?: unknown; name_question?: unknown; person_asked?: unknown; same_incident?: unknown; exit_offer?: unknown; team_confirm?: unknown; which_form?: unknown; steps?: unknown; question_key?: unknown } } | null };
 
 /** The turn's one-way key of the manager's message (`question_key`), to find that message when its id does not match. */
 const questionKeyOf = (row: TraceRow): string | null => (typeof row.slots?.agent_loop?.question_key === "string" ? row.slots.agent_loop.question_key : null);
@@ -208,8 +237,8 @@ export interface TurnRecord {
   readonly card: boolean;
 }
 
-type LoopRecords = { cards: CardRecord[]; nameQuestions: NameQuestionRecord[]; personAsked: PersonAskedRecord[]; exitOffers: ExitOfferRecord[]; teamConfirms: TeamConfirmRecord[]; whichForms: WhichFormRecord[]; turns: TurnRecord[] };
-const NO_RECORDS = (): LoopRecords => ({ cards: [], nameQuestions: [], personAsked: [], exitOffers: [], teamConfirms: [], whichForms: [], turns: [] });
+type LoopRecords = { cards: CardRecord[]; nameQuestions: NameQuestionRecord[]; personAsked: PersonAskedRecord[]; sameIncidents: SameIncidentRecord[]; exitOffers: ExitOfferRecord[]; teamConfirms: TeamConfirmRecord[]; whichForms: WhichFormRecord[]; turns: TurnRecord[] };
+const NO_RECORDS = (): LoopRecords => ({ cards: [], nameQuestions: [], personAsked: [], sameIncidents: [], exitOffers: [], teamConfirms: [], whichForms: [], turns: [] });
 
 /** This user's loop records in this conversation, oldest first, from one read. Empty without a conversation id, or if the read fails. */
 /**
@@ -262,7 +291,7 @@ export async function readLoopRecords(conversationId: string | undefined, userId
       cards: rows.flatMap((row) => {
         const card = row.slots?.agent_loop?.card;
         return isCardSlot(card)
-          ? [{ proposalId: card.proposalId, employeeKey: card.employeeKey ?? null, nameKey: card.nameKey ?? null, templateKey: card.templateKey, templateName: card.templateName ?? null, messageId: row.message_id, questionKey: questionKeyOf(row), asked: Array.isArray(card.asked) ? card.asked.filter((field): field is string => typeof field === "string") : [], level: card.level === "verbal" || card.level === "written" ? card.level : null, policyLine: typeof card.policyLine === "string" ? card.policyLine : null, payroll: card.payroll === "yes" || card.payroll === "no" ? card.payroll : null, payrollAmount: typeof card.payrollAmount === "string" && /^\d+(?:\.\d+)?$/.test(card.payrollAmount) ? card.payrollAmount : null, accountKey: typeof card.accountKey === "string" && /^[0-9a-f]{16}$/.test(card.accountKey) ? card.accountKey : null, issueKey: typeof card.issueKey === "string" && /^[0-9a-f]{16}$/.test(card.issueKey) ? card.issueKey : null, ...(card.coachingTopic === null || (typeof card.coachingTopic === "string" && card.coachingTopic.length <= 80) ? { coachingTopic: card.coachingTopic as string | null } : {}), incidentDate: typeof card.incidentDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(card.incidentDate) ? card.incidentDate : null, teamStoreId: typeof card.teamStoreId === "string" && /^loc-[A-Za-z0-9-]{1,16}$/.test(card.teamStoreId) ? card.teamStoreId : null, ...(Array.isArray(card.priorDates) ? { priorDates: card.priorDates.filter((date): date is string => typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)).slice(0, 12) } : {}), ...(Array.isArray(card.onFileOffered) ? { onFileOffered: card.onFileOffered.filter((date): date is string => typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)).slice(0, 12) } : {}), storeId: typeof card.storeId === "string" && /^loc-[A-Za-z0-9-]{1,16}$/.test(card.storeId) ? card.storeId : null }]
+          ? [{ proposalId: card.proposalId, employeeKey: card.employeeKey ?? null, nameKey: card.nameKey ?? null, templateKey: card.templateKey, templateName: card.templateName ?? null, messageId: row.message_id, questionKey: questionKeyOf(row), asked: Array.isArray(card.asked) ? card.asked.filter((field): field is string => typeof field === "string") : [], level: card.level === "verbal" || card.level === "written" ? card.level : null, policyLine: typeof card.policyLine === "string" ? card.policyLine : null, payroll: card.payroll === "yes" || card.payroll === "no" ? card.payroll : null, payrollAmount: typeof card.payrollAmount === "string" && /^\d+(?:\.\d+)?$/.test(card.payrollAmount) ? card.payrollAmount : null, accountKey: typeof card.accountKey === "string" && /^[0-9a-f]{16}$/.test(card.accountKey) ? card.accountKey : null, exitType: typeof card.exitType === "string" && /^[a-z_]{3,40}$/.test(card.exitType) ? card.exitType : null, issueKey: typeof card.issueKey === "string" && /^[0-9a-f]{16}$/.test(card.issueKey) ? card.issueKey : null, ...(card.coachingTopic === null || (typeof card.coachingTopic === "string" && card.coachingTopic.length <= 80) ? { coachingTopic: card.coachingTopic as string | null } : {}), incidentDate: typeof card.incidentDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(card.incidentDate) ? card.incidentDate : null, teamStoreId: typeof card.teamStoreId === "string" && /^loc-[A-Za-z0-9-]{1,16}$/.test(card.teamStoreId) ? card.teamStoreId : null, ...(Array.isArray(card.priorDates) ? { priorDates: card.priorDates.filter((date): date is string => typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)).slice(0, 12) } : {}), ...(Array.isArray(card.onFileOffered) ? { onFileOffered: card.onFileOffered.filter((date): date is string => typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)).slice(0, 12) } : {}), storeId: typeof card.storeId === "string" && /^loc-[A-Za-z0-9-]{1,16}$/.test(card.storeId) ? card.storeId : null, sameIncidentChecked: typeof card.sameIncidentChecked === "string" && /^\d{4}-\d{2}-\d{2}$/.test(card.sameIncidentChecked) ? card.sameIncidentChecked : null }]
           : [];
       }),
       nameQuestions: rows.flatMap((row) => {
@@ -280,6 +309,12 @@ export async function readLoopRecords(conversationId: string | undefined, userId
       personAsked: rows.flatMap((row) => {
         const asked = row.slots?.agent_loop?.person_asked as Partial<PersonAskedSlot> | undefined;
         return asked && typeof asked.templateKey === "string" ? [{ templateKey: asked.templateKey, messageId: row.message_id, questionKey: questionKeyOf(row) }] : [];
+      }),
+      sameIncidents: rows.flatMap((row) => {
+        const asked = row.slots?.agent_loop?.same_incident as Partial<SameIncidentSlot> | undefined;
+        return asked && typeof asked.templateKey === "string" && typeof asked.employeeKey === "string" && typeof asked.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(asked.date)
+          ? [{ templateKey: asked.templateKey, employeeKey: asked.employeeKey, date: asked.date, messageId: row.message_id, questionKey: questionKeyOf(row) }]
+          : [];
       }),
       teamConfirms: rows.flatMap((row) => {
         const asked = row.slots?.agent_loop?.team_confirm as Partial<TeamConfirmSlot> | undefined;

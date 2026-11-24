@@ -7,7 +7,7 @@ import type { FormsActor } from "./access";
 /**
  * HR APPROVAL, THE WHOLE ROUND TRIP (owner request, 23 Nov 2026), against the real `instances.ts` and `hr-approval.ts`:
  *
- *   the manager presses "Finalize and send to HR for approval"   → still a draft, pending; HR's bell rings
+ *   the manager presses "Finalize and send for approval"   → still a draft, pending; HR's bell rings
  *   the manager tries to change it                          → refused while HR has it
  *   HR edits it                                             → saved, in the approval history only
  *   HR sends it back without a note                         → refused: a note is required
@@ -35,7 +35,7 @@ vi.mock("@/lib/supabase/server", () => ({ getSupabaseAdmin: () => fakeSupabase(s
 
 const { ensureTemplateLibrary } = await import("./repository");
 const { createInstance, loadInstance, saveInstanceValues, finalizeInstance, HeldForHrError } = await import("./instances");
-const { sendForHrApproval, decideHrApproval, commentOnHrApproval, hrApprovalViewFor, finalizeGoesToHr, listHrQueue, listMyFormsWithHr, readHrApprovalsFor, recordHrEdit, HrApprovalError } =
+const { sendForHrApproval, decideHrApproval, commentOnHrApproval, hrApprovalViewFor, finalizeGoesToHr, listHrQueue, listMyFormsWithHr, readHrApprovalsFor, recordHrEdit, hrQueueSummary, HrApprovalError } =
   await import("./hr-approval");
 
 const CREATOR = "lm-thistle";
@@ -128,7 +128,7 @@ describe("the round trip", () => {
     // 4. HR edits it: saved through the one path past the hold, recorded in the approval history only.
     const eventsBefore = store.form_instance_events!.length;
     // As the PATCH route does it: the save, then the approval history's "edited".
-    await saveInstanceValues(instance.id, { values: { form_date: "2026-11-22" }, checked: {} }, HR, { asHrApprover: true });
+    await saveInstanceValues(instance.id, { values: { form_date: "2026-11-22" }, checked: {} }, HR, { pastHrHold: true });
     await recordHrEdit(instance.id, hr);
     expect((await loadInstance(instance.id))!.instance.formDate).toBe("2026-11-22");
     expect(store.form_instance_events!.length, "HR's edit reached the form's general history").toBe(eventsBefore);
@@ -138,7 +138,9 @@ describe("the round trip", () => {
     await expect(decideHrApproval(instance.id, manager, "approve", null)).rejects.toThrow(/Only HR/);
     const back = await decideHrApproval(instance.id, hr, "send_back", "Please add the date she was told.");
     expect(back.hrApprovalState).toBe("changes_requested");
-    expect(bells("thistle@example.com")[0]).toMatchObject({ kind: "form_hr_approval_decision", title: "HR sent your form back for changes" });
+    // Changed on purpose (24 Nov 2026): the sender's first bell is now their own "You sent a form for HR approval"
+    // receipt (owner request), so the decision is looked up by kind instead of being the first item.
+    expect(bells("thistle@example.com").find((bell) => bell.kind === "form_hr_approval_decision")).toMatchObject({ title: "HR sent your form back for changes" });
     await saveInstanceValues(instance.id, { values: { form_date: "2026-11-21" }, checked: {} }, CREATOR);
 
     // 6. The manager's reply and HR's note: only the two of them read the history.
@@ -254,3 +256,161 @@ describe("the round trip", () => {
     }
   });
 });
+
+/*
+ * THE NOTE REACHES HR'S BELL (owner, 23 Nov 2026, testing as HR in Ask Bubbles):
+ *   "also make sure colene recieves the note, because i added a note when i finalized it and it didnt appear in colenes"
+ *   "oh it shows here but also make it appear i nnotification"
+ * The note was saved and shown on the review page, but the bell put it after the form line, on a line the bell cut
+ * off. Now a note comes first in the bell, and the manager can write one beside the send button.
+ */
+// The invented Policy Review cites a policy the test knowledge base does not hold, so it is sent acknowledged.
+const ACK = { acknowledgeUnverifiedPolicy: true } as const;
+
+describe("the manager's note reaches HR's bell", () => {
+  it("a note typed beside the send button is in HR's request bell, first, and in the approval history", async () => {
+    const instance = await policyReview();
+    await sendForHrApproval(instance.id, manager, null, ACK, "  test  ");
+
+    const [request] = bells("hr.wren@example.com");
+    expect(request?.title).toBe("A form is waiting for your approval");
+    expect(String(request?.body)).toMatch(/^“test” — .*for Juniper Calloway at Invented Store/);
+    expect(String(request?.body)).toContain("sent by Thistle.");
+    // One bell for the send and its note, not a second "added a note" bell.
+    expect(bells("hr.wren@example.com")).toHaveLength(1);
+
+    const view = await hrApprovalViewFor(hr, (await loadInstance(instance.id))!.instance);
+    expect(view?.history.map((entry) => [entry.action, entry.note])).toEqual([
+      // The send records the policy acknowledgement this invented form needs (ACK); the manager's note is its own entry.
+      ["submitted", "Sent with an unverified policy reference, acknowledged by the manager."],
+      ["commented", "test"],
+    ]);
+  });
+
+  it("no note: the request bell is as before", async () => {
+    const instance = await policyReview();
+    await sendForHrApproval(instance.id, manager, null, ACK, "   ");
+    const [request] = bells("hr.wren@example.com");
+    expect(String(request?.body)).toMatch(/for Juniper Calloway at Invented Store, sent by Thistle\.$/);
+    expect(String(request?.body)).not.toMatch(/^“/);
+    expect(extra.form_hr_approval_events!.filter((row) => row.action === "commented")).toHaveLength(0);
+  });
+
+  it("a note added after sending: the bell names who wrote it and starts with the note", async () => {
+    const instance = await policyReview();
+    await sendForHrApproval(instance.id, manager, null, ACK);
+    await commentOnHrApproval(instance.id, manager, "test");
+    const comment = bells("hr.wren@example.com").find((row) => row.kind === "form_hr_approval_comment");
+    expect(comment?.title).toBe("Thistle added a note on a form you are approving");
+    expect(String(comment?.body)).toMatch(/^“test” — .*for Juniper Calloway at Invented Store/);
+  });
+
+  it("HR's note on a send back starts the manager's bell too", async () => {
+    const instance = await policyReview();
+    await sendForHrApproval(instance.id, manager, null, ACK);
+    await decideHrApproval(instance.id, hr, "send_back", "Add the date of the prior coaching.");
+    const decision = bells("thistle@example.com").find((row) => row.kind === "form_hr_approval_decision");
+    expect(String(decision?.body)).toMatch(/^“Add the date of the prior coaching\.” — .*for Juniper Calloway/);
+  });
+});
+
+/*
+ * ============================================================================
+ * "MANAGER REPLIED TO CHANGES" (owner, 23 Nov 2026)
+ * ============================================================================
+ *
+ * "colene sent to marissa, marissa replied and it shows … 'sent back for changes' still. it should be Manager Replied
+ * to changes. then view then approve." And the tab read "Pending HR approval (0)" while the row was listed.
+ */
+describe("manager replied to changes", () => {
+  async function sentBack() {
+    const instance = await policyReview();
+    await sendForHrApproval(instance.id, manager, null, { acknowledgeUnverifiedPolicy: true });
+    await decideHrApproval(instance.id, hr, "send_back", "Please add the time she arrived.");
+    return instance;
+  }
+
+  it("sent back: not HR's turn; the count leaves it out and HR may not approve yet", async () => {
+    const instance = await sentBack();
+    const [row] = await listHrQueue(hr);
+    expect(row).toMatchObject({ id: instance.id, managerReplied: false });
+    expect(await hrQueueSummary(hr)).toEqual({ pending: 0, overdue: 0 });
+    const view = await hrApprovalViewFor(hr, (await loadInstance(instance.id))!.instance);
+    expect(view).toMatchObject({ stage: "changes_requested", label: "Sent back by HR for changes", canApproveSentBack: false });
+    await expect(decideHrApproval(instance.id, hr, "approve", null)).rejects.toThrow(/sent back for changes. It can be approved or sent back again once the manager replies/);
+  });
+
+  it("the manager's reply: HR's row reads \"Manager replied to changes\" and counts in Pending HR approval", async () => {
+    const instance = await sentBack();
+    await commentOnHrApproval(instance.id, manager, "She arrived at 9:20.");
+    const rows = await listHrQueue(hr);
+    expect(rows.map((row) => [row.id, row.managerReplied])).toEqual([[instance.id, true]]);
+    // The count always equals the rows that need HR's decision.
+    const { needsHrDecision } = await import("./hr-approval-rules");
+    expect((await hrQueueSummary(hr))!.pending).toBe(rows.filter(needsHrDecision).length);
+    expect((await hrQueueSummary(hr))!.pending).toBe(1);
+    const hrView = await hrApprovalViewFor(hr, (await loadInstance(instance.id))!.instance);
+    expect(hrView).toMatchObject({ state: "changes_requested", stage: "manager_replied", label: "Manager replied to changes", canApproveSentBack: true, canDecide: false });
+    // The manager's own list says the same.
+    expect((await listMyFormsWithHr(manager)).map((row) => row.label)).toEqual(["Manager replied to changes"]);
+  });
+
+  it("HR's own note after sending it back is not the manager's reply", async () => {
+    const instance = await sentBack();
+    await commentOnHrApproval(instance.id, hr, "Also the date.");
+    expect((await listHrQueue(hr))[0]).toMatchObject({ id: instance.id, managerReplied: false });
+  });
+
+  it("a reply to an EARLIER send-back does not count once HR sends it back again", async () => {
+    const instance = await sentBack();
+    await commentOnHrApproval(instance.id, manager, "Added it.");
+    await sendForHrApproval(instance.id, manager, null, { acknowledgeUnverifiedPolicy: true });
+    await decideHrApproval(instance.id, hr, "send_back", "Still missing the time.");
+    expect((await listHrQueue(hr))[0]).toMatchObject({ managerReplied: false });
+  });
+
+  it("HR approves the replied form: finalized and approved; the manager's bell says so; the form is no longer in HR's list", async () => {
+    const instance = await sentBack();
+    await commentOnHrApproval(instance.id, manager, "She arrived at 9:20.");
+    // Reject stays for a pending form.
+    await expect(decideHrApproval(instance.id, hr, "reject", "No.")).rejects.toThrow(/not waiting/);
+    await expect(decideHrApproval(instance.id, manager, "approve", null)).rejects.toThrow(/Only HR/);
+    const approved = await decideHrApproval(instance.id, hr, "approve", null);
+    expect(approved.status).toBe("finalized");
+    expect(store.form_instances!.find((entry) => entry.id === instance.id)).toMatchObject({ hr_approval_state: "approved", hr_approval_decided_by: HR });
+    expect(bells("thistle@example.com").map((bell) => bell.title)).toContain("HR approved your form");
+    expect(await listHrQueue(hr)).toEqual([]);
+    const history = (await hrApprovalViewFor(manager, (await loadInstance(instance.id))!.instance))!.history;
+    expect(history.at(-1)).toMatchObject({ action: "approved", by: "HR" });
+    // Approved, it is an ordinary finalized form (the register scopes it by store: hr-approval-visibility.test.ts); the
+    // approval and HR's notes stay with the creator, the sender and HR: the store's District Manager reads none of it.
+    const finalForm = (await loadInstance(instance.id))!.instance;
+    expect(await hrApprovalViewFor(theirDm, finalForm)).toBeNull();
+    expect(await hrApprovalViewFor(hr, finalForm)).not.toBeNull();
+    const dmRead = await readHrApprovalsFor(theirDm.id, true);
+    expect(dmRead.kind === "manager" ? dmRead.forms : []).toEqual([]);
+    // "Was my CA approved?": the AI's reader gives it as approved, to its creator only.
+    const read = await readHrApprovalsFor(CREATOR, true);
+    expect(read.kind === "manager" ? read.forms.map((row) => [row.id, row.label]) : []).toEqual([[instance.id, "Approved by HR"]]);
+  });
+
+  it("HR sends the replied form back again (QA, 23 Nov 2026): a note is required; it is the manager's turn again", async () => {
+    const instance = await sentBack();
+    await commentOnHrApproval(instance.id, manager, "She arrived at 9:20.");
+    await expect(decideHrApproval(instance.id, hr, "send_back", " ")).rejects.toThrow(/what needs to change/);
+    const again = await decideHrApproval(instance.id, hr, "send_back", "Also the date.");
+    expect(again.hrApprovalState).toBe("changes_requested");
+    expect((await listHrQueue(hr))[0]).toMatchObject({ id: instance.id, managerReplied: false });
+    expect((await hrQueueSummary(hr))!.pending).toBe(0);
+    expect(bells("thistle@example.com").filter((bell) => bell.title === "HR sent your form back for changes")).toHaveLength(2);
+    // Before the manager replies again, HR may not approve it.
+    await expect(decideHrApproval(instance.id, hr, "approve", null)).rejects.toThrow(/sent back for changes/);
+  });
+});
+
+/*
+ * REMOVED ON PURPOSE (Pau, 23 Nov 2026, archiving removed): main's block here (QA, 23 Nov: "An archived form that was
+ * pending HR must never show in 'Needs your decision', be counted, or ring a bell") tested archiveInstance and the
+ * archived_at filter in the HR queue. There is no archiving any more, so the rule is moot; a form waiting for HR is
+ * always Draft, and the queue tests above still cover list, count, reminder and bells.
+ */

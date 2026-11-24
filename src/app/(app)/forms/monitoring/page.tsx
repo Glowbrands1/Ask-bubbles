@@ -22,7 +22,9 @@ import {
   visibleInstances,
 } from "@/lib/forms/instance-scope";
 import { pageFormsAccess } from "@/lib/forms/page-scope";
-import { HrApprovalTabs, HrQueueList, MyFormsWithHr } from "@/features/forms/hr-approval-lists";
+import { HrApprovalTabs, HrQueueList, MyFormsWithHr, SiblingHrQueueList } from "@/features/forms/hr-approval-lists";
+import { fetchSiblingHrQueue, type SiblingHrQueue } from "@/lib/partner/sibling-hr-queue";
+import { needsHrDecision } from "@/lib/forms/hr-approval-rules";
 import { hrQueueSummary, listHrQueue, listMyFormsWithHr, type HrQueueRow, type MyHrFormRow } from "@/lib/forms/hr-approval";
 import { supabaseSecretKeyConfigured } from "@/lib/config/server-env";
 import { privateAwareLimit, privateCreatorsActive } from "@/lib/forms/private-creators";
@@ -47,11 +49,11 @@ export const dynamic = "force-dynamic";
 export default async function FormMonitoringPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; followup?: string }>;
+  searchParams: Promise<{ view?: string; followup?: string; app?: string }>;
 }) {
   const identity = await requirePagePermission("view_form_monitoring");
 
-  const { view: requestedView, followup: requestedFollowUp } = await searchParams;
+  const { view: requestedView, followup: requestedFollowUp, app: requestedApp } = await searchParams;
   /*
    * The follow-up filter comes from the URL so a view survives a refresh and can be
    * linked to, and it is narrowed here rather than trusted — an unknown
@@ -85,11 +87,23 @@ export default async function FormMonitoringPage({
   let hrQueue: HrQueueRow[] = [];
   let hrSummary: { pending: number; overdue: number } | null = null;
   let myWithHr: MyHrFormRow[] = [];
+  /*
+   * THE SIBLING APP'S QUEUE, AS A TAB (owner, 23 Nov 2026: "1 tab for sunny 1 tab for bubbles"; then, of a link to the
+   * sibling's page: "i dont want the sunny approval in a different page and link, just a tab pls"). For a verified HR
+   * approver, asked of the sibling's server with this identity's email (`fetchSiblingHrQueue`), on every view so the
+   * tab carries its count; listed here, on `?view=hr&app=sibling`. "off" (no shared secret) shows no tab.
+   */
+  let sibling: SiblingHrQueue = { status: "off" };
+  const siblingView = hrView && requestedApp === "sibling";
   if (access) {
     try {
       if (isHr) {
-        hrSummary = await hrQueueSummary(access.actor);
-        if (hrView) hrQueue = await listHrQueue(access.actor);
+        const email = access.actor.verified && identity?.verified === true && identity.email ? identity.email : null;
+        [hrSummary, hrQueue, sibling] = await Promise.all([
+          hrQueueSummary(access.actor),
+          hrView ? listHrQueue(access.actor) : Promise.resolve<HrQueueRow[]>([]),
+          email ? fetchSiblingHrQueue(email) : Promise.resolve<SiblingHrQueue>({ status: "off" }),
+        ]);
       }
       myWithHr = await listMyFormsWithHr(access.actor);
     } catch {
@@ -172,10 +186,25 @@ export default async function FormMonitoringPage({
           description="Every form created in Ask Bubbles, the template version it was filled from, and what is still outstanding."
         />
 
-        {hrSummary ? <HrApprovalTabs active={hrView ? "hr" : "all"} pending={hrSummary.pending} overdue={hrSummary.overdue} /> : null}
+        {hrSummary ? (
+          <HrApprovalTabs
+            active={siblingView ? "sibling" : hrView ? "hr" : "all"}
+            pending={hrSummary.pending}
+            overdue={hrSummary.overdue}
+            sibling={
+              sibling.status === "off"
+                ? null
+                : sibling.status === "ok"
+                  ? { name: sibling.app, pending: sibling.approver ? sibling.forms.filter(needsHrDecision).length : 0 }
+                  : { name: null, pending: null }
+            }
+          />
+        ) : null}
         {!hrView ? <MyFormsWithHr rows={myWithHr} /> : null}
 
-        {hrView ? (
+        {hrView && siblingView && sibling.status !== "off" ? (
+          <SiblingHrQueueList queue={sibling} />
+        ) : hrView ? (
           <HrQueueList rows={hrQueue} />
         ) : !connected ? (
           <Notice tone="neutral" title="Forms are not connected in this deployment">
