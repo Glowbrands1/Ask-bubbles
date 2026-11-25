@@ -18,7 +18,8 @@ import { PRODUCTION_MANUAL_CHUNKS } from "./nov21-agent-loop-policy-page-agrees-
  */
 
 const FIX = ["LOOP_CARD_CITES_CONDUCT_LINE_ENABLED"];
-const STATUS = { open: "LOOP_CARD_CITES_CONDUCT_LINE_ENABLED is off in production (default off; QA flips it)" } as const;
+/* Fixed in production: the owner turned LOOP_CARD_CITES_CONDUCT_LINE_ENABLED on in Vercel (25 Nov 2026). */
+const STATUS = "fixed" as const;
 const REPORT = "the sibling app's QA (24 Nov 2026): \"Draft a corrective action form for a till shortage for Test Employee\" cited the Standards of Conduct heading, not the Register / Bank shortages line";
 const TEST_EMPLOYEE = { id: "e-test-employee", firstName: "Test", lastName: "Employee", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Team Member Part Time" };
 
