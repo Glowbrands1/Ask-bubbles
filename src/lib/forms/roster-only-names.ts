@@ -195,7 +195,7 @@ export function rosterOnlyNames(input: AskResponse, names: readonly string[], me
 
   const employee = proposal?.employeeName?.trim() ?? "";
   /*
-   * TYPED_EMPLOYEE_EVERY_CARD_ENABLED (port from Ask Sunny; its QA, 24 Nov 2026, live as an Admin; the owner: managers use "Test Employee" on
+   * TYPED_EMPLOYEE_EVERY_CARD_ENABLED (port from the sibling app; its QA, 24 Nov 2026, live as an Admin; the owner: managers use "Test Employee" on
    * purpose, it is a valid name). "… a made-up employee named Test Employee" became "named the employee Employee" with
    * "Who is this form for?". The full name the manager typed as the person (`typed-employee-name.ts`), on nobody's
    * roster, is the card's name whenever the card holds it, its first word, or no one: kept whole in the reply and on the
@@ -624,7 +624,7 @@ export function offRosterTyped(employee: string, message: string | undefined, na
   const typed = employee.trim();
   if (!NAME_SHAPE.test(typed) || rosterSpelling(typed, names) || anyRosterPersonClose(typed, names) || namesAForm(typed)) return null;
   /*
-   * TYPED_EMPLOYEE_EVERY_CARD_ENABLED (port from Ask Sunny; its QA, 24 Nov 2026): "<First> Employee" the manager typed as
+   * TYPED_EMPLOYEE_EVERY_CARD_ENABLED (port from the sibling app; its QA, 24 Nov 2026): "<First> Employee" the manager typed as
    * the person ("named Test Employee", "for Test Employee", the answer "Test Employee"; `typed-employee-name.ts`) is a
    * name, not the placeholder.
    */

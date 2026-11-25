@@ -1541,7 +1541,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
           if (speaksOfTheManager(text)) text = withoutManagerReasoning(text) || text;
         }
         /*
-         * Port of Ask Sunny (QA, 24 Nov 2026, live, Standard mode, twice): "Coach a leader on running better follow-up
+         * Port of the sibling app (QA, 24 Nov 2026, live, Standard mode, twice): "Coach a leader on running better follow-up
          * conversations" got only "Who is this Coaching Form for?". propose_form refuses a card for such a turn
          * (advice_not_form); a reply that still only asks who a form is for, on a turn that asked for advice and no form
          * (`adviceNotForm`, the manager's words), goes back once to be answered.
@@ -1551,7 +1551,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
           if (again && !onlyAsksWho(again)) text = again;
         }
         /*
-         * Port of Ask Sunny (its QA, 24 Nov 2026, live): "Draft a vacation request form" was answered "There's no … in the
+         * Port of the sibling app (its QA, 24 Nov 2026, live): "Draft a vacation request form" was answered "There's no … in the
          * forms library — …" with no word of the forms that exist. The f099 list came only from propose_form with a quote
          * holding the word "form". With no card this turn and the manager's words asking for a named document no library
          * form answers to (`formAskedOutsideLibrary`, read from the template names), the reply ends with the library's

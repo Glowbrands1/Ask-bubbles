@@ -6106,7 +6106,7 @@ export function priorFormsUpToTodayEnabled(): boolean {
 }
 
 /**
- * TYPED_EMPLOYEE_EVERY_CARD (port from Ask Sunny; its QA, 24 Nov 2026, live as an Admin; default off; same flag in both apps): "Draft a coaching
+ * TYPED_EMPLOYEE_EVERY_CARD (port from the sibling app; its QA, 24 Nov 2026, live as an Admin; default off; same flag in both apps): "Draft a coaching
  * form for a performance concern for a made-up employee named Test Employee" drafted the Observation "… named the
  * employee Employee" and asked who the form was for, also after the answer "Test Employee"; "Draft a corrective action
  * form for a till shortage for Test Employee" put **Test** on the loop's card. The full name the manager typed as the
@@ -6119,7 +6119,7 @@ export function typedEmployeeEveryCardEnabled(): boolean {
 }
 
 /**
- * ADMIN_CARD_ASKS_SALON (port from Ask Sunny; its QA, 24 Nov 2026, live as an Admin; default off; same flag in both
+ * ADMIN_CARD_ASKS_SALON (port from the sibling app; its QA, 24 Nov 2026, live as an Admin; default off; same flag in both
  * apps): an admin's card for a person Woven lists at one store silently took that store though their form on file in the
  * Forms Register is at another. With the flag on, a store taken from Woven while this person's forms on file are at
  * another store is not taken: the card asks which, naming both. (An admin's card with no store already asks here.)
@@ -6130,7 +6130,7 @@ export function adminCardAsksSalonEnabled(): boolean {
 }
 
 /**
- * LOOP_CARD_CITES_CONDUCT_LINE (port from Ask Sunny; its QA's live test, 24 Nov 2026; default off; same flag in both
+ * LOOP_CARD_CITES_CONDUCT_LINE (port from the sibling app; its QA's live test, 24 Nov 2026; default off; same flag in both
  * apps): a loop card citing the Standards of Conduct for an incident the manual lists on its own line (a register
  * shortage, theft, insubordination, disrespect, absence from the work area) names that line beside the heading, at the
  * line's printed page: "Standards of Conduct — <the line>, JBA Policy Manual p.<n>" (`forms/specific-policy-topics.ts`

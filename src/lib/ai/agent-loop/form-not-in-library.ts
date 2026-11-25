@@ -5,7 +5,7 @@ import { withoutMessageIdTags } from "./evidence";
  * A FORM THE LIBRARY DOES NOT HAVE: THE REPLY SAYS WHICH FORMS IT DOES HAVE
  * ============================================================================
  *
- * Port of Ask Sunny. Its QA, live on the agent loop, 24 Nov 2026: "Draft a vacation request form" was answered honestly ("There's no
+ * Port of the sibling app. Its QA, live on the agent loop, 24 Nov 2026: "Draft a vacation request form" was answered honestly ("There's no
  * \"Vacation Request Form\" in the forms library — PTO requests … run through <the staff app> directly …") but never said
  * which forms the manager can create. The board f099 fix lists them only when the model calls propose_form with
  * form_asked_evidence whose quote holds the library's title word ("form"): a request without that word ("draft a PTO

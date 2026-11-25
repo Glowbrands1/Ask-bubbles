@@ -13,7 +13,7 @@ import { configuredExcludedNames, isProductionRecord } from "./production-record
  * THE FOLLOW-UP QUEUE: ONE SET OF FORMS, ONE OVERDUE COUNT, FOR EVERY SCREEN
  * ============================================================================
  *
- * Port from Ask Sunny (QA, 24 Nov 2026: "The Overview, the sidebar and the Form Monitoring banner say 19 overdue.
+ * Port from the sibling app (QA, 24 Nov 2026: "The Overview, the sidebar and the Form Monitoring banner say 19 overdue.
  * Form Monitoring's Overdue filter says 8 and Open says 6."). Every screen used the same rule (`followUpState`) over a
  * different set of forms: the rail, Home and the Forms Register banner over the first 50 outstanding follow-ups (with
  * Home alone leaving out test records), the pills over the 200 most recently created forms.

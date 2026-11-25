@@ -347,7 +347,7 @@ describe("the module's source", () => {
 
   it("reads the live query on the server, not in the browser", () => {
     const page = readFileSync("src/app/(app)/page.tsx", "utf8");
-    // Changed on purpose (port from Ask Sunny, QA 24 Nov 2026): Home counts the one follow-up queue every screen counts.
+    // Changed on purpose (port from the sibling app, QA 24 Nov 2026): Home counts the one follow-up queue every screen counts.
     expect(page).toMatch(/readFollowUpQueue/);
     expect(page).toMatch(/queue\.attention/);
     // `force-dynamic` is what makes a navigation re-read Supabase.

@@ -362,7 +362,7 @@ describe("the server pages apply the same rule", () => {
       // This deployment reads the family's permission from config
       // (`FORM_FAMILY_READ_PERMISSIONS`) rather than naming it on each page.
       // `visibleInstances` applies `withoutUnreadable` and the reader's store scope together.
-      // Changed on purpose (port from Ask Sunny, QA 24 Nov 2026): the rail and Home count the follow-up queue, which
+      // Changed on purpose (port from the sibling app, QA 24 Nov 2026): the rail and Home count the follow-up queue, which
       // applies visibleInstances itself (asserted below).
       expect(source, file).toMatch(/visibleInstances\(|readFollowUpQueue\(access/);
     }

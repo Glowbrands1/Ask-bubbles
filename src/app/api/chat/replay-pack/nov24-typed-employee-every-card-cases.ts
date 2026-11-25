@@ -5,7 +5,7 @@ import { lastResult, loopStandIn, type LoopDecision, type LoopView } from "./loo
 
 /**
  * ============================================================================
- * "TEST EMPLOYEE" STAYS "TEST EMPLOYEE" ON EVERY CARD (port from Ask Sunny; its QA, 24 Nov 2026, live as an Admin; TYPED_EMPLOYEE_EVERY_CARD)
+ * "TEST EMPLOYEE" STAYS "TEST EMPLOYEE" ON EVERY CARD (port from the sibling app; its QA, 24 Nov 2026, live as an Admin; TYPED_EMPLOYEE_EVERY_CARD)
  * ============================================================================
  *
  * The sibling app's QA's turns, word for word (an Admin, a global login; "Test Employee" is QA's own stand-in, nobody on the directory):
@@ -19,7 +19,7 @@ import { lastResult, loopStandIn, type LoopDecision, type LoopView } from "./loo
  * staff list, used as typed" note, never "the employee" or "Test".
  */
 const FLAG = "TYPED_EMPLOYEE_EVERY_CARD_ENABLED";
-const REPORT = `Port from Ask Sunny: its QA, 24 Nov 2026 (live, Admin): "… a made-up employee named Test Employee" became "named the employee Employee"; "for Test Employee" became "**Test**"`;
+const REPORT = `Port from the sibling app: its QA, 24 Nov 2026 (live, Admin): "… a made-up employee named Test Employee" became "named the employee Employee"; "for Test Employee" became "**Test**"`;
 const OPEN = { open: "TYPED_EMPLOYEE_EVERY_CARD_ENABLED is off in production (QA flips it)" };
 const ADMIN = { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] };
 const COACHING = "Draft a coaching form for a performance concern for a made-up employee named Test Employee";

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { hrReminderBody } from "./hr-approval-reminders";
 
 /*
- * Port from Ask Sunny. QA, 24 Nov 2026 (Ask Sunny, live): "The notification bell says "None is overdue yet"" while the Overview said 19
+ * Port from the sibling app. QA, 24 Nov 2026 (the sibling app, live): "The notification bell says "None is overdue yet"" while the Overview said 19
  * follow-ups were overdue. The line was about HR approvals waiting more than a business day; it now says so.
  */
 describe("the 6 AM reminder's line names HR approval", () => {

@@ -5,17 +5,17 @@ import { lastResult, loopStandIn, type LoopDecision, type LoopView } from "./loo
 
 /**
  * ============================================================================
- * AN ADMIN'S CARD ASKS WHICH STORE WHEN WOVEN AND THE FORMS ON FILE DIFFER (port from Ask Sunny; ADMIN_CARD_ASKS_SALON)
+ * AN ADMIN'S CARD ASKS WHICH STORE WHEN WOVEN AND THE FORMS ON FILE DIFFER (port from the sibling app; ADMIN_CARD_ASKS_SALON)
  * ============================================================================
  *
- * Ask Sunny's QA (24 Nov 2026, live as an Admin), its wording with the person's first name swapped for an invented one:
+ * the sibling app's QA (24 Nov 2026, live as an Admin), its wording with the person's first name swapped for an invented one:
  * "Draft a coaching form for <first name>" filed the store Woven lists her at, while her form on file is at another.
  * An admin's card with no store already asks here (A2, #1087); now a Woven store that differs from this person's forms
  * on file in the Forms Register is not taken: the card asks which, naming both. A store the manager named still wins.
  * Every person is invented.
  */
 const FLAG = "ADMIN_CARD_ASKS_SALON_ENABLED";
-const REPORT = `Port from Ask Sunny: its QA, 24 Nov 2026 (live, Admin): "Draft a coaching form for <first name>" filed the Woven store though her form on file is at another`;
+const REPORT = `Port from the sibling app: its QA, 24 Nov 2026 (live, Admin): "Draft a coaching form for <first name>" filed the Woven store though her form on file is at another`;
 const OPEN = { open: "ADMIN_CARD_ASKS_SALON_ENABLED is off in production (QA flips it)" };
 const ADMIN = { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] };
 const BELLEVUE = "loc-67";

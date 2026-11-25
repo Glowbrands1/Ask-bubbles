@@ -1967,7 +1967,7 @@ export async function listOutstandingFollowUps(
 const OUTSTANDING_PAGE = 1000;
 
 /**
- * EVERY OUTSTANDING FOLLOW-UP, NO CAP (port from Ask Sunny; QA, 24 Nov 2026: the Overview, the rail and the banner
+ * EVERY OUTSTANDING FOLLOW-UP, NO CAP (port from the sibling app; QA, 24 Nov 2026: the Overview, the rail and the banner
  * said 19 overdue while the Overdue pill said 8, because the counts were taken from reads capped at 50 and 200). Read
  * page by page until a page comes back short, with the same scope and predicate as `listOutstandingFollowUps`, so the
  * one count every screen shows (`readFollowUpQueue`) is of every such form.

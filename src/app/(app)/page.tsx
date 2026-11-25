@@ -47,7 +47,7 @@ export default async function HomePage() {
       const access = await pageFormsAccess(identity);
       const locationIds = access.locationIds;
       /*
-       * THE ONE QUEUE (port from Ask Sunny; QA, 24 Nov 2026: 19 overdue on the Overview, 8 on the Overdue pill).
+       * THE ONE QUEUE (port from the sibling app; QA, 24 Nov 2026: 19 overdue on the Overview, 8 on the Overdue pill).
        * `readFollowUpQueue` is what the rail, the Forms Register's banner and its pills count too: every outstanding
        * follow-up this reader may open, read without a cap, with non-production records held back (they stay in the
        * Forms Register). See `lib/forms/follow-up-queue.ts`.

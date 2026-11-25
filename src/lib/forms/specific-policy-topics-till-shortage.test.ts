@@ -4,7 +4,7 @@ import type { ManualChunk } from "./official-policy-manual";
 import { conductLineCitation, specificTopic } from "./specific-policy-topics";
 
 /**
- * Port from Ask Sunny (its QA's live test, 24 Nov 2026): "Draft a corrective action form for a till shortage for Test Employee" is the manual's
+ * Port from the sibling app (its QA's live test, 24 Nov 2026): "Draft a corrective action form for a till shortage for Test Employee" is the manual's
  * Standards of Conduct line "Register / Bank shortages". The owner, the same day: "till" is the cash register, and
  * managers also spell it "til"; every way of saying the register came up short is that line, and "til" / "till" / "until"
  * as a time word ("til tomorrow", "till next week") never is. The loop card's citation is covered by the replay pack

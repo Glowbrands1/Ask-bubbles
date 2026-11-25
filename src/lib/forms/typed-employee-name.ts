@@ -48,7 +48,7 @@ const POSITIONS: readonly RegExp[] = [
 ];
 
 /**
- * TYPED_EMPLOYEE_EVERY_CARD_ENABLED (port from Ask Sunny; its QA, 24 Nov 2026): "… for a made-up employee named Test
+ * TYPED_EMPLOYEE_EVERY_CARD_ENABLED (port from the sibling app; its QA, 24 Nov 2026): "… for a made-up employee named Test
  * Employee" names the person after "named" / "called".
  */
 const NAMED_POSITION = new RegExp(`\\b(?:named|called)\\s+${FIRST}\\s+${EMPLOYEE}`, "g");

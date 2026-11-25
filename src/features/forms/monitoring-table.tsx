@@ -181,7 +181,7 @@ export function MonitoringTable({
   /**
    * THE FOLLOW-UP QUEUE, every outstanding follow-up this reader may open, uncapped and with test records left out:
    * the same forms the banner, Home and the rail badge count (`readFollowUpQueue`). The Open and Overdue pills count
-   * it, and their lists show it, so a pill can never say fewer than the banner above it (port from Ask Sunny; QA,
+   * it, and their lists show it, so a pill can never say fewer than the banner above it (port from the sibling app; QA,
    * 24 Nov 2026: "19 overdue" in the banner, "Overdue 8" on the pill). Absent: the loaded rows, as before.
    */
   outstanding?: MonitoredForm[];

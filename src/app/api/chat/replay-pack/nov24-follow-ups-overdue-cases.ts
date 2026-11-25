@@ -7,16 +7,16 @@ import { lastResult, loopStandIn, type LoopDecision, type LoopView } from "./loo
 
 /**
  * ============================================================================
- * THE OVERDUE COUNT IS ONE NUMBER, AND THE AI SAYS IT TOO (port from Ask Sunny; QA, 24 Nov 2026)
+ * THE OVERDUE COUNT IS ONE NUMBER, AND THE AI SAYS IT TOO (port from the sibling app; QA, 24 Nov 2026)
  * ============================================================================
  *
- * QA tested Ask Sunny live: "The overdue counts disagree. The Overview, the sidebar and the Form Monitoring banner say
+ * QA tested the sibling app live: "The overdue counts disagree. The Overview, the sidebar and the Form Monitoring banner say
  * 19 overdue. Form Monitoring's Overdue filter says 8 and Open says 6." This app had the same reads (Home, the rail
  * and the Forms Register banner over the first 50 follow-ups; the pills over the 200 newest forms). The screens now
  * count one queue (`readFollowUpQueue`) and the AI reads it through read_follow_ups (CLAUDE.md §5). Seeded: 19 overdue
  * and 9 open follow-ups at the manager's store under 210 newer forms with none, plus one test record.
  */
-const REPORT = "Port from Ask Sunny (QA, 24 Nov 2026, live): the overdue counts disagree (19 on the Overview, 8 on the Overdue filter)";
+const REPORT = "Port from the sibling app (QA, 24 Nov 2026, live): the overdue counts disagree (19 on the Overview, 8 on the Overdue filter)";
 const FLAG = "AGENT_LOOP_ENABLED";
 const ASKED = "how many follow-ups are overdue?";
 const STORE = COMPANY_LOCATIONS.find((location) => location.id === WEST_DODGE.primaryAreaId)!;
@@ -68,7 +68,7 @@ function seed(t: ReplayContext) {
 export const NOV24_FOLLOW_UPS_OVERDUE_CASES: ReplayCase[] = [
   {
     id: "nov24-follow-ups-overdue-same-count-as-home",
-    title: `port from Ask Sunny, QA: "The Overview, the sidebar and the [forms page] banner say 19 overdue. [Its] Overdue filter says 8" — asked "${ASKED}", read_follow_ups gives the model Home's 19 overdue and 9 open, test record left out`,
+    title: `port from the sibling app, QA: "The Overview, the sidebar and the [forms page] banner say 19 overdue. [Its] Overdue filter says 8" — asked "${ASKED}", read_follow_ups gives the model Home's 19 overdue and 9 open, test record left out`,
     report: REPORT,
     status: "fixed",
     fixFlags: [FLAG],

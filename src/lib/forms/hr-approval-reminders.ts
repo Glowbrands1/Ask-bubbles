@@ -9,7 +9,7 @@ import { hrQueueSummary } from "./hr-approval";
 import { hrApprovalEnabled, reminderDueAt } from "./hr-approval-rules";
 
 /**
- * The reminder's second line. It is about HR APPROVALS, and says so (port from Ask Sunny; QA, 24 Nov 2026: the bell's
+ * The reminder's second line. It is about HR APPROVALS, and says so (port from the sibling app; QA, 24 Nov 2026: the bell's
  * "None is overdue yet." read as "no follow-ups are overdue" while the Overview said 19 follow-ups were): an HR
  * approval is overdue once it has waited more than one business day, which is not a follow-up date.
  */

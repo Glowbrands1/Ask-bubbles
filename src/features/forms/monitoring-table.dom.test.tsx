@@ -194,7 +194,7 @@ describe("the follow-up pills", () => {
 });
 
 /*
- * Port from Ask Sunny (Form Monitoring there, the Forms Register here). QA, 24 Nov 2026 (Ask Sunny, live): "The overdue counts disagree. The Overview, the sidebar and the Form Monitoring
+ * Port from the sibling app (Form Monitoring there, the Forms Register here). QA, 24 Nov 2026 (the sibling app, live): "The overdue counts disagree. The Overview, the sidebar and the Form Monitoring
  * banner say 19 overdue. Form Monitoring's Overdue filter says 8 and Open says 6." The pills counted the 200 loaded
  * rows; the banner counted the follow-up queue. Now Open and Overdue count, and list, the queue the banner counts.
  */

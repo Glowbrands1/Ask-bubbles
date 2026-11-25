@@ -6,7 +6,7 @@ import { lastResult, loopStandIn, type LoopDecision, type LoopView } from "./loo
 
 /**
  * ============================================================================
- * ADVICE ABOUT COACHING IS ANSWERED, NEVER A FORM INTAKE (port of Ask Sunny; its QA, live, 24 Nov 2026)
+ * ADVICE ABOUT COACHING IS ANSWERED, NEVER A FORM INTAKE (port of the sibling app; its QA, live, 24 Nov 2026)
  * ============================================================================
  *
  * The sibling app's QA, Standard mode (the agent loop), twice: "Coach a leader on running better follow-up
@@ -17,7 +17,7 @@ import { lastResult, loopStandIn, type LoopDecision, type LoopView } from "./loo
  * once. Control: "Create a coaching form." (the home shortcut) still asks who the Coaching Form is for.
  */
 
-const REPORT = "Port of Ask Sunny (its QA, live on the agent loop, 24 Nov 2026): \"Coach a leader on running better follow-up conversations\" got only \"Who is this Coaching Form for?\"";
+const REPORT = "Port of the sibling app (its QA, live on the agent loop, 24 Nov 2026): \"Coach a leader on running better follow-up conversations\" got only \"Who is this Coaching Form for?\"";
 const SAID = "Coach a leader on running better follow-up conversations";
 const ADVICE = "Running strong follow-up is where most coaching actually succeeds or fails. 1. Open with what you agreed last time. 2. Ask what changed. 3. Agree one next step and a date.";
 const WHO = /\bwho\s+is\s+(?:this|it)\b[^?]{0,80}\bfor\?/i;

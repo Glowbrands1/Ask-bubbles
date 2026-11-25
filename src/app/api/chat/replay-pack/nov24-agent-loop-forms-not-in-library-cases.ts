@@ -6,7 +6,7 @@ import { evidenceFrom, lastResult, loopStandIn, type LoopDecision, type LoopView
 
 /**
  * ============================================================================
- * A FORM THE LIBRARY DOES NOT HAVE: THE REPLY NAMES THE FORMS IT HAS (port of Ask Sunny; its QA, live, 24 Nov 2026)
+ * A FORM THE LIBRARY DOES NOT HAVE: THE REPLY NAMES THE FORMS IT HAS (port of the sibling app; its QA, live, 24 Nov 2026)
  * ============================================================================
  *
  * The sibling app's QA, Standard mode (the agent loop): "Draft a vacation request form" was answered honestly ("There's
@@ -16,7 +16,7 @@ import { evidenceFrom, lastResult, loopStandIn, type LoopDecision, type LoopView
  * without a tool call. Controls: a library form asked for, and a letter the model writes, get no list.
  */
 
-const REPORT = "Port of Ask Sunny (its QA, live on the agent loop, 24 Nov 2026): \"Draft a vacation request form\" said there's no such form but never listed the forms that exist";
+const REPORT = "Port of the sibling app (its QA, live on the agent loop, 24 Nov 2026): \"Draft a vacation request form\" said there's no such form but never listed the forms that exist";
 const LIST = /The forms you can create are [^\n]*Coaching Form[^\n]*\./;
 
 type Out = { reason_code?: string; ask_exactly?: string } | null;

@@ -174,7 +174,7 @@ export default async function FormMonitoringPage({
       forms = instances.map(toMonitored);
 
       /*
-       * THE BANNER AND THE OPEN AND OVERDUE PILLS COUNT ONE QUEUE (port from Ask Sunny; QA, 24 Nov 2026: the banner
+       * THE BANNER AND THE OPEN AND OVERDUE PILLS COUNT ONE QUEUE (port from the sibling app; QA, 24 Nov 2026: the banner
        * said 19 overdue, the Overdue pill 8 and Open 6, because the pills counted the 200 newest rows and the banner
        * the first 50 follow-ups). `readFollowUpQueue` is every outstanding follow-up this reader may open, uncapped,
        * test records left out: the same forms Home and the rail badge count.

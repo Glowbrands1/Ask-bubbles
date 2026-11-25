@@ -7,10 +7,10 @@ import { PRODUCTION_MANUAL_CHUNKS } from "./nov21-agent-loop-policy-page-agrees-
 
 /**
  * ============================================================================
- * THE CARD NAMES THE STANDARDS OF CONDUCT LINE IT CITES (LOOP_CARD_CITES_CONDUCT_LINE; port from Ask Sunny)
+ * THE CARD NAMES THE STANDARDS OF CONDUCT LINE IT CITES (LOOP_CARD_CITES_CONDUCT_LINE; port from the sibling app)
  * ============================================================================
  *
- * Ask Sunny's QA (live test, 24 Nov 2026): "Draft a corrective action form for a till shortage for Test Employee" carded
+ * the sibling app's QA (live test, 24 Nov 2026): "Draft a corrective action form for a till shortage for Test Employee" carded
  * the Standards of Conduct at the heading's p.12. This app already cites the line's page (U14,
  * `nov23-r2-u14-till-shortage-page-cases.ts`); with the flag on the card also names the line, "Standards of Conduct —
  * Register / Bank shortages, JBA Policy Manual p.13", and Create saves that line. The owner, the same day: "til" and
@@ -19,7 +19,7 @@ import { PRODUCTION_MANUAL_CHUNKS } from "./nov21-agent-loop-policy-page-agrees-
 
 const FIX = ["LOOP_CARD_CITES_CONDUCT_LINE_ENABLED"];
 const STATUS = { open: "LOOP_CARD_CITES_CONDUCT_LINE_ENABLED is off in production (default off; QA flips it)" } as const;
-const REPORT = "Ask Sunny's QA (24 Nov 2026): \"Draft a corrective action form for a till shortage for Test Employee\" cited the Standards of Conduct heading, not the Register / Bank shortages line";
+const REPORT = "the sibling app's QA (24 Nov 2026): \"Draft a corrective action form for a till shortage for Test Employee\" cited the Standards of Conduct heading, not the Register / Bank shortages line";
 const TEST_EMPLOYEE = { id: "e-test-employee", firstName: "Test", lastName: "Employee", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Team Member Part Time" };
 
 function start(t: ReplayContext) {

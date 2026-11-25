@@ -8,7 +8,7 @@ import { COMPANY_LOCATIONS } from "@/lib/locations";
 import type { FormsActor } from "./access";
 
 /*
- * Port from Ask Sunny. QA, 24 Nov 2026 (Ask Sunny, live): "The overdue counts disagree. The Overview, the sidebar and the Form Monitoring
+ * Port from the sibling app. QA, 24 Nov 2026 (the sibling app, live): "The overdue counts disagree. The Overview, the sidebar and the Form Monitoring
  * banner say 19 overdue. Form Monitoring's Overdue filter says 8 and Open says 6." One queue now feeds all of them:
  * every outstanding follow-up the reader may open, read with no cap, with the Overview's exclusions.
  */

@@ -2647,7 +2647,7 @@ export async function readPolicy(context: ToolContext, input: { heading?: unknow
    * card, as a search_knowledge passage is (`rowToCitation`, `shownCitations`).
    */
   /*
-   * LOOP_CARD_CITES_CONDUCT_LINE (port from Ask Sunny, its QA's 24 Nov 2026 live test): the Standards of Conduct read for
+   * LOOP_CARD_CITES_CONDUCT_LINE (port from the sibling app, its QA's 24 Nov 2026 live test): the Standards of Conduct read for
    * an incident the manual lists on its own line ("a till shortage") is the line's: its source card is the chunk that
    * carries the line, at its printed page, and the result names the line (`listed_line`).
    */
@@ -3574,7 +3574,7 @@ async function exitFormsOnFile(context: ToolContext, name: string, exitKey: stri
 }
 
 /**
- * ADMIN_CARD_ASKS_SALON_ENABLED (port from Ask Sunny; its QA, 24 Nov 2026): the stores this person's forms on file are
+ * ADMIN_CARD_ASKS_SALON_ENABLED (port from the sibling app; its QA, 24 Nov 2026): the stores this person's forms on file are
  * at, as the Forms Register lists them for this login (any form, not a revised one), each once.
  */
 async function formsOnFileStores(context: ToolContext, name: string): Promise<{ id: string; name: string }[]> {
@@ -3637,7 +3637,7 @@ export function fullNamesOf(person: Pick<RosterEmployee, "firstName" | "lastName
  * there. The reply keeps `replyNameFor`. Falls back to it for a name with no first name to use.
  */
 export function cardAccountName(name: string, roster: readonly RosterEmployee[], mentioned: readonly string[], ownId?: string | null): string {
-  /* TYPED_EMPLOYEE_EVERY_CARD_ENABLED (port from Ask Sunny): "Test Employee", nobody on the roster, keeps its whole name in the card's account. */
+  /* TYPED_EMPLOYEE_EVERY_CARD_ENABLED (port from the sibling app): "Test Employee", nobody on the roster, keeps its whole name in the card's account. */
   if (!ownId && typedEmployeeEveryCardEnabled() && /^\S+\s+employee$/i.test(name.replace(/\s+/g, " ").trim())) return replyNameFor(name, roster, mentioned, ownId);
   return employeeFirstName(name) ?? replyNameFor(name, roster, mentioned, ownId);
 }
@@ -4172,7 +4172,7 @@ export async function proposeForm(
     return { reason_code: "whole_staff", error: "This form was asked for a whole staff. A form is for one person at a time: call list_staff and say what it returns." };
   }
   /*
-   * Port of Ask Sunny (QA, 24 Nov 2026, live on the loop, Standard mode, twice): "Coach a leader on running better
+   * Port of the sibling app (QA, 24 Nov 2026, live on the loop, Standard mode, twice): "Coach a leader on running better
    * follow-up conversations" was answered only "Who is this Coaching Form for?". A turn whose words ask for advice and for
    * no form (the old path's question reader, plus an advice imperative about nobody in particular: `advice-not-form.ts`)
    * is answered: no card, and never the who-question. A form asked for in any words ("Create a coaching form.", "coaching
@@ -4207,7 +4207,7 @@ export async function proposeForm(
     const titleWord = titleWordOf(templates.map((row) => row.name));
     const readsAsTitle = Boolean(titleWord) && new RegExp(`\\b${titleWord}s?\\b`, "i").test(asked);
     /*
-     * Port of Ask Sunny (its QA, 24 Nov 2026, live): "Draft a vacation request form", and the same without the word
+     * Port of the sibling app (its QA, 24 Nov 2026, live): "Draft a vacation request form", and the same without the word
      * "form" ("draft a PTO request"). The manager's own words are read too (`formAskedOutsideLibrary`: a create verb and a
      * named document that no library form answers to), so the check never waits on the model's quote holding the title
      * word.
@@ -5147,7 +5147,7 @@ export async function proposeForm(
    */
   /* c259 (QA2, 21 Nov 2026, option (a)): a heading with no Type of Offense box of its own names the box it is saved under. */
   /*
-   * LOOP_CARD_CITES_CONDUCT_LINE (port from Ask Sunny; its QA's live test, 24 Nov 2026, a till shortage carded at the
+   * LOOP_CARD_CITES_CONDUCT_LINE (port from the sibling app; its QA's live test, 24 Nov 2026, a till shortage carded at the
    * heading's p.12): the page above is already the line's (U14); the card now also names the line, as the saved draft
    * quotes it: "Standards of Conduct — Register / Bank shortages, JBA Policy Manual p.13". Read from the account first, then
    * the manager's words, as `citedPage` reads them. Create reads the heading back from before the dash (`cardPolicyHeading`).
@@ -6121,7 +6121,7 @@ export async function proposeForm(
   let whichSalon = false;
   const globalAsk = await import("./places");
   /*
-   * ADMIN_CARD_ASKS_SALON_ENABLED (port from Ask Sunny; its QA, 24 Nov 2026, live as an Admin): a store from Woven that
+   * ADMIN_CARD_ASKS_SALON_ENABLED (port from the sibling app; its QA, 24 Nov 2026, live as an Admin): a store from Woven that
    * differs from this person's forms on file is not taken: the card asks which store, naming both.
    */
   const adminAsks = adminCardAsksSalonEnabled() && context.actor.role === "admin" && context.actor.scope?.level === "global";

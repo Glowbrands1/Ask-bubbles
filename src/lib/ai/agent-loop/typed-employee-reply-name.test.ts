@@ -5,7 +5,7 @@ vi.mock("server-only", () => ({}));
 const { cardAccountName, replyNameFor } = await import("./tools");
 
 /*
- * Port from Ask Sunny (its QA, 24 Nov 2026, live as an Admin): "Here's the Corrective Action Form for **Test**" and
+ * Port from the sibling app (its QA, 24 Nov 2026, live as an Admin): "Here's the Corrective Action Form for **Test**" and
  * "Test had a till shortage." for "… for Test Employee" (TYPED_EMPLOYEE_EVERY_CARD_ENABLED). Invented people.
  */
 const row = (id: string, firstName: string, lastName: string) => ({ id, firstName, lastName, preferredFirstName: null, locationIds: [] });
@@ -18,7 +18,7 @@ describe("a stand-in name nobody on the roster has (\"Test Employee\")", () => {
     try {
       expect(replyNameFor("Test Employee", [PIKE, CALDER], [])).toBe("Test Employee");
       expect(cardAccountName("Test Employee", [PIKE, CALDER], [])).toBe("Test Employee");
-      expect(replyNameFor("Odalys Fenwick", [PIKE, CALDER], [])).toBe("Odalys");
+      expect(replyNameFor("Odalys Quillmere", [PIKE, CALDER], [])).toBe("Odalys");
     } finally {
       vi.unstubAllEnvs();
     }

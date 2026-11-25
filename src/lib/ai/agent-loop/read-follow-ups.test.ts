@@ -5,7 +5,7 @@ vi.mock("server-only", () => ({}));
 import { DEFAULT_DATA_TOOL_DEPS, dataToolHandlers, readFollowUps, type DataToolDeps, type FollowUpQueueRead } from "./data-tools";
 
 /*
- * Port from Ask Sunny. QA, 24 Nov 2026: "The Overview, the sidebar and the Form Monitoring banner say 19 overdue. Form
+ * Port from the sibling app. QA, 24 Nov 2026: "The Overview, the sidebar and the Form Monitoring banner say 19 overdue. Form
  * Monitoring's Overdue filter says 8 and Open says 6." read_follow_ups reads the one queue those screens count (Home,
  * the rail and the Forms Register here), so the AI says 19 too. Names are invented.
  */

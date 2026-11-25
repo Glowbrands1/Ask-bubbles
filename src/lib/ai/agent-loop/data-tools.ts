@@ -308,7 +308,7 @@ function followUpsSource(): string {
 const FOLLOW_UPS_LISTED = 25;
 
 /**
- * read_follow_ups() (port from Ask Sunny; QA, 24 Nov 2026; CLAUDE.md §5): the follow-up queue, the SAME forms and
+ * read_follow_ups() (port from the sibling app; QA, 24 Nov 2026; CLAUDE.md §5): the follow-up queue, the SAME forms and
  * counts Home, the rail badge and the Forms Register's banner and Open / Overdue pills show this manager
  * (`readFollowUpQueue`). Scoped as Home is: View overview, and the Forms Register's permission, which Home's follow-up
  * card also needs; the reader's own stores, as the page reads them.
