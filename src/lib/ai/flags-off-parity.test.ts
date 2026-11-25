@@ -263,6 +263,10 @@ const ALLOWED_UI = [
   "src/features/chat/message-bubble.tsx",
   "src/features/chat/composer.tsx",
   "src/features/chat/inline-form.tsx",
+  // The exit form's notice dates (Pau, 25 Nov 2026: "dates can NOT be entered into the Date that notice was given and
+  // Date that notice was fulfilled fields UNLESS Submitted & Fulfilled Notice box is checked"; port from Ask Sunny): the
+  // form card greys the two dates out with a note until that box is ticked. Exit form only; every other field as before.
+  "src/features/forms/document/responsive-form.tsx",
   "src/components/shell/global-search.tsx",
   "src/components/shell/hides-form-monitoring.ts",
   // App switcher gains a Leadership Hub link, shown only when the server says the signed-in
