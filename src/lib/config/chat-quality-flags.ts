@@ -29,6 +29,18 @@ export function requiredFieldsAtFinalizeEnabled(): boolean {
   return envFlag("REQUIRED_FIELDS_AT_FINALIZE_ENABLED");
 }
 
+/**
+ * ALL_FIELDS_REQUIRED_ENABLED (Pau, 25 Nov 2026; default off; same flag in both apps; QA audits, then flips it): "update
+ * all forms so that they cannot submit for approval if all field are not filled out". On: Finalize and "Finalize and
+ * send for approval" refuse a form with anything its creator fills still blank (`required-fields.ts`
+ * blankBeforeSubmission; signatures, hand-filled and employee lines are done in person and never asked for), and a
+ * blank Corrective Action history box is written "N/A" instead of refused. Off, only fields a version marks `required`
+ * are checked, and only with REQUIRED_FIELDS_AT_FINALIZE_ENABLED on.
+ */
+export function allFieldsRequiredEnabled(): boolean {
+  return envFlag("ALL_FIELDS_REQUIRED_ENABLED");
+}
+
 /** Claude tool-use reading of a form turn, and routing that reading off search. */
 export function formToolsEnabled(): boolean {
   return envFlag("FORM_TOOLS_ENABLED");
