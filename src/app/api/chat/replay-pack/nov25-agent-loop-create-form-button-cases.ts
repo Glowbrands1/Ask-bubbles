@@ -10,7 +10,7 @@ import { evidenceFrom, lastResult, loopStandIn, type LoopDecision, type LoopView
  * "CREATE A FORM FROM THIS CONVERSATION" PICKS THE FORM AND SHOWS ITS CARD (CREATE_FORM_BUTTON_PICKS_FORM)
  * ============================================================================
  *
- * Port from Ask Sunny. Pau (25 Nov 2026), from a manager's live chat about an employee's transfer: the manager pressed "Create a form from this
+ * Port from the sibling app. Pau (25 Nov 2026), from a manager's live chat about an employee's transfer: the manager pressed "Create a form from this
  * conversation" three times. the sibling app kept telling them to press Create draft themselves, then said no new card was made
  * because a draft was already open; it was not clear whether a card was actually there. "can we ask ai to detect what
  * form the manager needs when we press 'Create a form from this conversation'?"

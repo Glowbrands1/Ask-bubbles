@@ -6141,7 +6141,7 @@ export function loopCardCitesConductLineEnabled(): boolean {
 }
 
 /**
- * CREATE_FORM_BUTTON_PICKS_FORM (port from Ask Sunny; Pau, 25 Nov 2026; default off; same flag in both apps): in the
+ * CREATE_FORM_BUTTON_PICKS_FORM (port from the sibling app; Pau, 25 Nov 2026; default off; same flag in both apps): in the
  * sibling app, a manager pressed "Create a form from this conversation" three times; the agent loop told them to press
  * Create draft themselves with no card under its reply, then said no new card was made because a draft was already open.
  * This app's loop answers the button the same way. On: the button's turn tells the loop it was pressed and what is on

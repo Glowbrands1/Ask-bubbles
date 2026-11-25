@@ -1002,7 +1002,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
 
   /* PR 6: the turn's one read of the policy manual, shared with read_policy and propose_form (`turnManual`). */
   const [templates, manual] = await Promise.all([templateChoices(input.actor.role), turnManual(context)]);
-  /* CREATE_FORM_BUTTON_PICKS_FORM (port from Ask Sunny; Pau, 25 Nov 2026): the rail's button, by the app's own sentence (`create-form-button.ts`). */
+  /* CREATE_FORM_BUTTON_PICKS_FORM (port from the sibling app; Pau, 25 Nov 2026): the rail's button, by the app's own sentence (`create-form-button.ts`). */
   const buttonPressed = isCreateFormButtonTurn(input.question);
   const dynamic = agentLoopSystem({
     cardOpen: cardOpenAtStart,
@@ -1563,7 +1563,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
          * thank-you letter") gets the line only when the reply itself says there is no such form.
          */
         /*
-         * CREATE_FORM_BUTTON_PICKS_FORM (port from Ask Sunny; Pau, 25 Nov 2026): the button pressed with a card on screen and
+         * CREATE_FORM_BUTTON_PICKS_FORM (port from the sibling app; Pau, 25 Nov 2026): the button pressed with a card on screen and
          * no card under this reply ("press Create draft" with nothing to press) goes back once to propose it.
          */
         if (buttonPressed && stoppedAt === "reply" && cardOpenAtStart && !input.openFormId && !effects.proposal && !effects.formOpened && !effects.replyMustAsk) {

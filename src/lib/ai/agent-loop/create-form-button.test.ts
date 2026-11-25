@@ -6,7 +6,7 @@ import { createFormButtonLine, createFormButtonNoCardNote, isCreateFormButtonTur
 import { agentLoopSystem } from "./prompt";
 
 /*
- * Port from Ask Sunny. Pau (25 Nov 2026): a manager pressed "Create a form from this conversation" three times; the sibling app kept telling them to
+ * Port from the sibling app. Pau (25 Nov 2026): a manager pressed "Create a form from this conversation" three times; the sibling app kept telling them to
  * press Create draft themselves, then said no new card was made because a draft was already open. The button's turn tells
  * the loop it was pressed and what is on screen (CREATE_FORM_BUTTON_PICKS_FORM_ENABLED).
  */
