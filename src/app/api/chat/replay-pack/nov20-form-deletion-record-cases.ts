@@ -30,6 +30,26 @@ async function deletedDraft(t: ReplayContext): Promise<void> {
   await deleteInstance("f066-draft", { id: "dm-quill-harrow", role: "district_manager", via: "route" });
 }
 
+/*
+ * AN ADMINISTRATOR'S DELETE OF A FINALIZED FORM (Pau, 24 Nov 2026: "why cant delete? in bubbles", a finalized Corrective
+ * Action in the Forms Register; administrators may delete one now). It is the same record, so the same question must be
+ * answerable: the model is told the form was finalized when it went, and who deleted it. Corwin Ashby and the deleting
+ * administrator's account are invented.
+ */
+const FINALIZED_REPORT = "Pau, 24 Nov 2026: \"why cant delete? in bubbles\" on a finalized Corrective Action; administrators may delete one, and the record says so";
+const FINALIZED_ASKED = "who deleted Corwin Ashby's form";
+
+async function deletedFinalized(t: ReplayContext): Promise<void> {
+  vi.setSystemTime(new Date("2026-11-24T18:00:00Z"));
+  t.directory(STAFF);
+  t.forms().push({
+    id: "d24-final", template_id: "tpl-dpoa", template_key: "dpoa", template_name: "Corrective Action Form", employee_name: "Corwin Ashby",
+    status: "finalized", form_date: "2026-09-11", finalized_at: "2026-09-11T16:00:00Z", location_id: "loc-test", location_name: "Test Store",
+    created_by: "manager-a", created_at: "2026-09-11T15:00:00Z", updated_at: "2026-09-11T16:00:00Z",
+  });
+  await deleteInstance("d24-final", { id: "admin-vesper-lane", role: "admin", via: "route" }, { allowFinalized: true });
+}
+
 export const NOV20_FORM_DELETION_RECORD_CASES: ReplayCase[] = [
   {
     id: "nov20-admin-asks-who-deleted-the-form",
@@ -57,6 +77,20 @@ export const NOV20_FORM_DELETION_RECORD_CASES: ReplayCase[] = [
       const data = t.lastReportData?.() ?? "";
       expect(data).toContain("Who deleted a form is for administrators only");
       expect(data).not.toMatch(/dm-quill-harrow|Forms Register/);
+    },
+  },
+  {
+    id: "nov24-admin-asks-who-deleted-the-finalized-form",
+    title: `an admin: "${FINALIZED_ASKED}": a finalized form an administrator deleted is in the record: finalized, by whom, and that it was the Forms Register`,
+    report: FINALIZED_REPORT,
+    status: "fixed",
+    async run(t) {
+      await deletedFinalized(t);
+      t.as("admin", GLOBAL);
+      await t.thread().say(FINALIZED_ASKED);
+      const data = t.lastReportData?.() ?? "";
+      expect(data).toContain("FORM DELETION RECORD");
+      expect(data).toMatch(/Corrective Action Form for Corwin Ashby, dated 2026-09-11 \(finalized\), Test Store: deleted Nov 24, 2026.* by account admin-vesper-lane \(admin\), Forms Register\./);
     },
   },
 ];

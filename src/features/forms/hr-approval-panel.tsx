@@ -155,7 +155,9 @@ export function HrApprovalPanel({
       ) : null}
       {approveOnly ? (
         <p className="mt-2 text-xs text-muted-foreground">
-          The manager replied to your changes. Read their note or their changes to the form above, then approve it, or send it back again with a note.
+          {view.stage === "manager_replied"
+            ? "The manager replied to your changes. Read their note or their changes to the form above, then approve it, or send it back again with a note."
+            : "You sent this back for changes. You can approve it as it is now, or send it back again with a note."}
         </p>
       ) : view.state === "changes_requested" || view.state === "rejected" ? (
         !view.canDecide ? (

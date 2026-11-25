@@ -14,8 +14,13 @@ import type { BellData } from "@/lib/notifications/types";
 const push = vi.fn();
 const markRead = vi.fn<(ids: string[] | null) => Promise<{ ok: boolean }>>(async () => ({ ok: true }));
 const dismiss = vi.fn<(ids: string[] | null) => Promise<{ ok: boolean }>>(async () => ({ ok: true }));
+const markUnread = vi.fn<(ids: string[]) => Promise<{ ok: boolean }>>(async () => ({ ok: true }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
-vi.mock("./actions", () => ({ markNotificationsReadAction: (ids: string[] | null) => markRead(ids), dismissNotificationsAction: (ids: string[] | null) => dismiss(ids) }));
+vi.mock("./actions", () => ({
+  markNotificationsReadAction: (ids: string[] | null) => markRead(ids),
+  dismissNotificationsAction: (ids: string[] | null) => dismiss(ids),
+  markNotificationsUnreadAction: (ids: string[]) => markUnread(ids),
+}));
 
 const { NotificationBell, timeAgo } = await import("./notification-bell");
 
@@ -33,6 +38,7 @@ afterEach(() => {
   push.mockReset();
   markRead.mockClear();
   dismiss.mockClear();
+  markUnread.mockClear();
 });
 
 /* Changed on purpose (Pau, 23 Nov 2026): each row now has an × whose name holds the row's title ("Remove notification:
@@ -242,5 +248,97 @@ describe("a pinned approval request", () => {
     });
     expect(screen.getByRole("button", { name: /^A form is waiting for your approval/ })).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Rowan Pike/ })).toBeNull();
+  });
+});
+
+/* Pau, 24 Nov 2026, with the bell open on "3 forms are waiting for your approval" (already read): "have option to unread
+ * pls so notification stays there". A read row has a "Mark as unread" button: it goes bold again, the badge counts it,
+ * it stays in the list, and nothing is opened or removed. */
+describe("marking a notification unread so it stays", () => {
+  const open = () => fireEvent.click(screen.getByRole("button", { name: /Notifications/ }));
+
+  it("a read row can be marked unread: it goes bold, the count goes up, and it is not opened or removed", async () => {
+    render(<NotificationBell data={data} />);
+    open();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Mark as unread: Old one" }));
+    });
+    expect(markUnread).toHaveBeenCalledWith(["n0"]);
+    expect(push).not.toHaveBeenCalled();
+    expect(dismiss).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Notifications, 3 unread" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Old one\s*\(unread\)/ })).toBeTruthy();
+    // Now unread, so it has nothing left to mark.
+    expect(screen.queryByRole("button", { name: "Mark as unread: Old one" })).toBeNull();
+  });
+
+  it("an unread row has no Mark as unread", () => {
+    render(<NotificationBell data={data} />);
+    open();
+    expect(screen.queryByRole("button", { name: "Mark as unread: Rowan Pike sent a form for approval" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Mark as unread: Old one" })).toBeTruthy();
+  });
+
+  it("opening it reads it again, and it can be marked unread once more", async () => {
+    render(<NotificationBell data={data} />);
+    open();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Mark as unread: Old one" }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Old one/ }));
+    });
+    expect(markRead).toHaveBeenCalledWith(["n0"]);
+    expect(screen.getByRole("button", { name: "Notifications, 2 unread" })).toBeTruthy();
+    open();
+    expect(screen.getByRole("button", { name: "Mark as unread: Old one" })).toBeTruthy();
+  });
+
+  it("after Mark all as read, a row marked unread is the one left counted", async () => {
+    render(<NotificationBell data={data} />);
+    open();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Mark all as read" }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Mark as unread: Old one" }));
+    });
+    expect(screen.getByRole("button", { name: "Notifications, 1 unread" })).toBeTruthy();
+  });
+
+  it("a pinned approval request has no Mark as unread: it is unread already", () => {
+    render(
+      <NotificationBell
+        data={{ unread: 1, items: [{ id: "p1", kind: "form_hr_approval_request", title: "A form is waiting for your approval", body: "", href: "/forms/hr-approval/f1", createdAt: new Date().toISOString(), readAt: null, pinned: true }] }}
+      />,
+    );
+    open();
+    expect(screen.queryByRole("button", { name: /Mark as unread/ })).toBeNull();
+  });
+});
+
+/*
+ * Port from Ask Sunny. Pau, 24 Nov 2026, told the bar counted only this app's forms and not the other app's approvals
+ * tab: "fix". The badge adds the forms waiting in the other app, and the panel links to that tab.
+ */
+describe("the other app's waiting forms on the bar (Pau, 24 Nov 2026: \"fix\")", () => {
+  const read: BellData = { unread: 0, items: [{ ...data.items[0]!, readAt: new Date().toISOString() }] };
+
+  it("keeps the badge when only the other app has forms waiting, and links to its tab", () => {
+    render(<NotificationBell data={{ ...read, waitingSiblingHr: { app: "Other App", count: 2 } }} />);
+    const bar = screen.getByRole("button", { name: "Notifications, 2 forms waiting for your approval" });
+    expect(bar.textContent).toBe("2");
+    fireEvent.click(bar);
+    expect(screen.getByRole("link", { name: /2 in Other App need your decision/ }).getAttribute("href")).toBe("/forms/monitoring?view=hr&app=sibling");
+    expect(screen.queryByRole("link", { name: /forms? still needs? your decision/ })).toBeNull();
+  });
+
+  it("adds both apps' forms, with a link to each tab", () => {
+    render(<NotificationBell data={{ ...read, waitingHr: 2, waitingSiblingHr: { app: "Other App", count: 1 } }} />);
+    const bar = screen.getByRole("button", { name: "Notifications, 3 forms waiting for your approval" });
+    expect(bar.textContent).toBe("3");
+    fireEvent.click(bar);
+    expect(screen.getByRole("link", { name: /2 forms still need your decision/ }).getAttribute("href")).toBe("/forms/monitoring?view=hr");
+    expect(screen.getByRole("link", { name: /1 in Other App needs your decision/ }).getAttribute("href")).toBe("/forms/monitoring?view=hr&app=sibling");
   });
 });

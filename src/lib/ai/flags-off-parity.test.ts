@@ -509,14 +509,17 @@ function chatHalf(half: 0 | 1): string[] {
   return half === 0 ? all.slice(0, middle) : all.slice(middle);
 }
 /*
- * THE REPLAY PACK IN THIRDS (QA, 9 Nov 2026 in halves, as the sibling app's; thirds since 21 Nov 2026): the sibling's
+ * THE REPLAY PACK IN QUARTERS (QA, 9 Nov 2026 in halves, as the sibling app's; thirds since 21 Nov 2026; quarters since 24 Nov 2026): the sibling's
  * replay-pack child timed out at 540 s on CI as its pack grew, and this pack grows the same way. Nearly all of its time
  * is one file, `replay-pack-e2e.test.ts`, so it is split by case, not by file: the first child runs the whole folder
  * with the first part of the cases by id (`REPLAY_PACK_PART` "0"; the pack's other test files run there, once), the
  * others that one file with the next parts. Every case and every file still runs exactly once, with every new flag off.
  * Halves held until the first took 504 s of its 540 s on CI (21 Nov 2026) and the next cases pushed it over.
+ * Quarters since 24 Nov 2026: the first third took 510 s of its 540 s on main fac6ee9 (the others 391 s and 393 s), and
+ * the sibling app's ninth timed out the same day (ETIMEDOUT, no assertion failed) as cases were added. The job runs the
+ * children one after another, so its total (28 of its 45 minutes) is unchanged.
  */
-const REPLAY_PACK_PARTS = 3;
+const REPLAY_PACK_PARTS = 4;
 const REPLAY_PACK_E2E = `${REPLAY_PACK}/replay-pack-e2e.test.ts`;
 const CHILDREN: readonly { readonly name: string; readonly paths: () => readonly string[]; readonly env?: Readonly<Record<string, string>> }[] = [
   { name: "src/lib/ai, src/lib/forms", paths: () => ["src/lib/ai", "src/lib/forms"] },

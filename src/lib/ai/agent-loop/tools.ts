@@ -41,6 +41,7 @@ import { applyAssistantRevision, deleteInstance, listInstances } from "@/lib/for
 import { countFormsOnFile } from "@/lib/forms/forms-on-file-counts";
 import {
   cardPersonThisRequestEnabled,
+  formDateIsTodayEnabled,
   statedPlanStepsEnabled,
   currentManualScopeEnabled,
   formEditPlainWordsEnabled,
@@ -50,7 +51,13 @@ import {
   hybridSearchEnabled,
   manualSectionDedupeEnabled,
   retrievalRecallEnabled,
+  priorFormsUpToTodayEnabled,
+  typedEmployeeEveryCardEnabled,
+  adminCardAsksSalonEnabled,
+  loopCardCitesConductLineEnabled,
 } from "@/lib/config/chat-quality-flags";
+import { typedEmployeeName } from "@/lib/forms/typed-employee-name";
+import { formDateGiven } from "@/lib/forms/incident-dates";
 import type { AskResponse } from "@/lib/ai/types";
 import { findManualSection, manualSectionHeadings, type ManualChunk } from "@/lib/forms/official-policy-manual";
 import { sectionWording } from "@/lib/forms/policy-citation";
@@ -75,13 +82,15 @@ import { manualScopeFetchLimit, scopeToCurrentManual } from "@/lib/knowledge/cur
 import { matchHybridKnowledge } from "@/lib/knowledge/hybrid-match";
 import { matchRecallKnowledge } from "@/lib/knowledge/recall-match";
 import { rowToCitation, type MatchedChunkRow } from "@/lib/knowledge/mappers";
-import { topicHeadings, withConductLinePage } from "@/lib/forms/specific-policy-topics";
+import { conductLineCitation, topicHeadings, withConductLinePage } from "@/lib/forms/specific-policy-topics";
 import { formatManualCitation } from "@/lib/ai/policy-citation-fields";
 import { redactSensitiveDefaults } from "@/lib/ai/sensitive-defaults";
 import { expandPolicyQuery } from "@/lib/knowledge/policy-retrieval";
 import type { SourceCitation } from "@/types";
 import { followUpChangeAsked, followUpForCard, followUpLine, statedFollowUpDate } from "@/lib/forms/follow-up-default";
 import type { AccessScope, ChatFormProposal, ChatMessage, Role } from "@/types";
+import { adviceNotForm } from "@/lib/ai/agent-loop/advice-not-form";
+import { formAskedOutsideLibrary, formsYouCanCreate } from "@/lib/ai/agent-loop/form-not-in-library";
 import { accountKey, personKey, replyTurns, shownTextKey, type CardRecord, type ExitOfferRecord, type NameQuestionRecord, type PersonAskedRecord, type SameIncidentRecord, type TurnRecord } from "@/lib/ai/agent-loop/card-record";
 import { TEAM_SUBJECT_LABEL } from "@/lib/forms/team-subject";
 
@@ -2637,7 +2646,15 @@ export async function readPolicy(context: ToolContext, input: { heading?: unknow
    * QA's live-app item 9 (B1, B5, B7: the manual quoted with a page and no source card): the section read is a source
    * card, as a search_knowledge passage is (`rowToCitation`, `shownCitations`).
    */
-  const chunk = manual.chunks.find((row) => row.chunkIndex === section.chunkIndex);
+  /*
+   * LOOP_CARD_CITES_CONDUCT_LINE (port from the sibling app, its QA's 24 Nov 2026 live test): the Standards of Conduct read for
+   * an incident the manual lists on its own line ("a till shortage") is the line's: its source card is the chunk that
+   * carries the line, at its printed page, and the result names the line (`listed_line`).
+   */
+  const listed = loopCardCitesConductLineEnabled() ? conductLineCitation(withoutMessageIdTags(context.question ?? ""), manual.chunks) : null;
+  const line = listed && headingKey(listed.heading) === headingKey(section.heading) ? listed : null;
+  const listedLine = line ? { listed_line: { line: line.line, page: line.page, wording: manualWordsForDisplay(line.wording) } } : {};
+  const chunk = manual.chunks.find((row) => row.chunkIndex === (line ? line.chunkIndex : section.chunkIndex));
   if (effects && manual.document && chunk?.chunkId && chunk.locator) {
     const row: MatchedChunkRow = {
       chunk_id: chunk.chunkId,
@@ -2652,11 +2669,11 @@ export async function readPolicy(context: ToolContext, input: { heading?: unknow
     };
     const marker = addSource(effects, rowToCitation(row));
     const wording = manualWordsForDisplay(sectionWording(manual.chunks, section));
-    return { document: "JBA Policy Manual", heading: section.heading, page: section.page, source: marker, wording, ...(await readingNotes(wording)) };
+    return { document: "JBA Policy Manual", heading: section.heading, page: section.page, ...listedLine, source: marker, wording, ...(await readingNotes(wording)) };
   }
   /* The wording the reply quotes, in this company's words (QA, 21 Nov 2026, item 7: "salon" → "store"); the chunks stay as stored. */
   const wording = manualWordsForDisplay(sectionWording(manual.chunks, section));
-  return { document: "JBA Policy Manual", heading: section.heading, page: section.page, wording, ...(await readingNotes(wording)) };
+  return { document: "JBA Policy Manual", heading: section.heading, page: section.page, ...listedLine, wording, ...(await readingNotes(wording)) };
 }
 
 /**
@@ -3556,6 +3573,24 @@ async function exitFormsOnFile(context: ToolContext, name: string, exitKey: stri
     .map((row) => ({ status: row.status, date: mdy(row.formDate), store: row.locationName }));
 }
 
+/**
+ * ADMIN_CARD_ASKS_SALON_ENABLED (port from the sibling app; its QA, 24 Nov 2026): the stores this person's forms on file are
+ * at, as the Forms Register lists them for this login (any form, not a revised one), each once.
+ */
+async function formsOnFileStores(context: ToolContext, name: string): Promise<{ id: string; name: string }[]> {
+  const actor = await chatFormsActor(context.actor).catch(() => null);
+  if (!actor) return [];
+  const nameWords = candidateNameWords(name);
+  if (nameWords.length === 0) return [];
+  const rows = visibleInstances(actor, await listInstances(200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }).catch(() => []));
+  const found = new Map<string, string>();
+  for (const row of rows) {
+    if (row.status === "revised" || !row.locationId || !samePerson(row.employeeName, name)) continue;
+    if (!found.has(row.locationId)) found.set(row.locationId, rosterSalonName(row.locationId) ?? row.locationName ?? row.locationId);
+  }
+  return [...found].map(([id, label]) => ({ id, name: label }));
+}
+
 async function exitCardTicks(isExit: boolean, termination: boolean, requestWords: string, today: string, exitHow: string | null = null): Promise<{ exit_ticks?: string[]; exit_unset?: string[]; keys?: string[] }> {
   /*
    * Ported from the sibling app: its QA's live L6 (22 Nov 2026): a termination's reply said "Filed as" twice:
@@ -3602,6 +3637,8 @@ export function fullNamesOf(person: Pick<RosterEmployee, "firstName" | "lastName
  * there. The reply keeps `replyNameFor`. Falls back to it for a name with no first name to use.
  */
 export function cardAccountName(name: string, roster: readonly RosterEmployee[], mentioned: readonly string[], ownId?: string | null): string {
+  /* TYPED_EMPLOYEE_EVERY_CARD_ENABLED (port from the sibling app): "Test Employee", nobody on the roster, keeps its whole name in the card's account. */
+  if (!ownId && typedEmployeeEveryCardEnabled() && /^\S+\s+employee$/i.test(name.replace(/\s+/g, " ").trim())) return replyNameFor(name, roster, mentioned, ownId);
   return employeeFirstName(name) ?? replyNameFor(name, roster, mentioned, ownId);
 }
 
@@ -3622,6 +3659,12 @@ export function replyNameFor(name: string, roster: readonly RosterEmployee[], me
   const full = name.replace(/\s+/g, " ").trim();
   const words = full.split(" ");
   if (words.length < 2) return full;
+  /*
+   * TYPED_EMPLOYEE_EVERY_CARD_ENABLED (QA, 24 Nov 2026; the owner: "Test Employee" is a valid name managers type on
+   * purpose): "Here's the Corrective Action Form for **Test**" and "Test had a till shortage." A stand-in name nobody on
+   * the roster has, "<First> Employee", is called by its whole name, never its first word alone.
+   */
+  if (!ownId && words.length === 2 && /^employee$/i.test(words[1]!) && typedEmployeeEveryCardEnabled()) return full;
   const first = words[0]!.toLowerCase();
   const firstOf = (other: string) => other.trim().split(/\s+/)[0]!.toLowerCase();
   const onRoster = roster.filter((row) => row.id !== ownId).flatMap(fullNamesOf).filter((other) => !samePerson(other, full));
@@ -4128,6 +4171,18 @@ export async function proposeForm(
   if ((await import("@/lib/forms/staff-picker")).isBareWholeStaff(context.question) || (await import("@/lib/forms/staff-picker")).asksForWholeStaff(context.question)) {
     return { reason_code: "whole_staff", error: "This form was asked for a whole staff. A form is for one person at a time: call list_staff and say what it returns." };
   }
+  /*
+   * Port of the sibling app (QA, 24 Nov 2026, live on the loop, Standard mode, twice): "Coach a leader on running better
+   * follow-up conversations" was answered only "Who is this Coaching Form for?". A turn whose words ask for advice and for
+   * no form (the old path's question reader, plus an advice imperative about nobody in particular: `advice-not-form.ts`)
+   * is answered: no card, and never the who-question. A form asked for in any words ("Create a coaching form.", "coaching
+   * form for <name>", "write up <name>") is no advice and goes on as before.
+   */
+  if (!effects.proposal && !context.cardOnScreen && !context.openFormId && adviceNotForm(context.question, context.history)) {
+    return {
+      reason_code: "advice_not_form", error: "The manager asked for advice, not a form: answer it now in your reply (practical steps, a short checklist, a sample script or role-play where it helps, citing the manual where a policy applies). Propose no card and never ask who a form is for. You may offer the form in one closing line; propose it only when the manager asks for it.",
+    };
+  }
   const key = typeof input.template_key === "string" ? input.template_key.trim() : "";
   const templates = await creatableTemplates(context.actor.role).catch(() => null);
   if (!templates) return { reason_code: "read_failed", error: "The forms library could not be read just now." };
@@ -4151,19 +4206,26 @@ export async function proposeForm(
      */
     const titleWord = titleWordOf(templates.map((row) => row.name));
     const readsAsTitle = Boolean(titleWord) && new RegExp(`\\b${titleWord}s?\\b`, "i").test(asked);
-    if (asked && readsAsTitle && !quoteNamesForm(asked, template)) {
-      const other = templates.find((row) => row.key !== template.key && quoteNamesForm(asked, row));
+    /*
+     * Port of the sibling app (its QA, 24 Nov 2026, live): "Draft a vacation request form", and the same without the word
+     * "form" ("draft a PTO request"). The manager's own words are read too (`formAskedOutsideLibrary`: a create verb and a
+     * named document that no library form answers to), so the check never waits on the model's quote holding the title
+     * word.
+     */
+    const outside = !quoteNamesForm(context.question, template) ? formAskedOutsideLibrary(context.question, templates, quoteNamesForm) : null;
+    if ((asked && readsAsTitle && !quoteNamesForm(asked, template)) || outside) {
+      const other = asked && readsAsTitle ? templates.find((row) => row.key !== template.key && quoteNamesForm(asked, row)) : undefined;
       if (other) {
         return { reason_code: "form_asked_is_another", template_key: other.key, error: `The manager asked for the ${other.name} ("${asked}"), not the ${template.name}. Propose the ${other.name} (template_key "${other.key}").` };
       }
-      const named = formAskedName(asked);
+      const named = formAskedName(asked && readsAsTitle && !quoteNamesForm(asked, template) ? asked : outside ?? asked);
       if (input.instead_of_asked !== true) {
         const names = templates.map((row) => row.name);
         return {
           reason_code: "form_not_in_library",
           asked,
           templates: templates.map((row) => ({ key: row.key, name: row.name })),
-          ask_exactly: `${named ? `There's no ${named} in the forms library` : "That form isn't in the forms library"}. The forms you can create are ${names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0]}. Which one do you want?`,
+          ask_exactly: `${named ? `There's no ${named} in the forms library` : "That form isn't in the forms library"}. ${formsYouCanCreate(names).replace(/\.$/, "")}. Which one do you want?`,
           error: "No form in the library answers to the form the manager asked for. End the reply with ask_exactly, exactly, and propose no card; never make another form's card in its place. Propose another form with instead_of_asked true only when the manager chooses it.",
         };
       }
@@ -4189,7 +4251,21 @@ export async function proposeForm(
     /* R14: "Test Employee", the exact full name the manager typed, is a name; its last word is not a title to strip. */
     const typedAsPassed = titleless !== rawTyped && words(titleless).length === 1 && typedFullNameOf(titleless, requestTurnsText(context, read.roster))?.toLowerCase() === rawTyped.toLowerCase() ? rawTyped : titleless;
     /* C3 (QA's live round 3): "<First> <Last>" for the manager's "<Last>, <First>" is read in the manager's own order. */
-    const typed = asManagerCommaWrote(typedAsPassed, requestTurnsText(context, read.roster));
+    const typedByModel = asManagerCommaWrote(typedAsPassed, requestTurnsText(context, read.roster));
+    /*
+     * TYPED_EMPLOYEE_EVERY_CARD_ENABLED (QA, 24 Nov 2026, live as an Admin): "Draft a coaching form for … a made-up
+     * employee named Test Employee" got a card for "Employee" (the rules book calls "employee" a placeholder, so the
+     * model dropped "Test" or split the name). When the manager typed "<First> Employee" as the person in this request
+     * (`typed-employee-name.ts`) and the model passed no id and only a part of it, or nothing, the card's name is that
+     * full name, deterministically, on every card type.
+     */
+    const typed = (() => {
+      if (!typedEmployeeEveryCardEnabled() || id) return typedByModel;
+      const full = typedEmployeeName(requestTurnsText(context, read.roster));
+      if (!full) return typedByModel;
+      const passed = typedByModel.replace(/\s+/g, " ").trim().toLowerCase().replace(/^(?:the|an?|my)\s+/, "");
+      return ["", "employee", full.split(" ")[0]!.toLowerCase(), full.toLowerCase()].includes(passed) ? full : typedByModel;
+    })();
     /*
      * HARD GUARD, A "NO" NEVER SEATS THE NAME (NEAR_MISS_QUESTION_RULES, parity gap #45): when the manager answered
      * "no" to this chat's own "Did you mean **<A>**?" or "Is this for **<A>**?", <A> is not put on the card.
@@ -5070,8 +5146,19 @@ export async function proposeForm(
    * line, no longer an override). "Other" carries the model's short topic.
    */
   /* c259 (QA2, 21 Nov 2026, option (a)): a heading with no Type of Offense box of its own names the box it is saved under. */
-  let policyLine: string | null = policyHeading ? withReadersLineBox(formatManualCitation(policyHeading, page), policyHeading) : null;
-  if (policyLine && secondHeading && manual) policyLine = `${policyLine}; ${withReadersLineBox(formatManualCitation(secondHeading, citedPage(secondHeading)), secondHeading)}`;
+  /*
+   * LOOP_CARD_CITES_CONDUCT_LINE (port from the sibling app; its QA's live test, 24 Nov 2026, a till shortage carded at the
+   * heading's p.12): the page above is already the line's (U14); the card now also names the line, as the saved draft
+   * quotes it: "Standards of Conduct — Register / Bank shortages, JBA Policy Manual p.13". Read from the account first, then
+   * the manager's words, as `citedPage` reads them. Create reads the heading back from before the dash (`cardPolicyHeading`).
+   */
+  const conductLine = policyHeading && manual && loopCardCitesConductLineEnabled() ? (conductLineCitation(whatHappened, manual.chunks) ?? conductLineCitation(requestWords, manual.chunks)) : null;
+  const cardCitation = (heading: string, headingPage: number | null) =>
+    conductLine && headingKey(conductLine.heading) === headingKey(heading)
+      ? `${heading} — ${conductLine.line}, JBA Policy Manual p.${conductLine.page}`
+      : withReadersLineBox(formatManualCitation(heading, headingPage), heading);
+  let policyLine: string | null = policyHeading ? cardCitation(policyHeading, page) : null;
+  if (policyLine && secondHeading && manual) policyLine = `${policyLine}; ${cardCitation(secondHeading, citedPage(secondHeading))}`;
   /* Batch G (G7a, the tester's exit sweep): an exit cites no policy; it is not an incident. */
   if (template.key === appConfig().formKeys.exit) policyLine = null;
   /*
@@ -5233,7 +5320,16 @@ export async function proposeForm(
     ? [...(effects.formsRead ?? [])].reverse().find((read) => Boolean(read.formDate && DATE.test(read.formDate) && read.employeeName && samePerson(read.employeeName, employee.name) && sameAccount(read.account, String(input.what_happened))))
     : undefined;
   if (copiedForm?.formDate) date = copiedForm.formDate;
-  let datesAsked = datesGiven.length > 1 && !date ? datesGiven : [];
+  /*
+   * FORM_DATE_IS_TODAY_ENABLED (Pau, 24 Nov 2026): an incident form is dated the day it is written, the date the
+   * manager gave the form itself (`formDateGiven`), or the date of the form on file it copies (U16 above); the
+   * incident's date stays in the account, and "Which date goes on the form?" is never asked. Its forms on file are
+   * those dated on or before the form, so a Corrective Action finalized after the incident is offered as history.
+   * Off, null and as before.
+   */
+  const formDatedToday = ACCOUNT_FORMS.has(template.key) && formDateIsTodayEnabled();
+  const givenFormDate = formDatedToday ? formDateGiven(requestWords, template.key, today) ?? copiedForm?.formDate ?? null : null;
+  let datesAsked = !formDatedToday && datesGiven.length > 1 && !date ? datesGiven : [];
   /* Batch C (code-check #32): a date after today is a fact with today's date; the rules book says to ask. */
   /* Batch G (G6): only an incident form's date is never after today; an exit's last day or effective date may be. */
   const incidentForm = ACCOUNT_FORMS.has(template.key);
@@ -5426,7 +5522,7 @@ export async function proposeForm(
    */
   const rosterPerson = caOnlyFields && employee.id && read.kind === "read" ? read.roster.find((row) => row.id === employee.id) ?? null : null;
   const onFileBefore = date ?? (effects.proposal && effects.proposal.employeeName === employee.name ? effects.proposal.formDate ?? null : null) ?? ownCard?.incidentDate ?? null;
-  const priorsOnFile = rosterPerson ? await finalizedPriorsOnFile(context, rosterPerson, read.kind === "read" ? read.roster : [], today, onFileBefore) : [];
+  const priorsOnFile = rosterPerson ? await finalizedPriorsOnFile(context, rosterPerson, read.kind === "read" ? read.roster : [], today, priorFormsUpToTodayEnabled() ? null : formDatedToday ? givenFormDate ?? today : onFileBefore) : [];
   const onFileLine = priorsOnFile.length > 0 ? priorsOnFileLine(priorsOnFile) : null;
   /*
    * PAU'S RULING (23 Nov 2026, via QA; a manager did not like it): the forms on file are never added to Prior actions on
@@ -5969,11 +6065,11 @@ export async function proposeForm(
       error: `The manager's words state ${iso} as the day it happened. Propose again with incident_date "${iso}", or ask the manager if it is not that day. The card was not made.`,
     };
   }
-  if (statedOne && !date && !builderHasIt && effects.incidentDateNamed && ACCOUNT_FORMS.has(template.key)) datesAsked = datesGiven;
+  if (!formDatedToday && statedOne && !date && !builderHasIt && effects.incidentDateNamed && ACCOUNT_FORMS.has(template.key)) datesAsked = datesGiven;
   const card: ChatFormProposal = {
     ...proposal,
     sourceMessageIds: requestIds,
-    formDate: exitTermination ? exitTermination.date : datesAsked.length > 0 || futureDate ? null : date ?? (fromAnotherRequest(ownFormDate) || isPriorDate(ownFormDate) ? null : ownFormDate) ?? null,
+    formDate: exitTermination ? exitTermination.date : formDatedToday ? givenFormDate : datesAsked.length > 0 || futureDate ? null : date ?? (fromAnotherRequest(ownFormDate) || isPriorDate(ownFormDate) ? null : ownFormDate) ?? null,
     fromAgentLoop: true as const,
     /* QA item 17 (20 Nov 2026): an exit card the model decided is a termination (locked on the word) tells Create, as the CA's does. */
     ...(level ? { warningLevel: level } : loopTermination || exitTermination ? { loopTermination: true as const } : {}),
@@ -6024,7 +6120,40 @@ export async function proposeForm(
    */
   let whichSalon = false;
   const globalAsk = await import("./places");
-  if (noStoreStated && !card.locationId) {
+  /*
+   * ADMIN_CARD_ASKS_SALON_ENABLED (port from the sibling app; its QA, 24 Nov 2026, live as an Admin): a store from Woven that
+   * differs from this person's forms on file is not taken: the card asks which store, naming both.
+   */
+  const adminAsks = adminCardAsksSalonEnabled() && context.actor.role === "admin" && context.actor.scope?.level === "global";
+  let wovenAndForms: { woven: string; forms_on_file: string[]; ask_exactly: string } | null = null;
+  const wovenDiffersFromForms = async (wovenId: string): Promise<typeof wovenAndForms> => {
+    if (!adminAsks || !card.employeeName) return null;
+    const elsewhere = (await formsOnFileStores(context, employee.name)).filter((store) => store.id !== wovenId);
+    if (elsewhere.length === 0) return null;
+    const woven = rosterSalonName(wovenId) ?? wovenId;
+    const first = (replyNameFor(card.employeeName, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null).split(" ")[0]) || card.employeeName;
+    const onFile = elsewhere.map((store) => `**${store.name}**`);
+    const list = onFile.length === 1 ? onFile[0]! : `${onFile.slice(0, -1).join(", ")} and ${onFile[onFile.length - 1]!}`;
+    return {
+      woven,
+      forms_on_file: elsewhere.map((store) => store.name),
+      ask_exactly: `Which ${locationWord()} is this about? ${staffSystem()} lists ${first} at **${woven}**, and ${first}'s forms on file in the ${appConfig().formsPageName} are at ${list}. The card is ready — choose the ${locationWord()} before you create the draft, so it is not filed with no ${locationWord()}.`,
+    };
+  };
+  const askWhichStore = () => {
+    Object.assign(card, { locationId: null, locationName: null, locationResolution: "needs_selection", authorizedLocationIds: appConfig().locations().map((salon) => salon.id), status: "ready", supportsInlineDraft: card.supportsInlineDraft !== false });
+    salonFromWoven = null;
+    const askedBefore = context.history.some((turn) => turn.role === "assistant" && new RegExp(`which ${locationWord()} is this about`, "i").test(String(turn.content ?? "")));
+    if (askedBefore) wovenAndForms = null;
+  };
+  /* The card's store came from the person's Woven stores (the proposal builder's one employee store), not the manager's words. */
+  if (adminAsks && card.locationId && employee.id && !typedSalon && turnSalonIds.length === 0 && !globalAsk.salonIdNamedIn(requestWords) && employee.salonIds.includes(card.locationId)) {
+    wovenAndForms = await wovenDiffersFromForms(card.locationId);
+    if (wovenAndForms) askWhichStore();
+  }
+  if (wovenAndForms) {
+    /* Asked below with which_store_woven_and_forms. */
+  } else if (noStoreStated && !card.locationId) {
     Object.assign(card, { locationId: null, locationResolution: "not_applicable", status: card.status === "needs_location" ? "ready" : card.status, noStoreStated: true as const });
   } else if (!card.locationId && card.employeeName && context.actor.scope?.level === "global" && !globalAsk.globalNonAdminNeedsSalon(context.actor.role, context.actor.scope)) {
     /*
@@ -6043,7 +6172,9 @@ export async function proposeForm(
       : offRosterName
         ? ((await inactiveMatchRow(context.actor.scope, employee.name))?.locationIds ?? []).filter((id) => allStores.includes(id))
         : [];
-    if (theirs.length === 1) {
+    wovenAndForms = theirs.length === 1 && employee.id ? await wovenDiffersFromForms(theirs[0]!) : null;
+    if (wovenAndForms) askWhichStore();
+    else if (theirs.length === 1) {
       Object.assign(card, { locationId: theirs[0], locationName: rosterSalonName(theirs[0]!) ?? card.locationName, locationResolution: "resolved", authorizedLocationIds: [theirs[0]], status: card.status === "needs_location" ? "ready" : card.status });
       salonFromWoven = rosterSalonName(theirs[0]!) ?? theirs[0]!;
     } else {
@@ -6568,6 +6699,7 @@ export async function proposeForm(
     /* Pau's job-title rule (via QA, 23 Nov 2026): the manager's instructed title; the card and the saved form use it. */
     ...(jobTitleInstructed ? { job_title_as_you_said: card.employeeRole } : {}),
     ...(whichSalon ? { which_store: true } : {}),
+    ...(wovenAndForms ? { which_store_woven_and_forms: wovenAndForms } : {}),
     ...(terminationStated ? { termination_stated: { approval: stated.TERMINATION_APPROVAL_LINE, plan_closing: stated.TERMINATION_PLAN_SENTENCE } } : {}),
     /*
      * Batch G2 (item 3, QA's live run part 2: the hedge line was missing on 5 of 7): the manager's words name a

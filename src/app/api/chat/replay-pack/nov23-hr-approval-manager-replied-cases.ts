@@ -95,6 +95,37 @@ function sentBackOnly(t: ReplayContext, form: { id: string; row: Record<string, 
 
 export const NOV23_HR_APPROVAL_MANAGER_REPLIED_CASES: ReplayCase[] = [
   {
+    id: "nov24-hr-approval-what-have-i-approved",
+    title: 'HR: "what have I approved?": read_hr_approvals gives the approved form (the Approved tab); the store manager asking the same gets no HR list',
+    report: 'Owner, 24 Nov 2026: "a separate tab (not a link) for HR to see which forms she approved already for both sunnyt and bubble"',
+    status: "fixed",
+    fixFlags: FLAGS,
+    async run(t) {
+      if (skip(t)) return;
+      const form = await corrective(t);
+      hrApprover(t);
+      // As `decideHrApproval(…, "approve")` leaves it: finalized and approved in one write.
+      form.row.status = "finalized";
+      form.row.hr_approval_state = "approved";
+      form.row.hr_approval_requested_at = "2026-11-23T15:00:00Z";
+      form.row.hr_approval_decided_at = "2026-11-24T15:00:00Z";
+      form.row.hr_approval_decided_by = HR_ACCOUNT;
+
+      t.as("district_manager", GLOBAL, HR_ACCOUNT);
+      const result = readsHr(t);
+      await t.thread().say("what have I approved?");
+      const approved = result().approved_recently as Record<string, unknown>[] | undefined;
+      expect(approved, `HR's approved forms did not reach the model:\n${JSON.stringify(result())}`).toHaveLength(1);
+      expect(JSON.stringify(approved![0])).toMatch(/Corrective Action Form for Rosalind Tetherby/);
+      expect(approved![0]!.approved_by).toBe("You");
+
+      t.as("location_manager", WEST_DODGE);
+      const manager = readsHr(t);
+      await t.thread().say("what have I approved?");
+      expect(manager().approved_recently, "a store manager got HR's Approved list").toBeUndefined();
+    },
+  },
+  {
     id: "nov24-hr-approval-manager-edit-is-the-reply",
     title:
       'HR sent the form back; the manager changes it on the card without a note; HR: "what\'s waiting on me?": the form is waiting for HR, "manager replied to changes", and HR was told',

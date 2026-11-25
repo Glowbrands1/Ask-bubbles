@@ -1011,6 +1011,10 @@ export function formsGuideEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  // PRIOR_FORMS_UP_TO_TODAY (Pau, 24 Nov 2026; default off; same flag in both apps).
+  "PRIOR_FORMS_UP_TO_TODAY_ENABLED",
+  // FORM_DATE_IS_TODAY (Pau, 24 Nov 2026; default off; same flag in both apps).
+  "FORM_DATE_IS_TODAY_ENABLED",
   // Loop port, Phase 2 (ported from the sibling app at QA's direction, 21 Nov 2026; all default off, nothing reads them yet but switch.ts).
   "AGENT_LOOP_ENABLED",
   "CURRENT_MANUAL_SCOPE_ENABLED",
@@ -6079,4 +6083,59 @@ export function nearMissNeverSeatedEnabled(): boolean {
  */
 export function cardPersonThisRequestEnabled(): boolean {
   return envFlag("CARD_PERSON_THIS_REQUEST_ENABLED");
+}
+
+/**
+ * FORM_DATE_IS_TODAY (Pau, 24 Nov 2026; default off; same flag in both apps): a form's Date is the day it is written,
+ * never the incident's date, which stays in the account. A date the manager gives the form, and the day a Coaching
+ * Form's coaching was held, still date it. See `forms/incident-dates.ts` decideFormDate. Off, as before.
+ */
+export function formDateIsTodayEnabled(): boolean {
+  return envFlag("FORM_DATE_IS_TODAY_ENABLED");
+}
+
+/**
+ * PRIOR_FORMS_UP_TO_TODAY (Pau, 24 Nov 2026; default off; same flag in both apps): "it needs to add all past forms". The
+ * forms on file listed for "List previously received coaching and/or corrective action with date signed" (the draft) and
+ * offered by the agent loop are every finalized Coaching and Corrective Action up to today, not only those dated before
+ * this form's date. The form keeps its Date (the incident's day), so the same-incident check and "which date?" are
+ * unchanged. Off, as before.
+ */
+export function priorFormsUpToTodayEnabled(): boolean {
+  return envFlag("PRIOR_FORMS_UP_TO_TODAY_ENABLED");
+}
+
+/**
+ * TYPED_EMPLOYEE_EVERY_CARD (port from the sibling app; its QA, 24 Nov 2026, live as an Admin; default off; same flag in both apps): "Draft a coaching
+ * form for a performance concern for a made-up employee named Test Employee" drafted the Observation "… named the
+ * employee Employee" and asked who the form was for, also after the answer "Test Employee"; "Draft a corrective action
+ * form for a till shortage for Test Employee" put **Test** on the loop's card. The full name the manager typed as the
+ * person ("<First> Employee", `forms/typed-employee-name.ts`) is the card's name on every card type, on both paths:
+ * "named <First> Employee" is read as typed, the roster step keeps it as typed (never "the employee"), and the agent
+ * loop's propose_form puts it on the card when the model passed only one of its words or none. Off, as before.
+ */
+export function typedEmployeeEveryCardEnabled(): boolean {
+  return envFlag("TYPED_EMPLOYEE_EVERY_CARD_ENABLED");
+}
+
+/**
+ * ADMIN_CARD_ASKS_SALON (port from the sibling app; its QA, 24 Nov 2026, live as an Admin; default off; same flag in both
+ * apps): an admin's card for a person Woven lists at one store silently took that store though their form on file in the
+ * Forms Register is at another. With the flag on, a store taken from Woven while this person's forms on file are at
+ * another store is not taken: the card asks which, naming both. (An admin's card with no store already asks here.)
+ * Stores named in the request still win; non-admins are unchanged. Off, as before.
+ */
+export function adminCardAsksSalonEnabled(): boolean {
+  return envFlag("ADMIN_CARD_ASKS_SALON_ENABLED");
+}
+
+/**
+ * LOOP_CARD_CITES_CONDUCT_LINE (port from the sibling app; its QA's live test, 24 Nov 2026; default off; same flag in both
+ * apps): a loop card citing the Standards of Conduct for an incident the manual lists on its own line (a register
+ * shortage, theft, insubordination, disrespect, absence from the work area) names that line beside the heading, at the
+ * line's printed page: "Standards of Conduct — <the line>, JBA Policy Manual p.<n>" (`forms/specific-policy-topics.ts`
+ * conductLineCitation), as the saved draft quotes it. Off, as before (the line's page, the heading's name).
+ */
+export function loopCardCitesConductLineEnabled(): boolean {
+  return envFlag("LOOP_CARD_CITES_CONDUCT_LINE_ENABLED");
 }
