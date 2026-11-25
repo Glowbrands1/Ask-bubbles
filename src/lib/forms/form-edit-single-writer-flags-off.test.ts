@@ -281,6 +281,10 @@ const FLIPPED_AFTER_FIXTURE: readonly string[] = [
   "RELATIVE_DAY_PART_WORDS_ENABLED",
   "REOPEN_IS_OPENING_ENABLED",
   "THIS_FORM_IS_ABOUT_ENABLED",
+  // Changed on purpose (25 Nov 2026, Pau: "turn it on and merge"): on in production. A recorded Corrective Action
+  // finalized with lines still blank is now refused, and its empty history box is written N/A; the fixture predates it,
+  // so it is compared with it off.
+  "ALL_FIELDS_REQUIRED_ENABLED",
 ];
 const PRODUCTION = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn].filter((name) => !([FLAG, ...STEP_B, "FORM_EDIT_TOOL_IN_STREAM_ENABLED", "POLICY_PAGE_ON_CARD_ENABLED", ...FLIPPED_AFTER_FIXTURE] as readonly string[]).includes(name));
 const TOUCHED = [...new Set([FLAG, ...STEP_B, "FORM_EDIT_TOOL_IN_STREAM_ENABLED", ...PRODUCTION, ...PRODUCTION_FLAGS.off])];
