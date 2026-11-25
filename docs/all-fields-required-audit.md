@@ -52,15 +52,15 @@ blocks: when it is still blank at Finalize or send for approval — no step the 
 draft found — the app writes **N/A** into it (recorded as the app's, `no_prior_actions_found`). A history already in
 the box is never touched. If a step is added later (for example after HR sends it back), the N/A line is dropped.
 
-## Decisions for QA / Pau to confirm before flipping the flag
+## Decisions (Pau, 25 Nov 2026)
 
-- **Exit form "Additional Details"** is required. Say if it should be optional.
-- **Interview "Update In Careerplug"** (one box, "Yes") is required, so the interviewer confirms it was done.
-- **Interview "Qualities to observe"** are not required (a candidate may show none). Say if at least one tick should be.
-- **EPP figures:** where an EPP has its own figure lines (PPTA, LPSVA, UPTA, …), those lines are required and the
-  "figures, as provided" box beside them is not. An EPP with only one productivity box requires that box. An EPP
-  cannot be sent without the figures.
-- **Expectation checklists** need every row marked. The form used to allow "not evaluated yet" rows.
+- **Exit form "Additional Details"** is optional ("Should it be optional? - yes").
+- **Interview "Update In Careerplug"** is required (one box, "Yes": the interviewer confirms it was done). Confirmed.
+- **Expectation checklists** need every row marked; a row can no longer be left as "not evaluated yet". Confirmed.
+- **EPP figures:** an EPP cannot be sent without the productivity figures. Where an EPP has its own figure lines
+  (PPTA, LPSVA, UPTA, …), those lines are required and the "figures, as provided" box beside them is not; an EPP with
+  only one productivity box requires that box. Confirmed.
+- **Interview "Qualities to observe"** are not required (a candidate may show none).
 - **Coaching forms** (Coaching, Follow-Up Coaching) finalize without HR; they are held to the same rule at Finalize.
 
 ## QA checklist (flag on, preview)
@@ -206,7 +206,7 @@ Each form lists what must be filled and what is not asked for, and why. Regenera
 
 **Must be filled (17):** Name; Date; Job Title; Location; Permanent Address; Last Day Worked; Resignation Details; All store items were returned; Store key was returned; Is Payroll Deduction applicable? *; *Do they forfeit their bonus?; *Are they to be dropped to minimum wage?; Is written notice uploaded to the employee file?; Is this employee eligible for rehire?; Resignation Date; How Employee Resigned; Reason for Resignation
 
-**25 Nov 2026 (Pau):** the exit form is always held to this list, whatever ALL_FIELDS_REQUIRED_ENABLED says ("every field must be completed or the form will not submit to HR"); at least one Resignation Details box must be ticked; the notice dates can only be entered with Submitted & Fulfilled Notice ticked; and Permanent Address must be a complete mailing address with city, state and ZIP (`src/lib/forms/exit-submission-rules.ts`).
+**25 Nov 2026 (Pau):** the exit form is held to this list with ALL_FIELDS_REQUIRED_ENABLED (on in production) or EXIT_ALL_FIELDS_REQUIRED_ENABLED ("every field must be completed or the form will not submit to HR"); at least one Resignation Details box must be ticked; the notice dates can only be entered with Submitted & Fulfilled Notice ticked; and Permanent Address must be a complete mailing address with city, state and ZIP (`src/lib/forms/exit-submission-rules.ts`).
 
 **Not required:**
 - Additional Details — optional on the exit form (Pau, 25 Nov 2026)
