@@ -262,13 +262,20 @@ describe("every read path goes through the one check", () => {
     "src/lib/forms/chat-reopen.ts",
     "src/app/api/forms/instances/route.ts",
     "src/app/(app)/forms/monitoring/page.tsx",
-    "src/app/(app)/layout.tsx",
-    "src/app/(app)/page.tsx",
+    // Changed on purpose (port from the sibling app, QA 24 Nov 2026): the rail badge and Home no longer read a bounded list.
+    // They count the follow-up queue, which reads every outstanding follow-up (no cap, so nothing to over-read) and
+    // re-checks each row with visibleInstances: asserted just below, and in `lib/forms/follow-up-queue.test.ts`.
   ])("%s over-reads and re-checks every bounded list", (path) => {
     const source = readFileSync(path, "utf8");
     const reads = source.match(/await (?:listInstances|listOutstandingFollowUps)\(/g) ?? [];
     expect(reads.length).toBeGreaterThan(0);
     expect((source.match(/privateAwareLimit\(/g) ?? []).length).toBeGreaterThanOrEqual(reads.length);
     expect(source).toMatch(/visibleInstances|actorMaySeeInstance|mayRead/);
+  });
+
+  it("the follow-up queue the rail, Home and the banner count re-checks every row", () => {
+    const source = readFileSync("src/lib/forms/follow-up-queue.ts", "utf8");
+    expect(source).toMatch(/listAllOutstandingFollowUps/);
+    expect(source).toMatch(/visibleInstances\(options\.actor, \[\.\.\.outstanding\]\)/);
   });
 });

@@ -3,6 +3,8 @@ import { isGoogleReviewQuestion } from "@/lib/ai/google-reviews-chat";
 import { loadGoogleReviewsChatBlock } from "@/lib/ai/google-reviews-chat-read";
 import { assignmentTrackerText, canSeeAssignmentTracker, type AssignmentTracker } from "@/lib/ai-training/assignments";
 import { activePermissionMatrix, hasPermission } from "@/lib/permissions";
+import { relativeBusinessDay } from "@/lib/forms/follow-up";
+import type { AccessScope, Role } from "@/types";
 
 import { formatBusinessTime } from "@/lib/business-date";
 
@@ -54,6 +56,21 @@ export interface DataToolDeps {
   readonly loadAssignmentTracker: () => Promise<AssignmentTracker>;
   /** HR approval (`readHrApprovalsFor`): HR's queue, or the asker's own forms with HR. */
   readonly loadHrApprovals: (input: { subject: string; verified: boolean; now: Date }) => Promise<HrApprovalsRead>;
+  /**
+   * The follow-up queue (`readFollowUpQueue`): the forms and counts Home, the rail badge and the Forms Register's
+   * banner and pills show this reader. Null when the asker is not a verified account. Optional, so a test's deps that
+   * predate it read the real queue.
+   */
+  readonly loadFollowUpQueue?: (input: { subject: string; verified: boolean; role: Role; scope: AccessScope | null; today: string }) => Promise<FollowUpQueueRead | null>;
+}
+
+/** What read_follow_ups reads: the follow-up queue's counts and forms (`follow-up-queue.ts`). */
+export interface FollowUpQueueRead {
+  readonly overdue: number;
+  readonly dueThisWeek: number;
+  readonly open: number;
+  readonly excluded: number;
+  readonly forms: readonly { employeeName: string; templateName: string; locationName: string | null; followUpDate: string | null; overdue: boolean }[];
 }
 
 /** What read_hr_approvals reads (`hr-approval.ts`, `readHrApprovalsFor`). */
@@ -100,6 +117,30 @@ export const DEFAULT_DATA_TOOL_DEPS: DataToolDeps = {
   loadAssignmentTracker: async () => (await import("@/lib/ai-training/assignments-repository")).loadAssignmentTracker(),
   loadHrApprovals: async ({ subject, verified, now }) =>
     (await import("@/lib/forms/hr-approval")).readHrApprovalsFor(subject, verified, now),
+  loadFollowUpQueue: async ({ subject, verified, role, scope, today }) => {
+    if (!verified || !subject || !scope) return null;
+    const [{ pageFormsAccess }, { readFollowUpQueue }, { followUpState }] = await Promise.all([
+      import("@/lib/forms/page-scope"),
+      import("@/lib/forms/follow-up-queue"),
+      import("@/lib/forms/follow-up"),
+    ]);
+    // The page's own access and the page's own read: Home's queue, as this account would see it there.
+    const access = await pageFormsAccess({ subject, email: "", displayName: "", role, scope, verified: true });
+    const queue = await readFollowUpQueue(access, { today });
+    return {
+      overdue: queue.attention.overdue,
+      dueThisWeek: queue.attention.dueThisWeek,
+      open: queue.open,
+      excluded: queue.excluded,
+      forms: queue.forms.map((form) => ({
+        employeeName: form.employeeName,
+        templateName: form.templateName,
+        locationName: form.locationName,
+        followUpDate: form.followUpDate,
+        overdue: followUpState(form, today) === "overdue",
+      })),
+    };
+  },
 };
 
 const text = (value: unknown): string | null => (typeof value === "string" && value.trim() ? value.trim() : null);
@@ -258,6 +299,64 @@ export async function readHrApprovals(context: DataToolContext, deps: DataToolDe
   };
 }
 
+/* ---------------------------------------------------------------- read_follow_ups --- */
+
+/** The source label: the screens that show these counts. */
+function followUpsSource(): string {
+  return `Follow-ups (Home and the ${appConfig().formsPageName})`;
+}
+const FOLLOW_UPS_LISTED = 25;
+
+/**
+ * read_follow_ups() (port from the sibling app; QA, 24 Nov 2026; CLAUDE.md §5): the follow-up queue, the SAME forms and
+ * counts Home, the rail badge and the Forms Register's banner and Open / Overdue pills show this manager
+ * (`readFollowUpQueue`). Scoped as Home is: View overview, and the Forms Register's permission, which Home's follow-up
+ * card also needs; the reader's own stores, as the page reads them.
+ */
+export async function readFollowUps(context: DataToolContext, deps: DataToolDeps = DEFAULT_DATA_TOOL_DEPS): Promise<ToolResult> {
+  const matrix = activePermissionMatrix();
+  const role = context.actor.role;
+  if (!hasPermission(matrix, role, "view_overview") || !hasPermission(matrix, role, "view_form_monitoring")) {
+    return { source: followUpsSource(), refused: "This account's role does not show follow-ups. Nothing was read; say so plainly, in one line, and give no count." };
+  }
+  let read: FollowUpQueueRead | null;
+  try {
+    const load = deps.loadFollowUpQueue ?? DEFAULT_DATA_TOOL_DEPS.loadFollowUpQueue!;
+    read = await load({ subject: context.actor.subject ?? "", verified: context.actor.verified === true, role, scope: context.actor.scope, today: context.today });
+  } catch {
+    return { source: followUpsSource(), reason_code: "read_failed", error: "The follow-ups could not be read just now. Say so; give no count and never say none is overdue." };
+  }
+  if (!read) return { source: followUpsSource(), reason_code: "scope", error: "This account is not signed in with a verified identity, so its follow-ups cannot be read. Say so; give no count." };
+  const listed = read.forms.slice(0, FOLLOW_UPS_LISTED);
+  const place = appConfig().locationWord;
+  return {
+    source: followUpsSource(),
+    counts: {
+      overdue: read.overdue,
+      due_this_week: read.dueThisWeek,
+      needs_attention: read.overdue + read.dueThisWeek,
+      open: read.open,
+      outstanding: read.forms.length,
+    },
+    follow_ups: listed.map((form) => ({
+      employee: form.employeeName,
+      form: form.templateName,
+      [place]: form.locationName,
+      follow_up_date: form.followUpDate,
+      state: form.overdue ? "overdue" : "open",
+      ...(form.followUpDate ? { when: relativeBusinessDay(form.followUpDate, context.today) } : {}),
+    })),
+    ...(read.forms.length > listed.length ? { listed: listed.length, of: read.forms.length } : {}),
+    ...(read.excluded > 0 ? { test_records_not_counted: read.excluded } : {}),
+    note:
+      `These are the counts Home, the rail badge and the ${appConfig().formsPageName} (its banner and its Open and Overdue filters) show this manager: copy them, never count rows yourself. ` +
+      "overdue = the follow-up date has passed and nobody marked it followed up; open = scheduled for today or later; due_this_week = open and due by the end of this business week. " +
+      (read.forms.length > listed.length ? `${listed.length} of ${read.forms.length} are listed, soonest first; say how many are not shown. ` : "") +
+      (read.excluded > 0 ? `${read.excluded} test record${read.excluded === 1 ? " is" : "s are"} not counted, as on Home. ` : "") +
+      "This is follow-ups on forms, not HR approval (read_hr_approvals).",
+  };
+}
+
 /* ---------------------------------------------------------------- registration --- */
 
 /** The data tools' specs, in the loop's tool-list shape (`run.ts`), with the app config's words. */
@@ -282,6 +381,12 @@ export function dataToolSpecs(config: AppConfig) {
       name: "read_hr_approvals",
       description:
         "HR approval of forms: for HR, every form waiting for their approval (oldest first, overdue after one business day, including the ones the manager replied to after HR sent them back) and the ones they sent back or rejected, plus (approved_recently) the forms HR already approved, and (other_app) the forms waiting for them and already approved in the sibling app; for any other manager, only the forms THEY created or sent to HR, each with its state (waiting for HR approval, sent back by HR for changes, manager replied to changes, rejected by HR, or approved by HR in the last 30 days) and HR's latest note to them. Use it for \"has HR approved it?\", \"was my CA for <name> approved?\", \"what's waiting on me?\", \"what have I approved?\", \"did HR send my form back?\". A form waiting for HR is not on file; an approved one is.",
+      input_schema: { type: "object", properties: {}, required: [] },
+    },
+    {
+      name: "read_follow_ups",
+      description:
+        "Follow-ups on forms: how many are overdue, due this week and open, and which (employee, form, " + place + ", follow-up date), for the manager's own " + places + ", the same counts Home, the rail badge and the " + config.formsPageName + " show. Use it for \"how many follow-ups are overdue?\", \"what follow-ups do I have this week?\". Not HR approval (read_hr_approvals).",
       input_schema: { type: "object", properties: {}, required: [] },
     },
     {
@@ -322,5 +427,6 @@ export function dataToolHandlers(
     read_form_deletions: (args) => readFormDeletions(context, args, deps),
     read_ai_assignments: () => readAiAssignments(context, deps),
     read_hr_approvals: () => readHrApprovals(context, deps),
+    read_follow_ups: () => readFollowUps(context, deps),
   };
 }

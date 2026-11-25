@@ -1963,6 +1963,61 @@ export async function listOutstandingFollowUps(
     .slice(0, limit);
 }
 
+/** One page of the uncapped read: PostgREST's own maximum page. */
+const OUTSTANDING_PAGE = 1000;
+
+/**
+ * EVERY OUTSTANDING FOLLOW-UP, NO CAP (port from the sibling app; QA, 24 Nov 2026: the Overview, the rail and the banner
+ * said 19 overdue while the Overdue pill said 8, because the counts were taken from reads capped at 50 and 200). Read
+ * page by page until a page comes back short, with the same scope and predicate as `listOutstandingFollowUps`, so the
+ * one count every screen shows (`readFollowUpQueue`) is of every such form.
+ */
+export async function listAllOutstandingFollowUps(
+  locationIds: readonly string[] | null = null,
+  ownCreatedBy: string | null = null,
+): Promise<InstanceRow[]> {
+  const supabase = getSupabaseAdmin();
+  const outstanding = () =>
+    supabase
+      .from("form_instance_overview")
+      .select("*")
+      .not("follow_up_date", "is", null)
+      .is("followed_up_at", null)
+      .order("follow_up_date", { ascending: true })
+      .order("id", { ascending: true });
+  type Read = { data: unknown[] | null; error: { message: string } | null };
+  /** `narrow` adds the scope to a fresh query; every page is read through it. */
+  const readAll = async (narrow: (query: ReturnType<typeof outstanding>) => unknown): Promise<unknown[]> => {
+    const rows: unknown[] = [];
+    for (let from = 0; ; from += OUTSTANDING_PAGE) {
+      const query = narrow(outstanding()) as { range: (from: number, to: number) => PromiseLike<Read> };
+      const { data, error } = await query.range(from, from + OUTSTANDING_PAGE - 1);
+      if (error) throw new Error(`Could not read outstanding follow-ups: ${error.message}`);
+      rows.push(...(data ?? []));
+      if ((data ?? []).length < OUTSTANDING_PAGE) return rows;
+    }
+  };
+  const reads: Promise<unknown[]>[] = [];
+  if (locationIds === null) {
+    reads.push(readAll((query) => query));
+  } else {
+    // An empty list means no store qualifies; PostgREST does not accept `in.()`.
+    if (locationIds.length > 0) reads.push(readAll((query) => query.in("location_id", [...locationIds])));
+    if (ownCreatedBy) reads.push(readAll((query) => query.not("location_id", "is", null).eq("created_by", ownCreatedBy)));
+  }
+  const byId = new Map<string, InstanceRow>();
+  for (const rows of await Promise.all(reads)) {
+    for (const row of rows) {
+      const mapped = mapInstance(row as Record<string, unknown>);
+      byId.set(mapped.id, mapped);
+    }
+  }
+  // One version of a form carries its follow-up (`followUpState`), as in `listOutstandingFollowUps`.
+  return [...byId.values()]
+    .filter((row) => needsFollowUp(row))
+    .sort((a, b) => (a.followUpDate ?? "").localeCompare(b.followUpDate ?? ""));
+}
+
 /**
  * A CHANGE MADE FROM THE CHAT, ON THE RECORD: each field, what it said, what
  * it says now, who asked and (the event's own timestamp) when. The save itself

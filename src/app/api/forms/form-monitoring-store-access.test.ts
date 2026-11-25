@@ -543,7 +543,9 @@ describe("the server pages (Form Monitoring, Overview, rail badge) apply the sam
     ]) {
       const source = readFileSync(file, "utf8");
       expect(source, file).toMatch(/pageFormsAccess\(/);
-      expect(source, file).toMatch(/visibleInstances\(/);
+      // Changed on purpose (port from the sibling app, QA 24 Nov 2026): the rail and Home count the follow-up queue, which
+      // re-checks every row with visibleInstances itself (`follow-up-queue.ts`), given the page's own access.
+      expect(source, file).toMatch(/visibleInstances\(|readFollowUpQueue\(access/);
       expect(source, file).not.toMatch(/listOutstandingFollowUps\(\)/);
       if (source.includes("listOutstandingFollowUps(")) {
         // The queue reads the reader's own forms at other stores too.
