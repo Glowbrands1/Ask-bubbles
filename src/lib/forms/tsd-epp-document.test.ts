@@ -580,7 +580,7 @@ describe("the rest of the library is where it was", () => {
       // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): Buff City Soap titles and terms re-issue these six.
       "tsd-epp": 6,
       // 4: Steps to Finish Termination without sibling-company system names (QA, 25 Oct 2026).
-      "resignation-exit": 4,
+      "resignation-exit": 5, // CHANGED ON PURPOSE, revision 5 (Pau, 25 Nov 2026): written-notice wording, full-width Permanent Address, notice-date help.
       // Salon -> Store wording re-issues.
       "asd-sdit-epp": 4,
       "fttc-epp": 4,

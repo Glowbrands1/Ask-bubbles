@@ -402,12 +402,15 @@ describe("a finalized exit form, asked for again in chat", () => {
     const draft = reply.formInstanceRef!.instanceId;
     expect(draft).not.toBe(original);
     expect(reply.content).toContain("was finalized, so I opened a new draft of it");
-    expect(reply.content).toContain("Date that notice was given");
-    expect(reply.formUpdate).toMatchObject({ instanceId: draft });
+    /*
+     * CHANGED ON PURPOSE (Pau, 25 Nov 2026): the notice dates are entered only with "Submitted & Fulfilled Notice"
+     * ticked. This form's box is not ticked, so the date is not written — nor claimed.
+     */
+    expect(reply.content).not.toMatch(/September 27/);
 
-    // The draft: every answer carried, the change made, the follow-up kept.
+    // The draft: every answer carried, the locked date left blank, the follow-up kept.
     expect(statusOf(draft)).toBe("draft");
-    expect((await valueOf(draft, "notice_given_date"))?.value).toBe("2026-09-27");
+    expect((await valueOf(draft, "notice_given_date"))?.value ?? "").toBe("");
     expect((await valueOf(draft, "last_day_worked"))?.value).toBe((await valueOf(original, "last_day_worked"))?.value);
     expect((await review(draft)).instance.followUpDate).toBe("2026-10-05");
     expect((await review(draft)).instance.revisesInstanceId).toBe(original);

@@ -71,7 +71,8 @@ import type { AnswerStatementLine, FormBlock, FormDocument } from "./document";
  *
  * TWO THINGS IN THE FILE ARE NOT REPRODUCED, and both are deliberate:
  *
- *   1  "Written notice attached?" is saved with its No box already ticked. A
+ *   1  "Written notice attached?" (worded "Is written notice uploaded to the
+ *      employee file?" since revision 5) is saved with its No box already ticked. A
  *      pre-ticked answer on a blank form is the last user's answer, not part of
  *      the form — the same rule the Round 2 interview applies to answers left
  *      in its file — and printing it would tell every future record that no
@@ -158,7 +159,8 @@ export const EXIT_YES_NO_QUESTIONS: readonly { key: string; label: string }[] = 
   { key: "payroll_deduction_applicable", label: "Is Payroll Deduction applicable? *" },
   { key: "forfeit_bonus", label: "*Do they forfeit their bonus?" },
   { key: "dropped_to_minimum_wage", label: "*Are they to be dropped to minimum wage?" },
-  { key: "written_notice_attached", label: "Written notice attached?" },
+  /* Revision 5 (Pau, 25 Nov 2026): reworded from the Word file's "Written notice attached?". Same key. */
+  { key: "written_notice_attached", label: "Is written notice uploaded to the employee file?" },
   { key: "eligible_for_rehire", label: "Is this employee eligible for rehire?" },
 ];
 
@@ -259,8 +261,15 @@ export const EXIT_ANSWER_LINES: AnswerStatementLine[] = [
   },
 ];
 
+/** The Permanent Address line's guidance (revision 5). */
+export const PERMANENT_ADDRESS_HELP =
+  "Complete mailing address: street (and apartment or unit), city, state and ZIP code.";
+
 const FROM_MANAGER_DATE =
   "Filled only from a date the manager stated in the conversation. Left blank otherwise.";
+
+/** Revision 5 (Pau, 25 Nov 2026): the notice dates are locked until Submitted & Fulfilled Notice is ticked. */
+const NOTICE_DATE_HELP = `Entered only when "Submitted & Fulfilled Notice" is ticked. ${FROM_MANAGER_DATE}`;
 
 export function exitFormDocument(): FormDocument {
   return {
@@ -302,14 +311,24 @@ export function exitFormDocument(): FormDocument {
           field("location", "Location", "system"),
         ],
       },
+      /*
+       * Revision 5 (Pau, 25 Nov 2026: "Permanent Address should capture the
+       * complete mailing address, including zip"): the address has the full
+       * width of the page, says what it needs, and Finalize / send for
+       * approval refuse one without city, state and ZIP
+       * (`exit-submission-rules.ts`). Last Day Worked moves to its own line.
+       */
       {
-        kind: "field_row",
-        fields: [
-          field("permanent_address", "Permanent Address", "manager"),
-          field(EXIT_DATE_FIELDS.lastDayWorked, "Last Day Worked", "ai", "date", {
-            help: FROM_MANAGER_DATE,
-          }),
-        ],
+        kind: "field",
+        field: field("permanent_address", "Permanent Address", "manager", "text", {
+          help: PERMANENT_ADDRESS_HELP,
+        }),
+      },
+      {
+        kind: "field",
+        field: field(EXIT_DATE_FIELDS.lastDayWorked, "Last Day Worked", "ai", "date", {
+          help: FROM_MANAGER_DATE,
+        }),
       },
 
       { kind: "section", label: "Resignation Details" },
@@ -331,10 +350,10 @@ export function exitFormDocument(): FormDocument {
         kind: "field_row",
         fields: [
           field(EXIT_DATE_FIELDS.noticeGiven, "Date that notice was given", "ai", "date", {
-            help: FROM_MANAGER_DATE,
+            help: NOTICE_DATE_HELP,
           }),
           field(EXIT_DATE_FIELDS.noticeFulfilled, "Date that notice was fulfilled", "ai", "date", {
-            help: FROM_MANAGER_DATE,
+            help: NOTICE_DATE_HELP,
           }),
         ],
       },
@@ -462,8 +481,16 @@ export const EXIT_TEMPLATE_SEEDS: TemplateSeed[] = [
      * confirmed both). Text only; no field, key or layout changes. Published
      * as a new version by the next library install; forms already filed keep
      * the version they were pinned to.
+     *
+     * 5 (Pau, 25 Nov 2026): "Written notice attached?" reads "Is written notice
+     * uploaded to the employee file?"; Permanent Address has its own full-width
+     * line and asks for the complete mailing address; the notice dates say they
+     * need Submitted & Fulfilled Notice ticked. No field keys change. The
+     * rules themselves (notice dates locked, address with ZIP, every field
+     * before approval) are code, in `exit-submission-rules.ts`, and reach
+     * every version.
      */
-    revision: 4,
+    revision: 5,
     revisionNote:
       "Details section: resignation date, how and why the employee resigned, store key returned, and the returned-items, payroll deduction, minimum wage/bonus and rehire answers as statements (HR request, 28 Sep 2026).",
     bundledPdfName: "Resignation Exit Form.pdf",

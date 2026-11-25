@@ -124,7 +124,7 @@ describe("the prescreen without the uniform question", () => {
       "management-interview-round-1": 5,
       "management-interview-round-2": 4,
       // 4: Steps to Finish Termination without sibling-company system names (QA, 25 Oct 2026).
-      "resignation-exit": 4,
+      "resignation-exit": 5, // 5: Pau, 25 Nov 2026 (written-notice wording, Permanent Address line); changed on purpose.
     });
     // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the key is back as the Team Member Interview Form (it was removed on 21 Nov);
     // still no seed names the sibling company.

@@ -127,9 +127,9 @@ describe("EXIT_PROSE_FACTS_ENABLED", () => {
       expect(text).toContain("- **Name:** Ava Pellmore");
       expect(text).toContain("- **Job Title:** Store Associate");
       expect(text).toContain("- **Last Day Worked:** September 28, 2026");
-      expect(text).toContain(
-        "- **Date that notice was given:** September 15, 2026",
-      );
+      // CHANGED ON PURPOSE (Pau, 25 Nov 2026): the notice dates are entered only with "Submitted & Fulfilled Notice"
+      // ticked, and nothing here says the notice was worked, so the card does not list the notice date.
+      expect(text).not.toContain("- **Date that notice was given:**");
     });
   }
 });

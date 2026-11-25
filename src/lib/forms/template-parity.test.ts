@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import approved from "@/test/fixtures/approved-template-changes.json";
 import snapshot from "@/test/fixtures/ask-sunny-published-templates.json";
 
+import { withoutSharedNov25ExitChanges } from "@/test/nov25-exit-changes";
 import { APPROVED_REMOVAL_DESCRIPTION_CHANGES, APPROVED_REMOVALS, withApprovedRemovals } from "@/test/approved-removals";
 
 import { RETIRED_TEMPLATE_KEYS } from "@/config/company/forms/retired";
@@ -104,6 +105,8 @@ function withoutUnpublishedPayrollAmount(key: string, document: unknown): unknow
 }
 
 const RENAMED: Readonly<Record<string, string>> = { "stc-exit": "resignation-exit" };
+
+
 
 
 /**
@@ -293,7 +296,7 @@ describe("the migrated templates are the reference platform's published template
         comparable({ ...template, document: withApprovedRemovals(RENAMED[template.key] ?? template.key, template.document) }),
         comparable({
           ...(seed as unknown as Record<string, unknown>),
-          document: withoutUnpublishedPayrollAmount(seed!.key, seed!.document),
+          document: withoutSharedNov25ExitChanges(seed!.key, withoutUnpublishedPayrollAmount(seed!.key, seed!.document)),
         }),
         "",
         found,

@@ -41,6 +41,16 @@ export function allFieldsRequiredEnabled(): boolean {
   return envFlag("ALL_FIELDS_REQUIRED_ENABLED");
 }
 
+/**
+ * EXIT_ALL_FIELDS_REQUIRED_ENABLED (Pau, 25 Nov 2026; default off; same flag in both apps): "On the Exit Form, can the
+ * parameters be set so that every field must be completed or the form will not submit to HR?" On: the exit form is
+ * held to `blankBeforeSubmission` at Finalize and "Finalize and send for approval" even while ALL_FIELDS_REQUIRED_ENABLED
+ * is off (with it on, every form already is), so it also refuses an exit form with no Resignation Details box ticked.
+ */
+export function exitAllFieldsRequiredEnabled(): boolean {
+  return envFlag("EXIT_ALL_FIELDS_REQUIRED_ENABLED");
+}
+
 /** Claude tool-use reading of a form turn, and routing that reading off search. */
 export function formToolsEnabled(): boolean {
   return envFlag("FORM_TOOLS_ENABLED");

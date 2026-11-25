@@ -26,7 +26,12 @@ export const NOV11_EXIT_NOTICE_VERB_TYPOS_CASES: readonly ReplayCase[] = [
         .thread()
         .say("exit form for remy calder her last day will be 10/12/2026 and she submited her notice on 9/29/26");
       expect(reply.formProposal, `no exit card:\n${reply.content}`).toMatchObject({ employeeName: "Remy Calder" });
-      expect(reply.content, `notice date not 9/29:\n${reply.content}`).toMatch(/\*\*Date that notice was given:\*\*\s*September 29, 2026/);
+      /*
+       * CHANGED ON PURPOSE (Pau, 25 Nov 2026: "dates can NOT be entered into the Date that notice was given … UNLESS
+       * Submitted & Fulfilled Notice box is checked"): nothing here says the notice was worked, so the notice date is
+       * neither listed nor entered.
+       */
+      expect(reply.content, `notice date listed without the box:\n${reply.content}`).not.toMatch(/\*\*Date that notice was given:\*\*/);
       expect(reply.content, `last day lost:\n${reply.content}`).toMatch(/\*\*Last Day Worked:\*\*\s*October 12, 2026/);
     },
   },
