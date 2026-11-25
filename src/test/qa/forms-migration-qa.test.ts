@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 
+import { withoutSharedNov25ExitChanges } from "@/test/nov25-exit-changes";
 import { extractText, getDocumentProxy } from "unpdf";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -379,6 +380,8 @@ function differences(a: unknown, b: unknown, path: string, out: { path: string; 
  * The seed itself still has it; the tests below check that separately.
  */
 function referenceDocument(key: string, raw: unknown): unknown {
+  // The exit form's 25 Nov 2026 changes (Pau) are set aside the same way: `@/test/nov25-exit-changes`.
+  if (key === "resignation-exit") return withoutSharedNov25ExitChanges(key, raw);
   if (key !== "dpoa" || !raw || typeof raw !== "object") return raw;
   const document = raw as { blocks?: { kind?: string; field?: { key?: string } }[] };
   if (!Array.isArray(document.blocks)) return raw;
