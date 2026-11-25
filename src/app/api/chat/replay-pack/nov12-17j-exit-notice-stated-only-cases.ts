@@ -46,7 +46,12 @@ export const NOV12_17J_EXIT_NOTICE_STATED_ONLY_CASES: ReplayCase[] = [
       const reply = await thread.say("exit form for Marnie Holloway, she gave two weeks notice on 11/8");
       expect(thread.proposal?.templateKey, `no exit card:\n${reply.content}`).toBe("resignation-exit");
       const id = await thread.create();
-      expect(t.values(id).notice_given_date ?? "", "the stated notice date").toBe("2026-11-08");
+      /*
+       * CHANGED ON PURPOSE (Pau, 25 Nov 2026: "dates can NOT be entered into the Date that notice was given … UNLESS
+       * Submitted & Fulfilled Notice box is checked"): nothing here says the notice was worked, so the notice date is
+       * neither listed nor entered.
+       */
+      expect(t.values(id).notice_given_date ?? "", "a notice date entered without Submitted & Fulfilled Notice").toBe("");
     },
   },
 ];
