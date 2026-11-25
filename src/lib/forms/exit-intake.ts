@@ -5,7 +5,7 @@ import type { ChatFormProposal } from "@/types";
 
 import { answerStatementText } from "./document";
 import { EXIT_ANSWER_LINES, EXIT_DETAIL_LABEL, EXIT_OPTION } from "./exit-library";
-import { EXIT_ROLE_LABEL, exitFactsSupplied, type ExitDateRole, type ExitFacts } from "./exit-facts";
+import { EXIT_ROLE_LABEL, exitFactsSupplied, noticeDatesApply, type ExitDateRole, type ExitFacts } from "./exit-facts";
 import {
   exitDetailsSupplied,
   exitDetailValues,
@@ -146,7 +146,9 @@ export function exitReady({ proposal, facts, details }: ExitReadyInput): string 
   filled.push(`- **Date:** ${cardDate ?? "the day the draft is created"}`);
   // EXIT_INTAKE_FIX_ENABLED: the address the manager typed (`readPermanentAddress`).
   if (details.permanentAddress) filled.push(`- **Permanent Address:** ${details.permanentAddress}`);
-  for (const role of ROLE_ORDER) {
+  // The notice dates are entered only with "Submitted & Fulfilled Notice" ticked (Pau, 25 Nov 2026).
+  const roles = ROLE_ORDER.filter((role) => role === "lastDayWorked" || noticeDatesApply(facts));
+  for (const role of roles) {
     const iso = facts[role];
     if (iso) filled.push(`- **${EXIT_ROLE_LABEL[role]}:** ${exitDateInWords(iso)}`);
   }
@@ -195,12 +197,12 @@ export function exitReady({ proposal, facts, details }: ExitReadyInput): string 
   if (!proposal.employeeRole) blank.push("Job Title");
   if (!salon) blank.push("Store");
   if (!details.permanentAddress) blank.push("Permanent Address");
-  const unsetDates = ROLE_ORDER.filter((role) => !facts[role]).map((role) => EXIT_ROLE_LABEL[role]);
+  const unsetDates = roles.filter((role) => !facts[role]).map((role) => EXIT_ROLE_LABEL[role]);
   blank.push(...unsetDates);
   if (ticks.length === 0) blank.push("the Resignation Details boxes");
   blank.push(...blankDetailLines(facts, details));
   if (exitProseFactsEnabled() && !described) blank.push("Additional Details");
-  blank.push("written notice attached");
+  blank.push("whether written notice is uploaded to the employee file");
   blank.push("all three signature lines");
 
   const lines = [

@@ -458,7 +458,8 @@ describe.each([
       thread = [];
       const applied = await say("duplicate exit for tamsin ardwell and change date notice given to 10-12-26");
       expect(applied.formInstanceRef?.instanceId).toBe(draft);
-      expect((await fieldOf(draft, "notice_given_date"))?.value).toBe("2026-10-12");
+      // CHANGED ON PURPOSE (Pau, 25 Nov 2026): no "Submitted & Fulfilled Notice" tick on this form, so the notice date is not entered.
+      expect((await fieldOf(draft, "notice_given_date"))?.value ?? "").toBe("");
       expect(store.form_instances).toHaveLength(2);
 
       await finalize(draft);

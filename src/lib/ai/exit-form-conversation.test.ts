@@ -106,6 +106,7 @@ afterEach(() => {
 
 /* ======================================================== recognition == */
 
+/* 25 Nov 2026 (Pau): the blank list says "whether written notice is uploaded to the employee file", the question's new wording; changed on purpose. */
 describe("asking for it by any of its names", () => {
   it.each([
     "pull up the exit form",
@@ -282,7 +283,7 @@ describe("what Ask Bubbles says beside the proposal", () => {
     // Handing in notice is resigning: the notice date is the resignation date.
     expect(content).toMatch(/- \*\*Resignation Date:\*\* September 1, 2026/);
     expect(content).toMatch(
-      /\*\*Left blank for you to review:\*\* Store, Permanent Address, Date that notice was fulfilled, How Employee Resigned, Reason for Resignation, Store Items Returned, Store Key Returned, Payroll Deduction, Minimum Wage \/ Bonus Forfeiture, Eligible for Rehire, written notice attached and all three signature lines\./,
+      /\*\*Left blank for you to review:\*\* Store, Permanent Address, Date that notice was fulfilled, How Employee Resigned, Reason for Resignation, Store Items Returned, Store Key Returned, Payroll Deduction, Minimum Wage \/ Bonus Forfeiture, Eligible for Rehire, whether written notice is uploaded to the employee file and all three signature lines\./,
     );
     // A missing answer is a blank line on the form, never a question.
     expect(content).not.toMatch(/\?/);
@@ -319,7 +320,7 @@ describe("what Ask Bubbles says beside the proposal", () => {
     expect(content).toMatch(/- \*\*Payroll Deduction:\*\* Payroll deduction is not applicable\./);
     expect(content).toMatch(/- \*\*Minimum Wage \/ Bonus Forfeiture:\*\* Employee will not be dropped to minimum wage and will not forfeit bonus\./);
     expect(content).toMatch(/- \*\*Eligible for Rehire:\*\* Employee is eligible for rehire\./);
-    expect(content).toMatch(/\*\*Left blank for you to review:\*\* Store, Permanent Address, Date that notice was fulfilled, written notice attached and all three signature lines\./);
+    expect(content).toMatch(/\*\*Left blank for you to review:\*\* Store, Permanent Address, Date that notice was fulfilled, whether written notice is uploaded to the employee file and all three signature lines\./);
     expect(content).not.toMatch(/\?\n/); // no question asked
     expect(content).not.toMatch(/Before you create it/);
     expect(content).toMatch(/doesn't sign anything, remove anyone from MyGlow, change payroll or update Sunlync/);
@@ -658,7 +659,7 @@ describe("QA 4 — what the manager said is filled; nothing else is inferred", (
     expect(content).toMatch(/Left blank for you to review:[^\n]*Store Items Returned/);
     // Written notice and signatures are never read from chat.
     expect(filled).not.toMatch(/written notice|\bsign/i);
-    expect(content).toMatch(/Left blank for you to review:[\s\S]*written notice attached and all three signature lines/);
+    expect(content).toMatch(/Left blank for you to review:[\s\S]*whether written notice is uploaded to the employee file and all three signature lines/);
   });
 
   it("a key not returned gets the $25 sentence, and the payroll deduction line is still left blank", async () => {
