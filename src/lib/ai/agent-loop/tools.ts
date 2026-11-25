@@ -6437,7 +6437,11 @@ export async function proposeForm(
    * code no longer writes or appends any of it.
    */
   const conductHeading = appConfig().policyGuards.headings.conduct;
-  const underPerformance = Boolean(policyHeading && conductHeading && policyHeading.toLowerCase().includes(conductHeading.toLowerCase()) && (/\bunder[- ]?perform(?:ance|ing)\b|must see behaviou?rs?|\bperform[a-z]*\b/i.test(managerWords) || accountMetric().test(managerWords)));
+  /*
+   * Port from the sibling app (60ec55aab; its live re-test, 25 Nov 2026): a Coaching Form asked for "a performance
+   * concern" was told the Corrective Action Form has no Under Performance box. The fact is a Corrective Action's only.
+   */
+  const underPerformance = template.key === appConfig().formKeys.corrective && Boolean(policyHeading && conductHeading && policyHeading.toLowerCase().includes(conductHeading.toLowerCase()) && (/\bunder[- ]?perform(?:ance|ing)\b|must see behaviou?rs?|\bperform[a-z]*\b/i.test(managerWords) || accountMetric().test(managerWords)));
   accountMetric().lastIndex = 0;
   const corrective = template.key === appConfig().formKeys.corrective;
   /*
