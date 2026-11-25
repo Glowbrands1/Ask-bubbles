@@ -175,6 +175,8 @@ export interface FormEditRules {
   readonly writable?: ReadonlySet<string>;
   /** Keys written as the manager's statement, through `applyStatedFacts` (null: its default keys). */
   readonly statedKeys?: ReadonlySet<string> | null;
+  /** Where the stated facts came from, saved as their provenance. Default "manager_statement"; "woven" for the exit form's Permanent Address read from Woven. */
+  readonly statedSource?: "manager_statement" | "woven";
   /** Keys a draft may replace although the manager typed them. */
   readonly typedExempt?: ReadonlySet<string>;
   /** CA_NAME_FROM_CHAT_ENABLED: the form's subject column follows the Employee Name line, to this name. */
@@ -700,7 +702,7 @@ export async function writeFormEdits(instanceId: string, ops: readonly FormEditO
     policyRefused.push(...saved.policyRefused);
   }
   if (count(buckets.statement) > 0) {
-    statedKeys = await applyStatedFacts(instanceId, buckets.statement, rules.actorId, rules.statedKeys ?? undefined);
+    statedKeys = await applyStatedFacts(instanceId, buckets.statement, rules.actorId, rules.statedKeys ?? undefined, rules.statedSource);
     for (const key of statedKeys) {
       if (key in buckets.statement.values) accepted.values[key] = buckets.statement.values[key]!;
       if (key in buckets.statement.checked) accepted.checked[key] = buckets.statement.checked[key]!;
