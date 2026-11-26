@@ -402,7 +402,8 @@ function withApprovedHistoryBoxes(key: string, text: string): string {
   if (key !== "dpoa") return text;
   return text.replace(
     "List previously received coaching and/or corrective action with date signed",
-    "List previous coaching and corrective actions and include date signed by employee in past 90 days",
+    // Changed on purpose (Pau, 26 Nov 2026: "just remove the 90 day wording"): the label no longer says "in past 90 days".
+    "List previous coaching and corrective actions and include date signed by employee",
   );
 }
 
