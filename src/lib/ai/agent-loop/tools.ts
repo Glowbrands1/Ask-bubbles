@@ -58,6 +58,7 @@ import {
   loopCardCitesConductLineEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { typedEmployeeName } from "@/lib/forms/typed-employee-name";
+import { withFinalWritten } from "@/lib/forms/warning-level";
 import { formDateGiven } from "@/lib/forms/incident-dates";
 import type { AskResponse } from "@/lib/ai/types";
 import { findManualSection, manualSectionHeadings, type ManualChunk } from "@/lib/forms/official-policy-manual";
@@ -1107,6 +1108,15 @@ export function priorActionsWithStatedTopics(priorActions: string, stated: reado
   return lines.join(separator);
 }
 
+
+/**
+ * FINAL_WRITTEN_WARNING_ENABLED: the manager's words a level is read from for "final written" — the level evidence's
+ * quote (the manager's own words, already verified) when there is one, else this request's words.
+ */
+function levelWordsForFinal(evidence: unknown, fallback: string): string {
+  const quote = evidence && typeof evidence === "object" ? (evidence as { quote?: unknown }).quote : null;
+  return typeof quote === "string" && quote.trim() !== "" ? quote : fallback;
+}
 
 /** Batch G (QA's review, 15 Nov 2026): a warning level is exactly verbal, written or termination; anything else is refused. */
 export function exactWarningLevel(value: string): "verbal" | "written" | "termination" | null {
@@ -2347,7 +2357,7 @@ export async function findPastForms(context: ToolContext, input: { employee_name
      * Actions (a form of another kind has no level, so a level never drops it). Form data; no word list.
      */
     const asked = new Set([...words(askedQuote), ...words(withoutMessageIdTags(context.question))]);
-    const levelLabel: Record<string, string> = { verbal: "Verbal Warning", written: "Written Warning", termination: "Termination", demotion: "Demotion" };
+    const levelLabel: Record<string, string> = { verbal: "Verbal Warning", written: "Written Warning", final_warning: "Final Written Warning", termination: "Termination", demotion: "Demotion" };
     const levelOf = new Map<string, string[]>();
     if (rows.length <= 20) {
       await Promise.all(rows.filter((row) => row.templateKey === appConfig().formKeys.corrective).map(async (row) => {
@@ -3302,7 +3312,7 @@ async function finalizedPriorsOnFile(context: ToolContext, person: RosterEmploye
     .filter((row) => !firstNameShared(row) && (names.some((full) => samePerson(full, row.employeeName)) || sameRosterPerson(row.employeeName, displayName(person), roster)))
     .sort((a, b) => (a.formDate ?? "").localeCompare(b.formDate ?? "") || a.createdAt.localeCompare(b.createdAt))
     .slice(-10);
-  const levelName: Record<string, string> = { verbal: "Verbal Warning", written: "Written Warning", termination: "Termination" };
+  const levelName: Record<string, string> = { verbal: "Verbal Warning", written: "Written Warning", final_warning: "Final Written Warning", termination: "Termination" };
   return Promise.all(rows.map(async (row) => {
     const level = row.templateKey === keys.corrective
       ? await authorizeInstance(context.request, row.id, "view")
@@ -6142,7 +6152,8 @@ export async function proposeForm(
     formDate: exitTermination ? exitTermination.date : formDatedToday ? givenFormDate : datesAsked.length > 0 || futureDate ? null : date ?? (fromAnotherRequest(ownFormDate) || isPriorDate(ownFormDate) ? null : ownFormDate) ?? null,
     fromAgentLoop: true as const,
     /* QA item 17 (20 Nov 2026): an exit card the model decided is a termination (locked on the word) tells Create, as the CA's does. */
-    ...(level ? { warningLevel: level } : loopTermination || exitTermination ? { loopTermination: true as const } : {}),
+    /* FINAL_WRITTEN_WARNING_ENABLED (revision 9): a Written level the manager's words state as "final written" is the Final Written Warning. */
+    ...(level ? { warningLevel: withFinalWritten(level, levelWordsForFinal(input.level_evidence, requestWords)) } : loopTermination || exitTermination ? { loopTermination: true as const } : {}),
     ...(whatHappened ? { issue: whatHappened } : {}),
     ...(payroll ? { payrollDeduct: payroll } : {}),
     ...(payroll === "yes" && amount ? { payrollDeductAmount: amount } : {}),
@@ -7661,7 +7672,8 @@ export async function editForm(
       /* Batch G (G19): verbal, written or termination only; anything else (a demotion) is refused, never ticked as termination. */
       const kind = exactWarningLevel(values.warning_type);
       if (!kind) return { reason_code: "bad_level", error: `That level (${values.warning_type}) is not a warning level on this form (verbal, written or termination). Nothing was written.` };
-      checked.warning_type = [kind];
+      /* FINAL_WRITTEN_WARNING_ENABLED (revision 9): "final written" in the manager's quote or this message is the Final Written Warning. */
+      checked.warning_type = [withFinalWritten(kind, levelWordsForFinal(input.level_evidence, withoutMessageIdTags(context.question)))];
       delete values.warning_type;
     }
     /*
@@ -7819,7 +7831,7 @@ export async function editForm(
     const unchanged = unchangedAll.filter((field) => !alreadyFields.has(field));
     /* Batch G2 (item 1, EDIT_SEES_SAVED_FORM): the level the saved form holds now, read back, so the reply never claims it from the card or history. */
     const savedLevel = saved.values.find((row) => row.fieldKey === "warning_type")?.checked ?? [];
-    const levelLabel: Record<string, string> = { verbal: "Verbal", written: "Written", termination: "Termination" };
+    const levelLabel: Record<string, string> = { verbal: "Verbal", written: "Written", final_warning: "Final Written", termination: "Termination" };
     /*
      * QA's live finding (16 Nov 2026, case B): "tick payroll deduct" saved Payroll = Yes and the reply never asked the
      * amount. Read from the saved form: payroll Yes, the form has an amount field, and it is still empty (and the manager

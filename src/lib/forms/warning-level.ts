@@ -1,4 +1,4 @@
-import { caShortcutWordsEnabled, complaintAccountEnabled, levelEndsRequestEnabled, levelLeadsRequestEnabled, priorActionsNoCommaEnabled, relativeDayNotHistoryEnabled, requestLevelNotHistoryEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { caShortcutWordsEnabled, complaintAccountEnabled, finalWrittenWarningEnabled, levelEndsRequestEnabled, levelLeadsRequestEnabled, priorActionsNoCommaEnabled, relativeDayNotHistoryEnabled, requestLevelNotHistoryEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { businessToday } from "@/lib/business-date";
 
 import { datesInText } from "./form-date-answer";
@@ -853,7 +853,32 @@ const WHOLE_TURN_MAX = 80;
 const LEVEL_LEADS = new RegExp(String.raw`^\s*(?:please\s+)?(?:an?\s+)?(?:(?:another|one\s+more|first|1st|second|2nd|third|3rd|next)\s+)?(verbal|written)\s+for\s+(?!(?:the|that|this|it|same|being|a|an|her|his|their|them|him|not|no|missing|\d)\b)([a-z][a-z'’-]*(?:\s+[a-z][a-z'’-]*){0,2}?)(?=\s*$|\s*[,:;—–-]\s*(?!(?:it|that|this|which)?\s*(?:went|was|were|is|got|has\s+been|signed)\b)|\s+for\s+\S|\s+(?:she|he|they)\s+\S)`, "i");
 const LEADING_GROUP = /\b(?:team|staff|crew|everyone|everybody|employees|people|members|associates|workers)$/i;
 
+/*
+ * FINAL_WRITTEN_WARNING_ENABLED (port of the sibling app's; its owner's scope list from QA's comparison, 26 Nov 2026;
+ * default off): the Corrective Action Form's revision 9 has "Final Written Warning", and the manager's "final written"
+ * for this form ticks it instead of Written. Off, "final written" is Written (Pau, 30 Oct 2026).
+ */
+export const FINAL_WARNING_LABEL = "Final Written Warning";
+
+/** Every "written" in the manager's words is "final written", and there is at least one. */
+export function saysFinalWritten(text: string): boolean {
+  const read = (text ?? "").toLowerCase();
+  const written = [...read.matchAll(/\bwritten\b/g)];
+  return written.length > 0 && written.every((match) => /\bfinal[\s-]+$/.test(read.slice(Math.max(0, match.index! - 8), match.index)));
+}
+
+/** With FINAL_WRITTEN_WARNING_ENABLED on, a Written level stated as "final written" is the Final Written Warning (on a form that offers it). */
+export function withFinalWritten<T extends string | null | undefined>(level: T, words: string, offered?: readonly string[]): T | "final_warning" {
+  if (level !== "written" || !finalWrittenWarningEnabled() || !saysFinalWritten(words)) return level;
+  if (offered && !offered.includes("final_warning")) return level;
+  return "final_warning";
+}
+
 export function statedWarningLevel(raw: string, today: string = businessToday()): WarningLevel | null {
+  return withFinalWritten(statedWarningLevelAsWritten(raw, today), raw ?? "");
+}
+
+function statedWarningLevelAsWritten(raw: string, today: string): WarningLevel | null {
   // CA_SHORTCUT_WORDS_ENABLED: "1st written", "first written" — the same level as "written";
   // "final written" too (Pau, 30 Oct 2026: "Tick written"). "final warning" still asks.
   const text = caShortcutWordsEnabled() ? (raw ?? "").replace(/\b(?:1st|first)\s+(?=(?:verbal|written)\b)|\bfinal\s+(?=written\b)/gi, "") : raw;

@@ -1,6 +1,6 @@
 import { typoFullNameToRosterEnabled } from "@/lib/config/chat-quality-flags";
 
-import type { WarningLevel } from "./warning-level";
+import { warningLevelLabel, type WarningLevel } from "./warning-level";
 
 /*
  * ============================================================================
@@ -47,7 +47,7 @@ export function withConfirmedNameLevel<T extends { content: string; formProposal
   const levels = new Set(after.map((turn) => OPENS_WITH_LEVEL.exec(turn)?.[1]?.toLowerCase()).filter((level): level is string => Boolean(level)));
   if (levels.size !== 1) return answer;
   const level = [...levels][0] as WarningLevel;
-  const line = `**Type of warning:** ${level === "verbal" ? "Verbal Warning" : "Written Warning"}, as you said — tell me if that should change.`;
+  const line = `**Type of warning:** ${warningLevelLabel(level)}, as you said — tell me if that should change.`;
   // QA (12 Nov 2026, after G4-776b): the history notice in front of the question ("I've treated the earlier warning you
   // mentioned as previous corrective action history …") read the level as an earlier step; with the level set, it goes.
   const content = answer.content.replace(`${HISTORY_NOTICE} ${ASKED}`, line).replace(ASKED, line);

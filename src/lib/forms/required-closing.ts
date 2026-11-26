@@ -58,9 +58,28 @@ export const CA_ACTION_PLAN_CLOSING_REVISION_5 =
  * revision-5 plan carried onto revision 6 — has it taken out before the
  * current closing is put on, so the record never ends with both.
  */
+/**
+ * The Action Plan's closing on a Final Written Warning (revision 9 of this app's Corrective Action Form; port of the
+ * sibling app's revision 10, its owner's scope list from QA's comparison, 26 Nov 2026), in the owner's words exactly.
+ * It takes the place of the future-violations closing, never beside it. A value that already ends with it is closed.
+ */
+export const FINAL_WARNING_PLAN_CLOSING =
+  "Further violations may result in additional disciplinary action, up to and including termination, following leadership review.";
+const FINAL_WARNING_CLOSING = /Further violations may result in additional disciplinary action, up to and including termination, following leadership review\s*[.!]*\s*$/i;
+
 const SUPERSEDED_CLOSINGS: ReadonlyMap<string, readonly string[]> = new Map([
   [CA_ACTION_PLAN_CLOSING, [CA_ACTION_PLAN_CLOSING_REVISION_5]],
 ]);
+
+/** The value with these closings taken out, the seams tidied. */
+function withoutClosings(value: string, closings: readonly string[]): string {
+  if (closings.length === 0) return value;
+  return closings
+    .reduce((text, sentence) => text.replace(closingPattern(sentence), " "), value)
+    .replace(/[^\S\n]{2,}/g, " ")
+    .replace(/[^\S\n]+\n/g, "\n")
+    .trim();
+}
 
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -96,6 +115,8 @@ export function withRequiredClosing(value: string, closing: string): string {
    * future violations. Off, this line changes nothing.
    */
   if (terminationClosingEnabled() && TERMINATION_CLOSING.test(value.trim())) return value;
+  /* A Final Written Warning's plan ends with its own closing; the future-violations one is never added after it. */
+  if (wanted !== FINAL_WARNING_PLAN_CLOSING && FINAL_WARNING_CLOSING.test(value.trim())) return value;
 
   const body = [wanted, ...(SUPERSEDED_CLOSINGS.get(wanted) ?? [])]
     .reduce((text, sentence) => text.replace(closingPattern(sentence), " "), value)
@@ -145,6 +166,8 @@ export function applyRequiredClosings(
   document: FormDocument,
   variantKey: string | null,
   values: Record<string, string>,
+  /** Final Written Warning ticked on the form after this write: the Corrective Action plan ends with its closing. */
+  options: { readonly finalWarningTicked?: boolean } = {},
 ): Record<string, string> {
   const fields = closingFields(document, variantKey);
   if (fields.length === 0) return values;
@@ -153,7 +176,10 @@ export function applyRequiredClosings(
   for (const field of fields) {
     const current = values[field.key];
     if (typeof current !== "string") continue;
-    const closed = withRequiredClosing(current, field.requiredClosing!);
+    const finalWarning = options.finalWarningTicked === true && field.requiredClosing === CA_ACTION_PLAN_CLOSING;
+    const closed = finalWarning
+      ? withRequiredClosing(withoutClosings(current, [CA_ACTION_PLAN_CLOSING, CA_ACTION_PLAN_CLOSING_REVISION_5]), FINAL_WARNING_PLAN_CLOSING)
+      : withRequiredClosing(withoutClosings(current, FINAL_WARNING_CLOSING.test(current.trim()) ? [FINAL_WARNING_PLAN_CLOSING] : []), field.requiredClosing!);
     if (closed !== current) {
       next ??= { ...values };
       next[field.key] = closed;
