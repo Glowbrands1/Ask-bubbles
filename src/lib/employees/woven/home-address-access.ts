@@ -9,10 +9,10 @@ import type { Role } from "@/types";
  * "only Admins and Managers", both apps. Managers are District Managers, Regional Managers and Store Directors
  * (`location_manager`) — not assistant managers.
  *
- *   admins (the admin console roles)   the employee page's "Show home address", any employee
+ *   admins (the admin console roles)   the Employee Directory's "Show address" (its own permissions)
  *   DM · RM · Store Director           the exit form's Permanent Address only, for people at stores they cover
  *
- * The address is always read live from Woven and never stored: the directory still has no address column.
+ * The address is always read live from Woven and never stored.
  */
 
 export const HOME_ADDRESS_MANAGER_ROLES: readonly Role[] = ["district_manager", "regional_manager", "location_manager"];
@@ -23,7 +23,3 @@ export function mayReadHomeAddress(role: Role | null | undefined): boolean {
   return ADMIN_CONSOLE_ROLES.includes(role) || HOME_ADDRESS_MANAGER_ROLES.includes(role);
 }
 
-/** May this role look up any employee's home address on the admin Employee Directory? Admins only. */
-export function mayLookUpHomeAddress(role: Role | null | undefined): boolean {
-  return !!role && ADMIN_CONSOLE_ROLES.includes(role);
-}

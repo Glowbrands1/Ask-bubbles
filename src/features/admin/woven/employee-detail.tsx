@@ -16,7 +16,6 @@ import {
 import { ChangeTable } from "./change-feed";
 import { Locations, MappingBadge, STATUS_TONE } from "./directory-table";
 import { day, label, when } from "./format";
-import { HomeAddressReveal } from "./home-address-reveal";
 import type { WovenEmployeeProps } from "./load";
 import { WovenHeader } from "./tabs";
 
@@ -96,9 +95,6 @@ export function EmployeeDetailView({
         <SectionHeader title="Employment" />
         <dl className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           <Field term="Work email">{row.emailAddress ?? <Badge tone="failed" size="sm">missing</Badge>}</Field>
-          <Field term="Home address">
-            <HomeAddressReveal directoryId={row.id} disabled={actionsDisabled} />
-          </Field>
           <Field term="Position">
             {row.positionName ?? none}
             {row.positionId ? <span className="block font-mono text-[11px] text-muted-foreground">{row.positionId}</span> : null}
