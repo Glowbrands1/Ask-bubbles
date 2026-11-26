@@ -39,7 +39,7 @@ import { spokenDates } from "@/lib/forms/relative-date";
 import { typedEmployeeName } from "@/lib/forms/typed-employee-name";
 import { detectTemplateIntent, mentionsEarlierCoaching } from "@/lib/forms/template-intent";
 import { labelledStoreIds } from "@/lib/forms/store-cue";
-import { warningLevelFromTurns, managerStatedWarningLevel } from "@/lib/forms/warning-level";
+import { warningLevelFromTurns, managerStatedWarningLevel, warningLevelLabel } from "@/lib/forms/warning-level";
 import type { ChatFormProposal } from "@/types";
 
 import { withoutAppLines } from "./app-sentences";
@@ -1520,7 +1520,7 @@ function renderReply(
     if (fixed.policyLine) lines.push(fixed.policyLine);
   } else if (slots.policySection) lines.push(`**Policy:** ${slots.policySection}, as you said`);
   if (slots.warningLevel) {
-    const label = slots.warningLevel === "verbal" ? "Verbal Warning" : "Written Warning";
+    const label = warningLevelLabel(slots.warningLevel);
     lines.push(`**Type of warning:** ${label}, as you said`);
   }
   if (slots.payrollDeduct) lines.push(`**Payroll deduct:** ${slots.payrollDeduct === "yes" ? "Yes" : "No"}, as you said`);

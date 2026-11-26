@@ -782,6 +782,16 @@ async function writeValues(
 }
 
 /**
+ * Whether the form will hold Final Written Warning on its Type of Warning after this write: ticked in this write, else
+ * already stored (port of the sibling app's revision 10). The Action Plan's closing follows it.
+ */
+function finalWarningTicked(loaded: LoadedInstance, checked?: Readonly<Record<string, readonly string[]>> | null): boolean {
+  const written = checked?.warning_type;
+  if (written) return written.includes("final_warning");
+  return loaded.values.some((row) => row.fieldKey === "warning_type" && row.checked.includes("final_warning"));
+}
+
+/**
  * ============================================================================
  * THE MANAGER'S OWN STATEMENTS, PUT ON THE FORM
  * ============================================================================
@@ -890,7 +900,7 @@ export async function saveInstanceValues(
    * Deleting it in the textarea, or typing after it, does not take it off the
    * record — see `required-closing.ts`. Nothing else they typed is changed.
    */
-  const values = applyRequiredClosings(document, loaded.instance.variantKey, result.values);
+  const values = applyRequiredClosings(document, loaded.instance.variantKey, result.values, { finalWarningTicked: finalWarningTicked(loaded, result.checked) });
   /*
    * ONLY WHAT THE MANAGER CHANGED IS REWRITTEN AS THEIRS.
    *
@@ -1014,7 +1024,7 @@ export async function applyAssistantDraft(
    */
   const guarded = {
     ...refused,
-    values: applyRequiredClosings(document, loaded.instance.variantKey, refused.values),
+    values: applyRequiredClosings(document, loaded.instance.variantKey, refused.values, { finalWarningTicked: finalWarningTicked(loaded, draft.checked) }),
   };
 
   await writeValues(
@@ -1070,7 +1080,7 @@ export async function applyAssistantRevision(
   // A redraft keeps the version's required closings, exactly as a first draft does.
   const guarded = {
     ...refused,
-    values: applyRequiredClosings(document, loaded.instance.variantKey, refused.values),
+    values: applyRequiredClosings(document, loaded.instance.variantKey, refused.values, { finalWarningTicked: finalWarningTicked(loaded, draft.checked) }),
   };
 
   const writable = new Set([
@@ -1515,7 +1525,7 @@ export async function reviseInstance(
     const textValues = Object.fromEntries(
       rows.flatMap((row) => (typeof row.value === "string" ? [[row.field_key, row.value]] : [])),
     );
-    const closed = applyRequiredClosings(target, loaded.instance.variantKey, textValues);
+    const closed = applyRequiredClosings(target, loaded.instance.variantKey, textValues, { finalWarningTicked: finalWarningTicked(loaded) });
     for (const row of rows) {
       if (typeof row.value === "string" && closed[row.field_key] !== row.value) {
         row.value = closed[row.field_key]!;
