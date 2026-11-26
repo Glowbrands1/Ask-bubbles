@@ -42,6 +42,8 @@ describe("Employee Directory", () => {
       "Name",
       "Woven ID",
       "Work email",
+      // Added on purpose (Pau, 26 Nov 2026): "Show address" asks Woven for one person's home address on click.
+      "Home address",
       "Status",
       "Position",
       "Position ID",
