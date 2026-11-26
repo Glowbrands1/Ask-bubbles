@@ -203,6 +203,13 @@ const ALLOWED_UI = [
   // gains a section scoped to `.training-prose` and `.training-callout-*`.
   "src/app/(app)/ai-training/",
   "src/features/ai-training/",
+  // WHAT'S NEW and the AI-READABLE PAGES list (Paulyne, 26 Nov 2026, both apps; QA, 24 Nov 2026, could not find the list
+  // of pages the AI can read): two new pages and their screens only, with one rail entry each (navigation.ts, listed
+  // below). Read-only lists from typed config; no existing page, chat or form behaviour changes, no flag involved.
+  "src/app/(app)/whats-new/",
+  "src/features/whats-new/",
+  "src/app/(app)/admin/ai-readable-pages/",
+  "src/features/admin/ai-readable-pages-screen.tsx",
   // IN-APP BELL (Pau, 23 Nov 2026: "port the notification bell to Bubbles", for the HR form approval; port from Ask
   // Sunny 30cac4c): a new bell component and its mark-read action. It renders only for someone with a notification:
   // in the rail on desktop (sidebar.tsx), in the top bar on phones (app-shell.tsx), read by the (app) layout; all
