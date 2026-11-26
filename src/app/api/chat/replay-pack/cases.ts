@@ -53,6 +53,8 @@ export interface ReplayContext {
   directory(rows: readonly DirectoryRow[]): void;
   /** Every knowledge search's query this case, in order (POLICY_CARRY_RETRIEVAL, 12 Nov 2026). */
   searches?(): string[];
+  /** What the knowledge search returns this case, as indexed rows (port of the sibling app's helper, 26 Nov 2026). */
+  knowledgeHas?(rows: readonly Record<string, unknown>[]): void;
   /**
    * The full policy manual a policy question reads (`loadFullManualPlan`), as indexed chunks; this case only. Without
    * it the pack reads no manual. Used to put a source excerpt through the production path.

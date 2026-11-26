@@ -803,6 +803,8 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
   const noop = input.openFormId ? await import("@/lib/forms/form-noop-reply") : null;
   const openBefore = noop && input.openFormId ? await noop.formBeforeTurn(input.openFormId, input.request) : null;
   const steps: AgentLoopStep[] = [];
+  /* The turn's tool steps under a name no inner `steps` shadows (the coaching check reads whether search_knowledge ran). */
+  const turnSteps = steps;
   const replyNames = new Set<string>();
   const offRosterNames = new Set<string>();
   /* QA's live re-test B8: the inactive line of each former employee's card this turn. */
@@ -1567,8 +1569,10 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
          */
         if (stoppedAt === "reply" && !effects.proposal && !effects.formOpened && !effects.formUpdate && adviceNotForm(input.question, input.history) && asksCoachingHowTo(input.question)) {
           const shape = coachingAnswerShape(text);
-          if (!completeShape(shape)) {
-            const again = await handBack(coachingHowToNote(shape));
+          /* Port of the sibling app (26 Nov 2026): the company's own coaching guidance first; an answer written without a knowledge search goes back once too. */
+          const searched = turnSteps.some((step) => step.tool === "search_knowledge");
+          if (!completeShape(shape) || !searched) {
+            const again = await handBack(coachingHowToNote(shape, searched));
             if (again && !onlyAsksWho(again) && partsOf(coachingAnswerShape(again)) >= partsOf(shape)) text = again;
           }
         }
