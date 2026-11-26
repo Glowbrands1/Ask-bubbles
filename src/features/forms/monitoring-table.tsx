@@ -404,11 +404,14 @@ export function MonitoringTable({
 
   /*
    * BULK DELETE. A row can be ticked only when the per-row Delete would be
-   * offered: a draft, and the viewer may manage form records. The server still
+   * offered (`mayDelete`): a draft for anyone who may manage form records, and a
+   * finalized or revised form for the named account too (Pau, 26 Nov 2026: "oh i
+   * can but there is no check box"). The server still
    * decides each one (DELETE /api/forms/instances/{id}), so store scoping, HR
    * approval withdrawal and the deletion record are exactly as for one delete.
    */
-  const deletable = shown.filter((form) => mayManage && form.status === "draft");
+  const deletable = shown.filter(mayDelete);
+  const selectedIncludesFiled = () => selectedShown.some((form) => form.status !== "draft");
   const deletableIds = deletable.map((form) => form.id);
   const selectedShown = deletable.filter((form) => selected.has(form.id));
   const allTicked = deletable.length > 0 && selectedShown.length === deletable.length;
@@ -711,11 +714,11 @@ export function MonitoringTable({
                       <tr key={form.id} className="border-b border-border last:border-0">
                         {mayManage ? (
                           <td className="w-11 px-1 py-0">
-                            {form.status === "draft" ? (
+                            {mayDelete(form) ? (
                               <label className="flex size-11 cursor-pointer items-center justify-center">
                                 <input
                                   type="checkbox"
-                                  aria-label={`Select ${form.employeeName}'s ${form.templateShortName} draft`}
+                                  aria-label={`Select ${form.employeeName}'s ${form.templateShortName} ${form.status === "draft" ? "draft" : `(${form.status})`}`}
                                   checked={selected.has(form.id)}
                                   onChange={() => undefined}
                                   onClick={(event) => toggleRow(form.id, event.shiftKey)}
@@ -991,8 +994,12 @@ export function MonitoringTable({
         }}
       >
         <DialogContent
-          title={`Delete ${selectedShown.length} draft${selectedShown.length === 1 ? "" : "s"}?`}
-          description="Drafts are removed for good. A deletion record is kept."
+          title={`Delete ${selectedShown.length} ${selectedIncludesFiled() ? "form" : "draft"}${selectedShown.length === 1 ? "" : "s"}?`}
+          description={
+            selectedIncludesFiled()
+              ? "Includes finalized forms, which are normally kept on file. They are removed for good and cannot be undone. A deletion record is kept with your name and the time."
+              : "Drafts are removed for good. A deletion record is kept."
+          }
         >
           <ul className="space-y-1 text-[13px] text-foreground">
             {selectedShown.slice(0, 5).map((form) => (
