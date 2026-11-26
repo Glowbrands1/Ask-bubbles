@@ -88,7 +88,7 @@ export function exitEmployeeDirectoryId(
    */
   if (active.size === 1) return [...active][0]!;
   /*
-   * ONE NAME, TWO WOVEN ROWS, ONE AT THE FORM'S STORE (port from Ask Sunny; production there, 26 Nov 2026: an employee
+   * ONE NAME, TWO WOVEN ROWS, ONE AT THE FORM'S STORE (port from the sibling app; production there, 26 Nov 2026: an employee
    * with a store row and a second active row at the corporate Woven location, which maps to no store; a global manager
    * sees both). The row at the store the exit form is filed for is that person. Two at that store is still nobody.
    */

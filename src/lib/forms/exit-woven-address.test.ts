@@ -59,7 +59,7 @@ describe("the one person the exit form names", () => {
   });
 
   /*
-   * Port from Ask Sunny (production there, 26 Nov 2026): the exit form's employee had two active Woven rows, one at the
+   * Port from the sibling app (production there, 26 Nov 2026): the exit form's employee had two active Woven rows, one at the
    * store the form is filed for and one at the corporate Woven location (no store). A global manager saw both.
    */
   it("one name, a store row and a corporate row: the row at the form's store", () => {
