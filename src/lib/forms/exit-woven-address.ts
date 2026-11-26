@@ -319,9 +319,8 @@ export async function wovenExitAddress(
     return null;
   };
   /*
-   * ONLY ADMINS AND MANAGERS (Curt, 26 Nov 2026: "only Admins and Managers both apps"; port from Ask Sunny): the
-   * address is filled only for an admin, a District or Regional Manager or a Store Director. Anyone else's draft
-   * leaves the line blank.
+   * ONLY ADMINS AND MANAGERS (Curt, 26 Nov 2026: "only Admins and Managers both apps"): the address is filled only
+   * for an admin, a District or Regional Manager or a Store Director. Anyone else's draft leaves the line blank.
    */
   if (!mayReadHomeAddress(input.role)) return why("role may not read home addresses");
   try {
