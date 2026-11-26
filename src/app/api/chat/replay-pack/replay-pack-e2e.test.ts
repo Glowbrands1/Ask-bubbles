@@ -729,7 +729,7 @@ class Thread {
     this.idPrefix = options.idPrefix ?? "m";
   }
 
-  async say(question: string, reading: Record<string, unknown> = {}): Promise<Answer> {
+  async say(question: string, reading: Record<string, unknown> = {}, extra: Record<string, unknown> = {}): Promise<Answer> {
     state.reading = reading;
     // As the browser sends it: the card a message carried, and FORM_EDIT_SOURCE_TURN_ENABLED's `formReply` (`chat-screen.tsx`).
     const history = this.messages.map(({ id, role, content, formProposal, formReply }) => ({
@@ -757,6 +757,8 @@ class Thread {
           ...(this.instanceId ? { activeFormInstanceId: this.instanceId } : {}),
           // As the browser does (`ClaudeProvider`): the copy the last answer offered (SAME_FORM_COPY_NEW_PERSON_ENABLED).
           ...(pendingCopy ? { pendingCopyFromInstanceId: pendingCopy } : {}),
+          // ANSWER_MODE_ON_LOOP (26 Nov 2026): other fields the browser can send, e.g. the answer mode (`mode: "quick"`).
+          ...extra,
         }),
       }),
     );

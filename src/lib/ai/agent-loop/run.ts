@@ -275,6 +275,8 @@ export interface AgentTurnInput {
   readonly onTools?: (tools: readonly string[]) => void;
   /** PR 6 item 5: a short status as each tool starts, for the screen only (`progress.ts`); never the reply, history or trace. */
   readonly onProgress?: (status: string) => void;
+  /** ANSWER_MODE_ON_LOOP: the answer mode the manager chose; Quick and Detailed add a length line, Detailed more room. */
+  readonly answerMode?: "quick" | "standard" | "detailed";
 }
 
 const count = (value: unknown): number => (typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0);
@@ -1016,6 +1018,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
     openFormId: input.openFormId,
     answeringWhoQuestion: whoAsked ? (templates.find((row) => row.key === whoAsked.templateKey)?.name ?? "form") : null,
     createFormButton: buttonPressed ? (input.openFormId ? { kind: "draft_open" } : cardOnScreen ? { kind: "card_open", form: cardOnScreen.templateName ?? null } : { kind: "nothing" }) : null,
+    ...(input.answerMode && input.answerMode !== "standard" ? { answerMode: input.answerMode } : {}),
   });
 
   const { jsonSchema, streamText, tool } = await import("ai");
@@ -1107,7 +1110,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
         /* PR 6 item 3: the loop stops when its steps and the tools' own model calls reach the limit. */
         stopWhen: ({ steps: done }) => done.length + hiddenCalls >= limit,
         prepareStep: ({ messages }) => ({ messages: withLastMessageCached(messages) }),
-        maxOutputTokens: CLAUDE_MAX_TOKENS.standard,
+        maxOutputTokens: input.answerMode === "detailed" ? CLAUDE_MAX_TOKENS.detailed : CLAUDE_MAX_TOKENS.standard,
         maxRetries: timed.maxRetries,
         abortSignal: timed.signal,
         providerOptions: LOOP_PROVIDER_OPTIONS,
@@ -1250,7 +1253,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
            */
           prepareStep: ({ messages }) => ({ messages: withLastMessageCached(messages) }),
           providerOptions: LOOP_PROVIDER_OPTIONS,
-          maxOutputTokens: CLAUDE_MAX_TOKENS.standard,
+          maxOutputTokens: input.answerMode === "detailed" ? CLAUDE_MAX_TOKENS.detailed : CLAUDE_MAX_TOKENS.standard,
           maxRetries: timed.maxRetries,
           abortSignal: timed.signal,
           onError: () => {},
