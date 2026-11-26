@@ -220,6 +220,10 @@ const ALLOWED_UI = [
   // as blank; the pop-up is in inline-form.tsx (listed below). Only after a refusal for blank fields; otherwise every
   // field renders as before.
   "src/features/forms/document/responsive-form.tsx",
+  // "Show address" on the Employee Directory (Pau, 26 Nov 2026: "can we list their address here"; admins only, nothing
+  // saved): a Home address column whose button asks Woven for one person's address on click. Admin page only.
+  "src/features/admin/woven/directory-table.tsx",
+  "src/features/admin/woven/address-button.tsx",
   "src/features/forms/hr-approval-panel.tsx",
   "src/features/forms/hr-approval-screen.tsx",
   "src/app/(app)/forms/hr-approval/",
