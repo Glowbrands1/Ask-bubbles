@@ -1289,8 +1289,14 @@ async function answerQuestionCore(
   });
   const reportData =
     [briefing?.text ?? null, reviewBlock?.text ?? null, deletionsBlock, dataAddition.data].filter((part) => part && part.length > 0).join("\n\n") || null;
+  // The files attached to this question (the composer's attach button), read for the model: `lib/chat/attachments.server.ts`.
+  const attachedFiles = request.attachments && request.attachments.length > 0 ? await import("@/lib/chat/attachments.server") : null;
+  const attachedRead = attachedFiles ? await attachedFiles.readAttachments(request.attachments) : [];
   const claudeBase = {
     system,
+    ...(attachedFiles && attachedRead.length > 0
+      ? { attachments: [...attachedFiles.attachmentAnthropicBlocks(attachedRead), { type: "text" as const, text: attachedFiles.attachmentsLead(attachedRead) }] }
+      : {}),
     reportData,
     formsLibrary: formInventoryBlock,
     verifiedRecords: entities.block,
@@ -1510,6 +1516,7 @@ async function answerQuestionCore(
     question: request.question,
     history: request.history,
     attachedDocumentIds: request.attachedDocumentIds,
+    attachments: request.attachments,
   }).content;
   // CA_SALES_POLICY_ENABLED: the Corrective Action offer is added at the turn's one exit (`answerQuestion`, `withCaOffer`).
   return {
