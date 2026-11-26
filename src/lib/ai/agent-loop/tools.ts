@@ -52,6 +52,7 @@ import {
   manualSectionDedupeEnabled,
   retrievalRecallEnabled,
   priorFormsUpToTodayEnabled,
+  priorOnFileOnCardEnabled,
   typedEmployeeEveryCardEnabled,
   adminCardAsksSalonEnabled,
   loopCardCitesConductLineEnabled,
@@ -3370,7 +3371,8 @@ export function priorsOnFileLine(priors: readonly PriorOnFile[]): string {
     const found = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso ?? "");
     return found ? `${found[2]}/${found[3]}/${found[1]}` : "date not recorded";
   };
-  return priors.map((prior) => `${prior.form}${prior.level ? `, ${prior.level}` : ""}${prior.withHr ? `, ${prior.withHr}` : ""} — ${usDay(prior.date)}`).join("; ");
+  // Each line says what the form is (Pau, 26 Nov 2026: "also say if its a draft and finalized").
+  return priors.map((prior) => `${prior.form}${prior.level ? `, ${prior.level}` : ""}, ${prior.withHr ?? "finalized"} — ${usDay(prior.date)}`).join("; ");
 }
 
 /**
@@ -5577,7 +5579,20 @@ export async function proposeForm(
     })
     : [];
   const priorParts = priorActionsRead ? [...(onFileBeside.length > 0 ? [priorsOnFileLine(onFileBeside)] : []), priorActionsRead, ...listedSteps] : [];
-  const priorActions = priorActionsRead ? priorParts.join(priorActionsRead.includes("\n") ? "\n" : "; ").slice(0, 600) : null;
+  const priorActionsStated = priorActionsRead ? priorParts.join(priorActionsRead.includes("\n") ? "\n" : "; ").slice(0, 600) : null;
+  /*
+   * THE FORMS ON FILE GO ON THE CARD (Pau, 26 Nov 2026, port from the sibling app: "Ai saw prior forms but i need them here";
+   * PRIOR_ON_FILE_ON_CARD_ENABLED). This person's forms on file (finalized, or a draft with HR) are added to Prior actions
+   * on their own, after the manager's own steps, each saying what it is, never twice for a date a kept step already has.
+   * They are never "as you said": the manager's quote does not hold their dates. Off, they are offered, as before.
+   */
+  const statedDates = priorActionsStated ? readDates(priorActionsStated) : [];
+  const onFileToAdd = !priorOnFileOnCardEnabled() ? [] : priorsOnFile.filter((prior) => {
+    const iso = onFileDateOf(prior);
+    if (iso === null) return true;
+    return !statedDates.some((held) => sameDate(held, { month: Number(iso.slice(5, 7)), day: Number(iso.slice(8, 10)), year: Number(iso.slice(0, 4)) }));
+  });
+  const priorActions = [priorActionsStated, onFileToAdd.length > 0 ? priorsOnFileLine(onFileToAdd) : null].filter((part): part is string => Boolean(part)).join("; ").slice(0, 600) || null;
   /*
    * THE CARD ON SCREEN KEEPS ITS PRIOR ACTIONS (Pau's round 3, U21 T7; QA, 22 Nov 2026): "add the direct policy from the
    * official manual that goes with this" re-proposed Briony's card with the new policy and no prior_actions, and the card's
@@ -5600,7 +5615,8 @@ export async function proposeForm(
    * U09 / U21: a prior step on this card's Prior actions is never this incident's account (`accountWithoutPriorSteps`).
    * Only the steps the card keeps: a sentence leaves the Observation only when Prior actions holds it, so nothing is lost.
    */
-  if (whatHappened && priorActions) whatHappened = accountWithoutPriorSteps(whatHappened, priorActions, date);
+  // Only the manager's own steps leave the account; a form on file added above is never a sentence of it.
+  if (whatHappened && priorActionsStated) whatHappened = accountWithoutPriorSteps(whatHappened, priorActionsStated, date);
   /*
    * QA's live re-test (21 Nov 2026, item 18): the prior actions the forms on file filled were read back "…, as you said"
    * (the manager never said them). Prior actions are the manager's statement only when their words state the steps
@@ -6546,7 +6562,7 @@ export async function proposeForm(
      */
     ...(levelNotGiven ? { level_not_given: { option: levelNotGiven, note: `This card has no warning level, and the manager's message names the form's ${levelNotGiven === "written" ? "Written" : "Verbal"} Warning option. If it states THIS form's level, propose the card again with warning_level ${levelNotGiven} and level_evidence quoting those words; if it is history ("written up before"), leave the level unset.` } } : {}),
     ...(level || payroll || (priorActions && priorStated)
-      ? { stated: { ...(level ? { warning_level: level } : {}), ...(payroll ? { payroll_deduct: payroll } : {}), ...(payroll === "yes" && amount ? { payroll_amount: `$${amount.replace(/^\$/, "")}` } : {}), ...(priorActions && priorStated ? { prior_actions: priorActions } : {}) } }
+      ? { stated: { ...(level ? { warning_level: level } : {}), ...(payroll ? { payroll_deduct: payroll } : {}), ...(payroll === "yes" && amount ? { payroll_amount: `$${amount.replace(/^\$/, "")}` } : {}), ...(priorActionsStated && priorStated ? { prior_actions: priorActionsStated } : {}) } }
       : {}),
     /*
      * QA's live finding (16 Nov 2026): "as you said" only for what THIS message stated. The level and payroll whose
@@ -6606,7 +6622,7 @@ export async function proposeForm(
      * Pau's ruling (23 Nov 2026): the forms on file are offered, never added. ask_exactly is the one line the reply ends
      * with; on the manager's yes (or when they name one), propose again with prior_actions holding it.
      */
-    ...(priorsOnFile.length > 0 ? { prior_on_file: { forms: priorsOnFile, line: onFileLine, on_card: false, ...(onFileOffer ? { ask_exactly: onFileOffer } : {}) } } : {}),
+    ...(priorsOnFile.length > 0 ? { prior_on_file: { forms: priorsOnFile, line: onFileLine, on_card: onFileToAdd.length > 0, ...(onFileToAdd.length > 0 ? { used_on_card: true } : {}), ...(onFileOffer ? { ask_exactly: onFileOffer } : {}) } } : {}),
     /* The owner (24 Nov 2026): a form of theirs for this person already with HR is said, with its offense and policy. */
     ...(otherWithHr.length > 0 ? { with_hr: { forms: otherWithHr.map(({ instanceId, form, date, state, offense, policy }) => ({ instance_id: instanceId, form, date, state, offense, policy })), say_exactly: formsWithHrLine(card.employeeName ?? employee.name, otherWithHr) } } : {}),
     ...(corrective && payroll === "yes" && !amount && statedAmount ? { payroll_amount_said: `$${statedAmount}` } : {}),

@@ -162,8 +162,8 @@ export const NOV21_AGENT_LOOP_LIVE_RETEST_U_CASES: ReplayCase[] = [
        * file are never put on Prior actions on their own, only offered. So the form on file of 10/20 is offered (its
        * ask_exactly) and is not on the card; and still, nothing the manager never gave is read back "as you said".
        */
-      expect(card?.facts?.prior_on_file?.ask_exactly ?? "", `the form on file is not offered (the case proves nothing):\n${JSON.stringify(card)}`).toMatch(/10\/20\/2026\. Want me to add it to Prior actions\?/);
-      expect(card?.card?.prior_actions ?? null, "a form on file was put on Prior actions on its own").toBeNull();
+      // CHANGED ON PURPOSE (Pau, 26 Nov 2026: "Ai saw prior forms but i need them here"; PRIOR_ON_FILE_ON_CARD_ENABLED, port from the sibling app): forms on file are put on the card's Prior actions by the app, each saying what it is, and never offered. What this case still guards: never "as you said", and never listed as stated by the manager.
+      expect(card?.card?.prior_actions ?? "", `the form on file is not on the card (the case proves nothing):\n${JSON.stringify(card)}`).toMatch(/finalized — 10\/20\/2026/);
       expect(card?.facts?.stated?.prior_actions, "prior actions from the forms on file are listed as stated by the manager").toBeUndefined();
       expect(reply.content, `the reply says "as you said" about prior actions the manager never gave:\n${reply.content}`).not.toMatch(/\*\*Prior actions:\*\*[^\n]*as you said/i);
       expect(reply.content, "the level the manager typed lost its \"as you said\"").toMatch(/Verbal Warning, as you said/);

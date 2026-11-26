@@ -1,6 +1,7 @@
 import { expect, vi } from "vitest";
 
 import { STAFF, type ReplayCase, type ReplayContext } from "./cases";
+import { allFieldsRequiredEnabled } from "@/lib/config/chat-quality-flags";
 
 /**
  * ============================================================================
@@ -35,7 +36,8 @@ export const NOV14_PRIOR_ACTIONS_UNSAID_BLANK_CASES: ReplayCase[] = [
     fixFlags: [FLAG],
     async run(t: ReplayContext) {
       const { reply, prior } = await createdPriorActions(t, "verbal ca for remy calder, she was late on 11/3/26. no payroll deduct");
-      expect(prior, `Prior Actions was filled:\n${reply}`).toBe("");
+      // CHANGED ON PURPOSE (Pau, 26 Nov 2026: "still not say N/A here" / "yes i want it before"; ALL_FIELDS_REQUIRED_ENABLED, port from the sibling app): nothing said and nothing on file reads "N/A", never the drafter's "None — first occurrence". Blank with the flag off.
+      expect(prior, `Prior Actions was filled:\n${reply}`).toBe(allFieldsRequiredEnabled() ? "N/A" : "");
     },
   },
 ];

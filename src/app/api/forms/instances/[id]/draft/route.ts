@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { readersLineBox } from "@/lib/forms/readers-line-headings";
 import { keptPlanSteps, withPlanSteps } from "@/lib/forms/stated-plan-steps";
-import { priorFormsUpToTodayEnabled, statedPlanStepsEnabled } from "@/lib/config/chat-quality-flags";
+import { allFieldsRequiredEnabled, priorFormsUpToTodayEnabled, statedPlanStepsEnabled } from "@/lib/config/chat-quality-flags";
 import { TERMINATION_OPTION, withTerminationPlan } from "@/lib/forms/termination-stated";
 import { salesResultsOffenseLine, withCaChosenRule } from "@/lib/ai/ca-sales-prompt-lines";
 import { noteSpendUser } from "@/lib/ai/spend-meter";
@@ -262,8 +262,10 @@ import { applyEmployeeName, employeeFirstName, employeeNameRules } from "@/lib/f
 import {
   LEGACY_PREVIOUS_ACTION_DATE_KEY,
   NO_PRIOR_ACTION,
+  NO_PRIOR_ACTIONS_FOUND,
   PRIOR_ACTIONS_KEY,
   groundPriorActions,
+  isNoHistoryLine,
 } from "@/lib/forms/prior-actions";
 
 /**
@@ -2196,6 +2198,12 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
           );
         }
         if (priorActions.value.trim() !== "") base[PRIOR_ACTIONS_KEY] = priorActions.value;
+        /*
+         * NOTHING FOUND READS "N/A" FROM THE DRAFT ON (Pau, 26 Nov 2026, port from the sibling app: "still not say N/A here").
+         * With ALL_FIELDS_REQUIRED_ENABLED, no step the manager stated and no form on file (finalized, or with HR) writes
+         * "N/A" now, not only at send time. A step added later replaces it.
+         */
+        else if (allFieldsRequiredEnabled()) base[PRIOR_ACTIONS_KEY] = NO_PRIOR_ACTIONS_FOUND;
         else delete base[PRIOR_ACTIONS_KEY];
       }
       return base;
@@ -2776,13 +2784,18 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      * on it would say nothing anyone decided. So the plan is built when this
      * draft wrote something, or the form already holds a draft.
      */
+    /*
+     * The "N/A" written to an empty history box (ALL_FIELDS_REQUIRED_ENABLED; Pau, 26 Nov 2026: "yes i want it before") is
+     * not something drafted: a form holding only that is still blank here.
+     */
+    const autoNoHistory = (key: string, value: string | null | undefined) => key === PRIOR_ACTIONS_KEY && isNoHistoryLine(value ?? "");
     const holdsDraft = (values: Record<string, string>, checked: Record<string, string[]>) =>
-      Object.values(values).some((value) => typeof value === "string" && value.trim() !== "") ||
+      Object.entries(values).some(([key, value]) => typeof value === "string" && value.trim() !== "" && !autoNoHistory(key, value)) ||
       Object.values(checked).some((options) => options.length > 0);
     const draftedAnything =
       holdsDraft(named.values, validated.checked) ||
       (loaded.values ?? []).some(
-        (row) => row.filledBy === "ai" && ((row.value ?? "").trim() !== "" || row.checked.length > 0),
+        (row) => row.filledBy === "ai" && !autoNoHistory(row.fieldKey, row.value) && ((row.value ?? "").trim() !== "" || row.checked.length > 0),
       );
     /*
      * THE MANAGER'S ACTION PLAN, OR NONE (ACTION_PLAN_MANAGER_ONLY_ENABLED; Pau,
@@ -2908,8 +2921,13 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
        */
       if (typeof body.cardPriorActions === "string" && !keeps("prior_actions")) {
         const prior = body.cardPriorActions.trim();
-        if (prior === "" && (loopCardDraft.values.prior_actions ?? "").trim() !== "") {
-          loopCardDraft.values = { ...loopCardDraft.values, prior_actions: "" };
+        /*
+         * ALL_FIELDS_REQUIRED_ENABLED (Pau, 26 Nov 2026, port from the sibling app: "still not say N/A here"): a card with no
+         * step and no form on file saves "N/A" rather than a blank line. Off, blank as before.
+         */
+        const none = allFieldsRequiredEnabled() ? NO_PRIOR_ACTIONS_FOUND : "";
+        if (prior === "" && fields.some((field) => field.key === "prior_actions") && (loopCardDraft.values.prior_actions ?? "").trim() !== none) {
+          loopCardDraft.values = { ...loopCardDraft.values, prior_actions: none };
         } else if (prior !== "" && fields.some((field) => field.key === "prior_actions")) {
           loopCardDraft.values = { ...loopCardDraft.values, prior_actions: prior.slice(0, 600) };
         }
