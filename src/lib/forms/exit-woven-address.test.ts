@@ -58,6 +58,23 @@ describe("the one person the exit form names", () => {
     expect(exitEmployeeDirectoryId(ROWS, "Ash Brook", GLOBAL)).toBeNull();
   });
 
+  /*
+   * Port from Ask Sunny (production there, 26 Nov 2026): the exit form's employee had two active Woven rows, one at the
+   * store the form is filed for and one at the corporate Woven location (no store). A global manager saw both.
+   */
+  it("one name, a store row and a corporate row: the row at the form's store", () => {
+    const rows = [...ROWS, row("d-6", "Lyra", "Wendle", ["loc-0310"]), row("d-7", "Lyra", "Wendle", [])];
+    expect(exitEmployeeDirectoryId(rows, "Lyra Wendle", GLOBAL)).toBeNull();
+    expect(exitEmployeeDirectoryId(rows, "Lyra Wendle", GLOBAL, "loc-0310")).toBe("d-6");
+    expect(exitEmployeeDirectoryId(rows, "Lyra Wendle", GLOBAL, "loc-0311")).toBeNull();
+    expect(exitEmployeeDirectoryId(rows, "Ash Brook", GLOBAL, "loc-0311")).toBe("d-4");
+  });
+
+  it("two people by that name at the form's own store: still nobody", () => {
+    const rows = [...ROWS, row("d-8", "Ash", "Brook", ["loc-0310"])];
+    expect(exitEmployeeDirectoryId(rows, "Ash Brook", GLOBAL, "loc-0310")).toBeNull();
+  });
+
   it("a first name alone, no name, or no scope: nobody", () => {
     expect(exitEmployeeDirectoryId(ROWS, "Marlow", STORE)).toBeNull();
     expect(exitEmployeeDirectoryId(ROWS, "", STORE)).toBeNull();
@@ -112,6 +129,12 @@ describe("the live read", () => {
     const live = deps();
     expect(await wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE }, live)).toBe("412 Invented Ln, Faketown, NE 68000");
     expect(live.asked).toEqual(["W-501"]);
+  });
+
+  it("a global manager's exit form reads the row at the form's store", async () => {
+    const live = deps({ wovenIdOf: async (id) => (id === "d-3" ? "W-503" : "W-504") });
+    expect(await wovenExitAddress({ employeeName: "Ash Brook", scope: GLOBAL, formLocationId: "loc-0310" }, live)).toBe("412 Invented Ln, Faketown, NE 68000");
+    expect(live.asked).toEqual(["W-503"]);
   });
 
   it("asks Woven nothing when the person is not exactly one", async () => {
