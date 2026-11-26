@@ -14,7 +14,7 @@ import { loopStandIn, type LoopDecision, type LoopView } from "./loop-stand-in";
  * hard-conversation how-to answer carries a numbered outline (opening, facts and expectation, listening, next steps,
  * follow-up date), a quoted script the manager can read aloud, and a short checklist (`src/lib/ai/coaching-how-to.ts`).
  * The loop hands a reply with no outline or no quoted script back once; the older chat prompt carries the same rule.
- * Manager-style wording; nobody is named. Ported from Ask Sunny (mechanism only).
+ * Manager-style wording; nobody is named. Ported from the sibling app (mechanism only).
  */
 
 const REPORT = "Port of the sibling app (its owner, 26 Nov 2026): coaching how-to answers must always give managers a script they can say and an outline of the conversation";

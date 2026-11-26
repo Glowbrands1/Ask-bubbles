@@ -22,7 +22,7 @@ import { lastResult, loopStandIn, type LoopDecision, type LoopView } from "./loo
  *     Form for?") gets the package in Quick, Standard and Detailed.
  *
  * The loop hands an advice reply missing a part back once (`coaching-how-to.ts`). Invented names only (Ozren Brack).
- * Ported from Ask Sunny (mechanism only).
+ * Ported from the sibling app (mechanism only).
  */
 
 const LOOP = "AGENT_LOOP_ENABLED";

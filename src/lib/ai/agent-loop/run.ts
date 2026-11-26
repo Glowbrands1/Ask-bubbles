@@ -1560,7 +1560,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
           if (again && !onlyAsksWho(again)) text = again;
         }
         /*
-         * Port from Ask Sunny (26 Nov 2026): a coaching / hard-conversation how-to answer is a prep package: a numbered
+         * Port of the sibling app (26 Nov 2026): a coaching / hard-conversation how-to answer is a prep package: a numbered
          * outline, a quoted script, a role-play and a measurable action plan among its parts (`coaching-how-to.ts`, the rules
          * book's coachingHowToRule). A reply on such a turn with no card that lacks one goes back once; the answer it returns
          * is kept only when it is no worse.

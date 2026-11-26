@@ -761,7 +761,7 @@ export const FRAMEWORK_GENERAL_SECTIONS_RULE =
   "- WHEN THE COACHING FRAMEWORK IS AMONG THE SOURCES, A PEOPLE ISSUE IT DOES NOT NAME IS STILL COVERED BY ITS GENERAL SECTIONS: root cause identification, the difference between performance issues and behavior issues, and the coaching conversation structure. Answer from those sections and cite them by their markers. Say only that no section names this exact issue; do not say the knowledge base does not have it.";
 
 function withFrameworkGeneralSections(prompt: string, on: boolean, place: string): string {
-  /* Port from Ask Sunny, 26 Nov 2026: coaching how-to answers carry an outline, a quoted script and a checklist, as in the agent loop's rules book. */
+  /* Port of the sibling app, 26 Nov 2026: coaching how-to answers carry an outline, a quoted script and a checklist, as in the agent loop's rules book. */
   const coached = withCoachingHowTo(prompt, place);
   if (!on || !coached.includes(UNCOVERED_RULE)) return coached;
   return coached.split(UNCOVERED_RULE).join(`${UNCOVERED_RULE}\n${FRAMEWORK_GENERAL_SECTIONS_RULE}`);
