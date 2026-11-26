@@ -114,6 +114,7 @@ function table(
     outstanding?: MonitoredForm[];
     outstandingExcluded?: number;
     listLimit?: number | null;
+    showCount?: number;
     /** The server's answer from FINALIZED_FORM_DELETE_EMAILS (`mayDeleteFinalizedForm`). */
     mayDeleteFinalized?: boolean;
   } = {},
@@ -129,6 +130,7 @@ function table(
       outstanding={options.outstanding}
       outstandingExcluded={options.outstandingExcluded}
       listLimit={options.listLimit}
+      showCount={options.showCount}
       mayDeleteFinalized={options.mayDeleteFinalized}
     />,
   );
@@ -907,5 +909,28 @@ describe("can u just create a multi click button and delete so we can easily del
       />,
     );
     await waitFor(() => expect(screen.queryByText("1 selected")).toBeNull());
+  });
+});
+
+/*
+ * Reported 18 Nov 2026: "i need to see all forms". The page loaded the newest
+ * 200 forms and stopped, so older forms could not be found here.
+ */
+describe("Load more", () => {
+  it("is offered when the list stopped at its page, and asks for the next page in the URL", async () => {
+    table([form()], { listLimit: 200 });
+    await userEvent.click(screen.getByRole("button", { name: "Load more forms" }));
+    expect(navigated.pushes.at(-1)).toBe("/forms/monitoring?show=400");
+  });
+
+  it("adds a page to what is already loaded", async () => {
+    table([form()], { listLimit: 400, showCount: 400 });
+    await userEvent.click(screen.getByRole("button", { name: "Load more forms" }));
+    expect(navigated.pushes.at(-1)).toBe("/forms/monitoring?show=600");
+  });
+
+  it("is not offered when every form is already loaded", () => {
+    table([form()], { listLimit: null });
+    expect(screen.queryByRole("button", { name: "Load more forms" })).toBeNull();
   });
 });
