@@ -23,6 +23,7 @@ import {
   visibleInstances,
 } from "@/lib/forms/instance-scope";
 import { pageFormsAccess } from "@/lib/forms/page-scope";
+import { mayDeleteFinalizedForm } from "@/lib/forms/finalized-delete";
 import { HrApprovalTabs, HrApprovedList, HrQueueList, MyFormsWithHr, SiblingHrQueueList } from "@/features/forms/hr-approval-lists";
 import { fetchSiblingHrQueue, type SiblingHrQueue } from "@/lib/partner/sibling-hr-queue";
 import { mayReadHrDecision, needsHrDecision } from "@/lib/forms/hr-approval-rules";
@@ -258,6 +259,7 @@ export default async function FormMonitoringPage({
             outstandingExcluded={outstandingExcluded}
             listLimit={listCapped ? LIST_LIMIT : null}
             demo={demo}
+            mayDeleteFinalized={mayDeleteFinalizedForm(identity)}
           />
         )}
       </PageShell>
