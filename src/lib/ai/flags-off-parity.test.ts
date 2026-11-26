@@ -231,6 +231,10 @@ const ALLOWED_UI = [
   // saved): a Home address column whose button asks Woven for one person's address on click. Admin page only.
   "src/features/admin/woven/directory-table.tsx",
   "src/features/admin/woven/address-button.tsx",
+  // The named account sees every address without clicking (Pau, 26 Nov 2026: "for my access only"; WOVEN_ADDRESS_LIST_EMAILS):
+  // the Woven page passes the yes/no down to the directory. Admin page only.
+  "src/app/(app)/admin/integrations/woven/[view]/page.tsx",
+  "src/features/admin/woven/woven-view-screen.tsx",
   "src/features/forms/hr-approval-panel.tsx",
   "src/features/forms/hr-approval-screen.tsx",
   "src/app/(app)/forms/hr-approval/",
