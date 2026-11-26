@@ -59,6 +59,8 @@ export function progressStatus(tool: string, args: unknown): string {
       return "Checking follow-ups…";
     case "read_whats_new":
       return "Checking what's new…";
+    case "read_ai_training":
+      return "Checking AI Training…";
     case "app_help":
       return `Checking ${appConfig().appName}'s help…`;
     default:
