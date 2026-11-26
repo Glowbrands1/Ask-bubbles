@@ -6,6 +6,7 @@ import type { TokenUsage } from "./model-prices";
 import { activeSpendMeter, takeSpend, type SpendSource } from "./spend-meter";
 import { closeStages } from "./chat-stage-timings";
 import { chatTraceDraft, runChatTrace, type ChatTraceDraft } from "./chat-trace-store";
+import { voiceInputNote } from "@/lib/voice/voice-input-note";
 
 const SECRET = /sk-ant-[A-Za-z0-9_-]+|sb_secret_[A-Za-z0-9_-]+|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g;
 
@@ -115,7 +116,7 @@ async function persistChatTrace(draft: ChatTraceDraft): Promise<void> {
       extraction_model: draft.formExtraction?.model ?? null,
       extraction_input_tokens: draft.formExtraction?.inputTokens ?? null,
       extraction_output_tokens: draft.formExtraction?.outputTokens ?? null,
-      slots: withStages(
+      slots: withVoiceInput(withStages(
         withSpend(
           withCardCheck(
             withDraftCheck(
@@ -134,7 +135,7 @@ async function persistChatTrace(draft: ChatTraceDraft): Promise<void> {
         ),
         draft.stages,
         draft.stagesFrom ?? draft.startedAt,
-      ),
+      )),
     });
     if (error) {
       chatTraceInsertErrorCount += 1;
@@ -146,6 +147,12 @@ async function persistChatTrace(draft: ChatTraceDraft): Promise<void> {
     console.error("chat_traces insert failed");
     // Tracing never changes what the manager sees.
   }
+}
+
+/** VOICE_INPUT_ENABLED: `slots.voice_input = { trace_id, edited }` on a turn typed by the mic; otherwise as before. */
+function withVoiceInput(slots: Record<string, unknown> | null): Record<string, unknown> | null {
+  const note = voiceInputNote();
+  return note ? { ...(slots ?? {}), voice_input: { trace_id: note.trace_id, edited: note.edited } } : slots;
 }
 
 /** The draft's own `slots` (the agent loop's, once ported) over the extraction's; absent, the slots as before. */

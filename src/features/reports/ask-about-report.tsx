@@ -7,6 +7,7 @@ import { BubbleMark } from "@/components/brand-mark";
 import { AnswerSheet } from "@/features/dashboard/answer-sheet";
 import { ConversationRating } from "@/features/chat/conversation-rating";
 import { useInlineAsk } from "@/features/chat/use-inline-ask";
+import { useVoiceDraft, VoiceButton, VoiceControl, VoiceNotice } from "@/features/voice/voice-button";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import {
   chatReportContextToParams,
@@ -140,10 +141,12 @@ export function AskAboutReport({
    * the control did as a link and what the placeholder promises. Typing
    * replaces it.
    */
+  /* VOICE_INPUT_ENABLED: what the mic put in the bar, so Send can say so (`useVoiceDraft`). */
+  const voice = useVoiceDraft();
   const submit = (text: string) => {
     const question = text.trim() || suggested;
     setValue("");
-    void send(question);
+    void send(question, voice.take(question));
   };
 
   /*
@@ -156,6 +159,15 @@ export function AskAboutReport({
 
   return (
     <div className={className}>
+      <VoiceControl
+        surface="report"
+        conversationId={conversationId}
+        disabled={busy}
+        onText={(text, traceId) => {
+          setValue((current) => voice.land(current, text, traceId));
+          inputRef.current?.focus();
+        }}
+      >
       <div className="flex items-center gap-3 rounded-[14px] bg-surface py-2.5 pr-3 pl-4 shadow-ask focus-within:shadow-ask-focus">
         <BubbleMark className="size-6 shrink-0" onDark />
         <label htmlFor="report-ask" className="sr-only">
@@ -167,7 +179,10 @@ export function AskAboutReport({
           rows={1}
           value={value}
           disabled={busy}
-          onChange={(event) => setValue(event.target.value)}
+          onChange={(event) => {
+            voice.forgetIfEmpty(event.target.value);
+            setValue(event.target.value);
+          }}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
@@ -187,6 +202,8 @@ export function AskAboutReport({
             <X className="size-3.5" />
           </button>
         ) : null}
+        {/* VOICE_INPUT_ENABLED: the mic, beside the send button. Nothing when voice is off. */}
+        <VoiceButton className="size-[34px]" timerClassName="text-foreground" />
         <button
           type="button"
           onClick={() => submit(value)}
@@ -197,6 +214,9 @@ export function AskAboutReport({
           <ArrowUp className="size-3.5" strokeWidth={2.5} />
         </button>
       </div>
+      {/* VOICE_INPUT_ENABLED: voice's notices, directly under the bar. */}
+      <VoiceNotice className="mt-2 text-band-foreground" />
+      </VoiceControl>
 
 
       {/*

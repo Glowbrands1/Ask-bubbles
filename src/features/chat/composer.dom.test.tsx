@@ -171,8 +171,14 @@ describe("nothing dead is rendered", () => {
   it("shows no attachment, image or voice control", () => {
     // F. They were honest and disabled. A manager still reads three controls
     // that do not work as broken product.
+    //
+    // VOICE_INPUT_ENABLED (27 Nov 2026): a WORKING mic is now allowed, and only
+    // when the server says this person may use voice (`VoiceAccessProvider`)
+    // and the browser can record — see `composer-voice.dom.test.tsx`. Rendered
+    // here without that (voice off), so no voice control at all; attach and
+    // image stay banned outright.
     renderComposer();
-    for (const name of [/attach/i, /image/i, /voice/i, /microphone/i]) {
+    for (const name of [/attach/i, /image/i, /voice/i, /microphone/i, /speak your message/i]) {
       expect(screen.queryByRole("button", { name })).toBeNull();
     }
   });

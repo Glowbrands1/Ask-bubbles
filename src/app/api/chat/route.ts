@@ -23,6 +23,7 @@ import {
   requireString,
 } from "@/lib/api/validation";
 import { authorizeRequest } from "@/lib/auth/server";
+import { noteVoiceInput, voiceInputFields } from "@/lib/voice/voice-input-note";
 import { closeTurn, openTurn } from "@/lib/analytics/record";
 import { logTurnEvent } from "@/lib/analytics/telemetry";
 import {
@@ -174,6 +175,9 @@ async function postChat(request: Request, progress?: ProgressChannel) {
     assertWithinRateLimit(request, "chat");
 
     const body = await parseJsonBody<AskRequest>(request);
+    /* VOICE_INPUT_ENABLED: a dictated question is noted on its trace (`slots.voice_input`); nothing else reads it. */
+    const voiced = voiceInputFields(body);
+    noteVoiceInput(voiced ? { trace_id: voiced.voiceTraceId, edited: voiced.voiceEdited } : null);
 
     const askedAt = Date.now();
 
@@ -1549,6 +1553,8 @@ function parseAskRequest(body: Partial<AskRequest>): AskRequest {
      * null rather than travelling further as a string.
      */
     surface: isActivitySurface(body.surface) ? body.surface : null,
+    // VOICE_INPUT_ENABLED: "voice", a UUID and a yes/no, or nothing. Recorded only; see `voice/voice-input-note.ts`.
+    ...(voiceInputFields(body) ?? {}),
     attachedDocumentIds: Array.isArray(body.attachedDocumentIds)
       ? body.attachedDocumentIds
           .filter((id): id is string => typeof id === "string")

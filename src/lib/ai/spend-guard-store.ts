@@ -102,12 +102,25 @@ export function spendUsageRows(spend: unknown): TokenUsage[] | null {
   if (!Array.isArray(spend)) return null;
   return spend
     .filter((entry): entry is Record<string, unknown> => typeof entry === "object" && entry !== null)
-    .map((entry) => ({
-      model: typeof entry.model === "string" ? entry.model : null,
-      inputTokens: typeof entry.inputTokens === "number" ? entry.inputTokens : 0,
-      outputTokens: typeof entry.outputTokens === "number" ? entry.outputTokens : 0,
-      cacheReadTokens: typeof entry.cacheReadTokens === "number" ? entry.cacheReadTokens : 0,
-      cacheWriteTokens: typeof entry.cacheWriteTokens === "number" ? entry.cacheWriteTokens : 0,
-    }));
+    .map((entry): TokenUsage =>
+      /* VOICE_INPUT_ENABLED: a voice entry is audio seconds at an hourly price, with no model (`voice/voice-usage.ts`). */
+      entry.source === "voice" || typeof entry.audio_seconds === "number"
+        ? {
+            model: null,
+            inputTokens: 0,
+            outputTokens: 0,
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+            audioSeconds: typeof entry.audio_seconds === "number" ? entry.audio_seconds : 0,
+            ...(typeof entry.usd_per_hour === "number" ? { usdPerHour: entry.usd_per_hour } : {}),
+          }
+        : {
+            model: typeof entry.model === "string" ? entry.model : null,
+            inputTokens: typeof entry.inputTokens === "number" ? entry.inputTokens : 0,
+            outputTokens: typeof entry.outputTokens === "number" ? entry.outputTokens : 0,
+            cacheReadTokens: typeof entry.cacheReadTokens === "number" ? entry.cacheReadTokens : 0,
+            cacheWriteTokens: typeof entry.cacheWriteTokens === "number" ? entry.cacheWriteTokens : 0,
+          },
+    );
 }
 

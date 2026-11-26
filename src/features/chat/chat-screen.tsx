@@ -36,7 +36,7 @@ import {
 } from "@/lib/reporting/report-context";
 import { reportById } from "@/lib/reporting/registry";
 import { toChatTurnError } from "./chat-error";
-import { Composer } from "./composer";
+import { Composer, type VoiceSendFields } from "./composer";
 import { writeChatAddress } from "./chat-address";
 import { ContextPanel } from "./context-panel";
 import { ConversationList } from "./conversation-list";
@@ -210,7 +210,7 @@ export function ChatScreen() {
        * recorded by the function that also decides whether the turn goes out at
        * all, so a refused send cannot leave one behind.
        */
-      options: { fromPicker?: boolean } = {},
+      options: { fromPicker?: boolean; voice?: VoiceSendFields } = {},
     ): Promise<boolean> => {
       const text = rawText.trim();
       /*
@@ -318,6 +318,8 @@ export function ChatScreen() {
            * row and nothing else. See `AskRequest.surface`.
            */
           surface: "main_chat",
+          /* VOICE_INPUT_ENABLED: the text came from the mic; recorded on the trace only. */
+          ...(options.voice ?? {}),
           // No corpus. The server derives it from the active brand; sending one
           // could only ever be ignored or trusted, and one of those is a bug.
           /*
@@ -1108,10 +1110,11 @@ export function ChatScreen() {
         <Composer
           value={input}
           onChange={setInput}
-          onSubmit={() => void send(input)}
+          onSubmit={(voice) => void send(input, { voice })}
           mode={mode}
           onModeChange={setMode}
           busy={busy}
+          conversationId={activeId}
         />
       </div>
 

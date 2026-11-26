@@ -197,6 +197,15 @@ export interface AskRequest {
    * failing the insert and losing the whole event.
    */
   surface?: ActivitySurface | null;
+  /**
+   * VOICE_INPUT_ENABLED: the question was dictated with the mic (`api/chat/voice`) and then sent. `voiceTraceId` is the
+   * voice route's trace id; `voiceEdited` says whether the sent text differs from the transcript as it landed in the
+   * box. Recorded on the chat trace (`slots.voice_input`) and nothing else: no decision reads them, and they are never
+   * a reason to skip the agent loop.
+   */
+  inputMode?: "voice";
+  voiceTraceId?: string;
+  voiceEdited?: boolean;
   context: AskContext;
 }
 

@@ -17,6 +17,10 @@ import { cn } from "@/lib/utils/cn";
 import { LONG_MESSAGE_LIMIT, messageLengthStatus } from "@/lib/chat/message-limit";
 import { chatLongMessageClientEnabled } from "@/lib/config/chat-quality-flags";
 import type { AnswerMode } from "@/types";
+import { useVoiceDraft, VoiceButton, VoiceControl, VoiceNotice } from "@/features/voice/voice-button";
+
+/** VOICE_INPUT_ENABLED: what a dictated question adds to its send (nothing when it was typed). */
+export type VoiceSendFields = { inputMode?: "voice"; voiceTraceId?: string; voiceEdited?: boolean };
 
 const MODES: AnswerMode[] = ["quick", "standard", "detailed"];
 
@@ -91,10 +95,12 @@ export function Composer({
   onModeChange,
   busy,
   autoFocus,
+  conversationId,
 }: {
   value: string;
   onChange: (value: string) => void;
-  onSubmit: () => void;
+  /** VOICE_INPUT_ENABLED: `voice` says the text came from the mic (empty when it was typed). */
+  onSubmit: (voice?: VoiceSendFields) => void;
   mode: AnswerMode;
   onModeChange: (mode: AnswerMode) => void;
   /**
@@ -107,8 +113,20 @@ export function Composer({
    */
   busy: boolean;
   autoFocus?: boolean;
+  /** VOICE_INPUT_ENABLED: this conversation, so the voice route can read its names as spelling hints (its own only). */
+  conversationId?: string | null;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  /*
+   * VOICE_INPUT_ENABLED (the owner, 27 Nov 2026): a mic between the field and Send, only for people the server lets use
+   * voice (`VoiceControl` renders nothing otherwise). The transcript is appended to the text through `onChange` and
+   * the field takes focus; the manager checks it and presses Send as usual.
+   */
+  const voice = useVoiceDraft();
+  const onVoiceText = (text: string, traceId: string) => {
+    onChange(voice.land(value, text, traceId));
+    textareaRef.current?.focus();
+  };
 
   // Unchanged. One row at rest, grows with the content, stops at 200px and
   // scrolls inside itself from there.
@@ -131,7 +149,7 @@ export function Composer({
 
   const submit = () => {
     if (!value.trim() || busy || overLimit) return;
-    onSubmit();
+    onSubmit(voice.take(value));
   };
 
   /* The input surface, identical in both variants apart from its scale. */
@@ -148,7 +166,10 @@ export function Composer({
         disabled={busy}
         autoFocus={autoFocus}
         aria-describedby={length?.notice ? "chat-input-length" : undefined}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => {
+          voice.forgetIfEmpty(event.target.value);
+          onChange(event.target.value);
+        }}
         onKeyDown={(event) => {
           if (event.key === "Enter" && !event.shiftKey) {
             event.preventDefault();
@@ -185,10 +206,12 @@ export function Composer({
       at the foot of the screen; while you type it takes a White halo that
       shows against the canvas.
     */
+    <VoiceControl surface="chat" conversationId={conversationId} disabled={busy} onText={onVoiceText}>
     <div className="shrink-0 px-4 pt-3.5 pb-3 sm:px-6">
       <div className="mx-auto flex max-w-3xl items-center gap-3 rounded-[var(--radius-2xl)] border-2 border-primary bg-surface py-2 pr-2 pl-3.5 shadow-raised transition-shadow focus-within:shadow-[0_0_0_3px_var(--surface)]">
         <BubbleMark className="size-[26px] shrink-0" />
         <div className="flex min-w-0 flex-1 items-center">{field}</div>
+        <VoiceButton timerClassName="text-foreground" />
         {sendButton}
       </div>
 
@@ -202,6 +225,9 @@ export function Composer({
           {length.notice}
         </p>
       ) : null}
+
+      {/* VOICE_INPUT_ENABLED: voice's notices sit with the length notice, under the field. Nothing when voice is off. */}
+      <VoiceNotice className="mx-auto mt-2 max-w-3xl text-foreground" />
 
       {/*
         THE `.under` ROW: the mode control and one line of disclaimer, side by
@@ -222,6 +248,7 @@ export function Composer({
         </p>
       </div>
     </div>
+    </VoiceControl>
   );
 }
 

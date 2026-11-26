@@ -30,8 +30,11 @@ import type { TokenUsage } from "./model-prices";
  * that was not before. Off, no meter, no wrapping, no extra row.
  */
 
-/** "l10_assistant": the DM L10 tab's assistant (src/features/l10/assistant), counted by the same monthly budget. */
-export type SpendSource = "chat" | "forms_draft" | "form_ingest" | "l10_assistant";
+/**
+ * "l10_assistant": the DM L10 tab's assistant (src/features/l10/assistant), counted by the same monthly budget.
+ * "voice": the AI chat boxes' mic (VOICE_INPUT_ENABLED, `api/chat/voice`): audio seconds at an hourly price, never a model.
+ */
+export type SpendSource = "chat" | "forms_draft" | "form_ingest" | "l10_assistant" | "voice";
 
 export interface SpendMeter {
   readonly source: SpendSource;
