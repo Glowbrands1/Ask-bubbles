@@ -2915,8 +2915,13 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
        */
       if (typeof body.cardPriorActions === "string" && !keeps("prior_actions")) {
         const prior = body.cardPriorActions.trim();
-        if (prior === "" && (loopCardDraft.values.prior_actions ?? "").trim() !== "") {
-          loopCardDraft.values = { ...loopCardDraft.values, prior_actions: "" };
+        /*
+         * ALL_FIELDS_REQUIRED_ENABLED (Pau, 26 Nov 2026, port from Ask Sunny: "still not say N/A here"): a card with no
+         * step and no form on file saves "N/A" rather than a blank line. Off, blank as before.
+         */
+        const none = allFieldsRequiredEnabled() ? NO_PRIOR_ACTIONS_FOUND : "";
+        if (prior === "" && fields.some((field) => field.key === "prior_actions") && (loopCardDraft.values.prior_actions ?? "").trim() !== none) {
+          loopCardDraft.values = { ...loopCardDraft.values, prior_actions: none };
         } else if (prior !== "" && fields.some((field) => field.key === "prior_actions")) {
           loopCardDraft.values = { ...loopCardDraft.values, prior_actions: prior.slice(0, 600) };
         }

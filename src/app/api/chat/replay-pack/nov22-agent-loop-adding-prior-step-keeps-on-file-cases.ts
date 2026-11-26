@@ -72,16 +72,15 @@ export const NOV22_AGENT_LOOP_ADDING_PRIOR_STEP_KEEPS_ON_FILE_CASES: ReplayCase[
        * never says yes, so T4 adds the signing only. What this case still guards: the step the manager adds lands, and
        * nothing the manager did not state or accept is added.
        */
-      expect(priorOf(model), "T3's card lists the CA on file the manager never accepted").not.toMatch(/10\/20\/2026/);
-      const offered = model.views.flatMap((view) => view.results.filter((result) => result.tool === "propose_form")).map((result) => JSON.stringify(result.output)).join("\n");
-      expect(offered, "the CA on file was never offered").toMatch(/on file from 10\/20\/2026\. Want me to add it to Prior actions\?/);
+      // CHANGED ON PURPOSE (Pau, 26 Nov 2026: "Ai saw prior forms but i need them here"; PRIOR_ON_FILE_ON_CARD_ENABLED, port from Ask Sunny): forms on file are put on the card's Prior actions by the app, each saying what it is, and never offered. What A13 guards again: adding a step never removes the form on file.
+      expect(priorOf(model), "T3's card does not hold the CA on file").toMatch(/finalized — 10\/20\/2026/);
       const reply = await thread.say(T[3]!);
       expect(priorOf(model), `the signing was not added:\n${reply.content}`).toMatch(/10\/15\/2026/);
-      expect(priorOf(model), `the CA on file was added unasked:\n${reply.content}`).not.toMatch(/10\/20\/2026/);
+      expect(priorOf(model), `adding the signing removed the CA on file:\n${reply.content}`).toMatch(/10\/20\/2026/);
       const id = await thread.create();
       const saved = JSON.stringify(t.values(id));
       expect(saved, `the saved form lost the signing:\n${saved}`).toMatch(/10\/15\/2026/);
-      expect(saved, `the saved form holds the CA on file unasked:\n${saved}`).not.toMatch(/10\/20\/2026/);
+      expect(saved, `the saved form lost the CA on file:\n${saved}`).toMatch(/10\/20\/2026/);
     },
   },
   {

@@ -6562,7 +6562,7 @@ export async function proposeForm(
      */
     ...(levelNotGiven ? { level_not_given: { option: levelNotGiven, note: `This card has no warning level, and the manager's message names the form's ${levelNotGiven === "written" ? "Written" : "Verbal"} Warning option. If it states THIS form's level, propose the card again with warning_level ${levelNotGiven} and level_evidence quoting those words; if it is history ("written up before"), leave the level unset.` } } : {}),
     ...(level || payroll || (priorActions && priorStated)
-      ? { stated: { ...(level ? { warning_level: level } : {}), ...(payroll ? { payroll_deduct: payroll } : {}), ...(payroll === "yes" && amount ? { payroll_amount: `$${amount.replace(/^\$/, "")}` } : {}), ...(priorActions && priorStated ? { prior_actions: priorActions } : {}) } }
+      ? { stated: { ...(level ? { warning_level: level } : {}), ...(payroll ? { payroll_deduct: payroll } : {}), ...(payroll === "yes" && amount ? { payroll_amount: `$${amount.replace(/^\$/, "")}` } : {}), ...(priorActionsStated && priorStated ? { prior_actions: priorActionsStated } : {}) } }
       : {}),
     /*
      * QA's live finding (16 Nov 2026): "as you said" only for what THIS message stated. The level and payroll whose
@@ -6622,7 +6622,7 @@ export async function proposeForm(
      * Pau's ruling (23 Nov 2026): the forms on file are offered, never added. ask_exactly is the one line the reply ends
      * with; on the manager's yes (or when they name one), propose again with prior_actions holding it.
      */
-    ...(priorsOnFile.length > 0 ? { prior_on_file: { forms: priorsOnFile, line: onFileLine, on_card: false, ...(onFileOffer ? { ask_exactly: onFileOffer } : {}) } } : {}),
+    ...(priorsOnFile.length > 0 ? { prior_on_file: { forms: priorsOnFile, line: onFileLine, on_card: onFileToAdd.length > 0, ...(onFileToAdd.length > 0 ? { used_on_card: true } : {}), ...(onFileOffer ? { ask_exactly: onFileOffer } : {}) } } : {}),
     /* The owner (24 Nov 2026): a form of theirs for this person already with HR is said, with its offense and policy. */
     ...(otherWithHr.length > 0 ? { with_hr: { forms: otherWithHr.map(({ instanceId, form, date, state, offense, policy }) => ({ instance_id: instanceId, form, date, state, offense, policy })), say_exactly: formsWithHrLine(card.employeeName ?? employee.name, otherWithHr) } } : {}),
     ...(corrective && payroll === "yes" && !amount && statedAmount ? { payroll_amount_said: `$${statedAmount}` } : {}),
