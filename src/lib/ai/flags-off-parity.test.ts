@@ -208,6 +208,11 @@ const ALLOWED_UI = [
   // in the rail on desktop (sidebar.tsx), in the top bar on phones (app-shell.tsx), read by the (app) layout; all
   // three are listed below. No chat or form behaviour changes.
   "src/features/notifications/",
+  // WOVEN HOME ADDRESS (Pau, 26 Nov 2026, approved by Curt: "only Admins and Managers both apps"; port from Ask Sunny):
+  // the Woven employee page's "Home address" field and its "Show home address" button, admin console only. One
+  // employee's address is read live from Woven on click; nothing is stored. No chat or form screen changes.
+  "src/features/admin/woven/employee-detail.tsx",
+  "src/features/admin/woven/home-address-reveal.tsx",
   // ...and its × per row and Clear all (Pau, 23 Nov 2026: "able to delete notification all or clicking x by removing 1"):
   // the viewer's own notifications only. The DM L10 bell (src/features/l10/, listed above) shows the same panel (Pau:
   // "for dm meeting make this UI same with bubble"), with its out-of-app Settings link removed.
