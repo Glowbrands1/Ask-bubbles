@@ -1500,10 +1500,20 @@ const ALSO_ASK_ACCOUNT = "If so, tell me what happened.";
 export const FIND_STAFF_LIMIT = 10;
 
 export async function findStaff(context: ToolContext, input: { name?: unknown; person_evidence?: unknown }, effects?: ToolEffects): Promise<ToolResult> {
-  const typed = typeof input.name === "string" ? withoutJobTitle(input.name) : "";
-  if (typed === "") return { reason_code: "missing_input", error: "Give the name to look for." };
+  const titleless = typeof input.name === "string" ? withoutJobTitle(input.name) : "";
+  if (titleless === "" && !(typeof input.name === "string" && input.name.trim() !== "")) return { reason_code: "missing_input", error: "Give the name to look for." };
   if (effects) effects.staffLookedUp = true;
   const read = await rosterFor(context.actor.scope);
+  /*
+   * TYPED_EMPLOYEE_EVERY_CARD_ENABLED (port of the sibling app's find_staff fix; its owner's scope list from QA's
+   * comparison, 26 Nov 2026, item A): "Test Employee" the manager typed as the person was looked up as "Test" (its last
+   * word read as a job title) and find_staff answered that it is no person's name and to ask who the form is for.
+   * propose_form already keeps the full name (#1149); find_staff now looks it up whole too.
+   */
+  const typedEmployee = typedEmployeeEveryCardEnabled() && typeof input.name === "string" && read.kind === "read" ? typedEmployeeName(requestTurnsText(context, read.roster)) : null;
+  const passedWhole = typeof input.name === "string" ? input.name.replace(/\s+/g, " ").trim().toLowerCase() : "";
+  const typed = typedEmployee && [typedEmployee.toLowerCase(), typedEmployee.split(" ")[0]!.toLowerCase(), "employee"].includes(passedWhole) ? typedEmployee : titleless;
+  if (typed === "") return { reason_code: "missing_input", error: "Give the name to look for." };
   if (read.kind === "failed") return { reason_code: "roster_failed", error: ROSTER_FAILED };
   if (read.kind === "unchecked") return { unchecked: true, note: ROSTER_UNCHECKED };
   /*
