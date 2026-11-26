@@ -6,112 +6,185 @@ import type { Permission, Role } from "@/types";
  * ============================================================================
  *
  * The list the What's New page (`/whats-new`) shows and the AI reads (`read_whats_new`): recent updates and new
- * features, in a manager's words. TO ADD ONE, add an entry at the TOP of `WHATS_NEW` — nothing else changes: the page,
- * the sidebar entry, the AI's tool and its replay case all read this list.
+ * features, in a manager's words. TO ADD ONE, add an entry to the newest release at the TOP of `WHATS_NEW` (or a new
+ * release above it) — nothing else changes: the page, the sidebar entry, the AI's tool and its replay case all read this
+ * list.
  *
  * Why a typed file and not a table: the entries change when the app changes, so they ship in the same pull request as
  * the feature, reviewed with it; there is no migration, no admin screen and no seed to keep in step, and the page and
- * the AI read the same list with no database call. `whats-new.test.ts` checks every entry (date, order, a link that
- * is a real page, and the permission of that page).
+ * the AI read the same list with no database call. `whats-new.test.ts` checks every entry.
  *
- * An entry:
- *   - date: the day it reached the app, YYYY-MM-DD;
- *   - title and description: plain manager language, no flag or code names;
- *   - href (optional): the page it is about;
- *   - permission (optional): the permission that page's own gate takes. A role without it never sees the entry, on
- *     the page or from the AI, so nobody is told about a screen they cannot open. Leave it out for something everyone
- *     signed in has.
+ * THE FORMAT (the owner, 26 Nov 2026: the sibling product's What's New, format only):
+ *   - releases newest first, each with its date (YYYY-MM-DD) and a one-line summary;
+ *   - each entry tagged New or Improved, in three short parts: before (what it was like), now (what changed), howToUse
+ *     (one concrete instruction, or a phrase to type in the chat);
+ *   - showMe (optional): the page it is about, for a "Show me" link;
+ *   - permission (optional): the permission that page's own gate takes. A role without it never sees the entry, on the
+ *     page or from the AI, so nobody is told about a screen they cannot open. Leave it out for what everyone has.
+ *   Plain manager language: no flag or code names.
  *
  * This is Ask Bubbles' list, from Ask Bubbles' own changes. The sibling app keeps its own.
  */
+export type WhatsNewTag = "New" | "Improved";
+
 export interface WhatsNewEntry {
-  readonly date: string;
+  readonly tag: WhatsNewTag;
   readonly title: string;
-  readonly description: string;
-  readonly href?: string;
+  readonly before: string;
+  readonly now: string;
+  readonly howToUse: string;
+  readonly showMe?: { readonly href: string; readonly label: string };
   readonly permission?: Permission;
 }
 
-export const WHATS_NEW: readonly WhatsNewEntry[] = [
+export interface WhatsNewRelease {
+  readonly date: string;
+  readonly summary: string;
+  readonly entries: readonly WhatsNewEntry[];
+}
+
+export const WHATS_NEW: readonly WhatsNewRelease[] = [
   {
     date: "2026-11-26",
-    title: "What's New",
-    description: "This page: a list of recent updates to Ask Bubbles, newest first. You can also ask Bubbles \"what's new?\" in the chat.",
-    href: "/whats-new",
-  },
-  {
-    date: "2026-11-26",
-    title: "New AI Training lessons are announced",
-    description: "When a new lesson or module is posted in AI Training, you get a notification that opens it.",
-    href: "/ai-training",
-    permission: "view_ai_training",
-  },
-  {
-    date: "2026-11-26",
-    title: "Follow-up reminders in Notifications",
-    description: "Whoever filed a form gets a notification when its follow-up is due, and another if it becomes overdue.",
-    href: "/forms/monitoring",
-    permission: "view_form_monitoring",
-  },
-  {
-    date: "2026-11-26",
-    title: "Search every form for one employee",
-    description: "HR and administrators can type an employee's name on the Forms Register and see every form on file for them, drafts included, with the date. Narrow it to Drafts, Finalized or Approved by HR.",
-    href: "/forms/monitoring",
-    permission: "view_form_monitoring",
-  },
-  {
-    date: "2026-11-26",
-    title: "Employee address in the Employee Directory",
-    description: "Administrators can press \"Show address\" in the Employee Directory to see one person's home address from Woven. Nothing is saved.",
-    href: "/admin/integrations/woven",
-    permission: "manage_integrations",
+    summary: "A What's New page, reminders for follow-ups and new lessons, and HR search across every form.",
+    entries: [
+      {
+        tag: "New",
+        title: "What's New",
+        before: "New features arrived without a word; you found them by chance.",
+        now: "This page lists every update, newest first, and Bubbles can tell you about them.",
+        howToUse: "Open What's New from the sidebar, or ask Bubbles \"what's new?\".",
+        showMe: { href: "/whats-new", label: "What's New" },
+      },
+      {
+        tag: "New",
+        title: "The list of pages Bubbles can read",
+        before: "There was no way to see in the app which pages Bubbles can read and which it cannot.",
+        now: "Administrators see every page, whether Bubbles can read it, the tool it uses, and why not when it cannot.",
+        howToUse: "Open Admin, then AI-readable pages.",
+        showMe: { href: "/admin/ai-readable-pages", label: "AI-readable pages" },
+        permission: "view_ai_usage",
+      },
+      {
+        tag: "Improved",
+        title: "Ask Bubbles about AI Training",
+        before: "Bubbles could not tell you which AI Training lessons there are.",
+        now: "Bubbles reads the published AI Training lessons, by track and module.",
+        howToUse: "Ask Bubbles \"what lessons are in AI Training?\".",
+        showMe: { href: "/ai-training", label: "AI Training" },
+        permission: "view_ai_training",
+      },
+      {
+        tag: "New",
+        title: "New AI Training lessons are announced",
+        before: "A new lesson or module in AI Training showed up silently.",
+        now: "You get a notification when a new lesson or module is posted, and it opens the lesson.",
+        howToUse: "Watch the Notifications bar under Home.",
+        showMe: { href: "/ai-training", label: "AI Training" },
+        permission: "view_ai_training",
+      },
+      {
+        tag: "New",
+        title: "Follow-up reminders in Notifications",
+        before: "You had to remember to check when a form's follow-up was due.",
+        now: "Whoever filed the form gets a notification when its follow-up is due, and another if it becomes overdue.",
+        howToUse: "Open the notification to go to the form, or ask Bubbles \"how many follow-ups are overdue?\".",
+        showMe: { href: "/forms/monitoring", label: "Forms Register" },
+        permission: "view_form_monitoring",
+      },
+      {
+        tag: "New",
+        title: "Search every form for one employee",
+        before: "HR scrolled the Forms Register to find one person's forms, and older ones were past the end of the list.",
+        now: "HR and administrators type an employee's name and see every form on file for them, drafts included, with the date.",
+        howToUse: "On the Forms Register, type the name in the search bar, then narrow it to Drafts, Finalized or Approved by HR.",
+        showMe: { href: "/forms/monitoring", label: "Forms Register" },
+        permission: "view_form_monitoring",
+      },
+      {
+        tag: "New",
+        title: "Employee address in the Employee Directory",
+        before: "An employee's home address was only in Woven.",
+        now: "Administrators can see one person's home address from Woven in the Employee Directory. Nothing is saved.",
+        howToUse: "In the Employee Directory, press \"Show address\" on the person's row.",
+        showMe: { href: "/admin/integrations/woven", label: "Woven Employee Sync" },
+        permission: "manage_integrations",
+      },
+    ],
   },
   {
     date: "2026-11-25",
-    title: "Missing fields explained at Finalize",
-    description: "If a form still has blank fields when you press Finalize, a pop-up lists them and each one is outlined in red on the form until it is filled.",
-    href: "/forms/monitoring",
-    permission: "view_form_monitoring",
-  },
-  {
-    date: "2026-11-25",
-    title: "Create a form from this conversation",
-    description: "In the chat, \"Create a form from this conversation\" picks the right form for what you discussed and shows its card for you to check before you create it.",
-    href: "/chat",
-    permission: "ask_questions",
-  },
-  {
-    date: "2026-11-24",
-    title: "Delete several drafts at once",
-    description: "On the Forms Register, tick several drafts and delete them together.",
-    href: "/forms/monitoring",
-    permission: "manage_form_records",
-  },
-  {
-    date: "2026-11-24",
-    title: "Notifications bar",
-    description: "A Notifications bar under Home tells you when your form went to HR, when HR left a note, sent it back or approved it. Mark a notice as unread to keep it at the top.",
-  },
-  {
-    date: "2026-11-24",
-    title: "HR approval of forms",
-    description: "Forms that need HR's sign-off are sent with \"Finalize and send for approval\". HR approves, sends back or rejects each one; approved forms are on the Approved tab, and you can ask Bubbles \"has HR approved it?\".",
-    href: "/forms/monitoring",
-    permission: "view_form_monitoring",
+    summary: "Clearer Finalize, and a better \"Create a form from this conversation\".",
+    entries: [
+      {
+        tag: "Improved",
+        title: "Missing fields explained at Finalize",
+        before: "Finalize refused a form with blank fields and did not say which.",
+        now: "A pop-up lists the blank fields, and each one is outlined in red on the form until it is filled.",
+        howToUse: "Press \"Show me the blank fields\" in the pop-up to jump to the first one.",
+        showMe: { href: "/forms/monitoring", label: "Forms Register" },
+        permission: "view_form_monitoring",
+      },
+      {
+        tag: "Improved",
+        title: "Create a form from this conversation",
+        before: "The button could leave you unsure whether a form card had been made.",
+        now: "It picks the right form for what you discussed and shows its card for you to check before you create it.",
+        howToUse: "After describing what happened in the chat, press \"Create a form from this conversation\".",
+        showMe: { href: "/chat", label: "Ask Bubbles" },
+        permission: "ask_questions",
+      },
+    ],
   },
   {
     date: "2026-11-24",
-    title: "Google Reviews leaderboard by period",
-    description: "Rank stores by this month, L3, L6 or YTD, or pick a single month such as October.",
-    href: "/reviews",
-    permission: "view_reports",
+    summary: "HR approval of forms, a Notifications bar, and the Google Reviews leaderboard by period.",
+    entries: [
+      {
+        tag: "New",
+        title: "HR approval of forms",
+        before: "A form was final the moment it was finalized; HR saw it only afterwards.",
+        now: "Forms that need HR's sign-off go to HR first. HR approves, sends back or rejects each one; approved forms are on the Approved tab.",
+        howToUse: "Press \"Finalize and send for approval\", then ask Bubbles \"has HR approved it?\".",
+        showMe: { href: "/forms/monitoring", label: "Forms Register" },
+        permission: "view_form_monitoring",
+      },
+      {
+        tag: "New",
+        title: "Notifications bar",
+        before: "There was no one place that told you what happened to your forms.",
+        now: "A Notifications bar under Home tells you when your form went to HR, when HR left a note, sent it back or approved it.",
+        howToUse: "Open the Notifications bar; mark a notice as unread to keep it at the top.",
+      },
+      {
+        tag: "Improved",
+        title: "Delete several drafts at once",
+        before: "Drafts were deleted one at a time.",
+        now: "You can tick several drafts and delete them together.",
+        howToUse: "On the Forms Register, tick the drafts' checkboxes and press Delete.",
+        showMe: { href: "/forms/monitoring", label: "Forms Register" },
+        permission: "manage_form_records",
+      },
+      {
+        tag: "Improved",
+        title: "Google Reviews leaderboard by period",
+        before: "The store leaderboard ranked one month at a time.",
+        now: "Rank stores by this month, L3, L6 or YTD, or pick a single month such as October.",
+        howToUse: "On Google Reviews, pick a Period on the leaderboard, or ask Bubbles \"Google reviews L3 and YTD\".",
+        showMe: { href: "/reviews", label: "Google Reviews" },
+        permission: "view_reports",
+      },
+    ],
   },
 ];
 
-/** The entries a role may see, newest first (a null role, the preview with no sign-in enforced: every entry). */
-export function whatsNewFor(role: Role | null, can: (role: Role, permission: Permission) => boolean, entries: readonly WhatsNewEntry[] = WHATS_NEW): WhatsNewEntry[] {
-  return [...entries]
-    .filter((entry) => !entry.permission || role === null || can(role, entry.permission))
-    .sort((a, b) => b.date.localeCompare(a.date));
+/**
+ * The releases a role may see, newest first, each with only the entries it may open (a release left with none is
+ * dropped). A null role, the preview with no sign-in enforced: every entry.
+ */
+export function whatsNewFor(role: Role | null, can: (role: Role, permission: Permission) => boolean, releases: readonly WhatsNewRelease[] = WHATS_NEW): WhatsNewRelease[] {
+  return [...releases]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .map((release) => ({ ...release, entries: release.entries.filter((entry) => !entry.permission || role === null || can(role, entry.permission)) }))
+    .filter((release) => release.entries.length > 0);
 }

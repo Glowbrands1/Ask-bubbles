@@ -1,4 +1,5 @@
 import {
+  BookOpenCheck,
   BarChart3,
   FileStack,
   Gauge,
@@ -189,6 +190,8 @@ const ALL_SECTIONS: NavSection[] = [
         permission: "view_ai_usage",
         feature: "aiUsage",
       },
+      /* QA, 24 Nov 2026: the list of every page the AI can read, from the page registry. */
+      { label: "AI-readable pages", href: "/admin/ai-readable-pages", icon: BookOpenCheck, permission: "view_ai_usage", adminOnly: true },
       { label: "User Management", href: "/admin/users", icon: Users, permission: "manage_users" },
       {
         label: "Integrations",

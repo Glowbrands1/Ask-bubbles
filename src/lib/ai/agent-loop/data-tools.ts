@@ -6,7 +6,7 @@ import { activePermissionMatrix, hasPermission } from "@/lib/permissions";
 import { pagesToolLine, type PageReaderTool } from "@/config/ai-readable-pages";
 import { FORM_RECORDS_PERMISSION } from "@/lib/forms/chat-form-records";
 import { relativeBusinessDay } from "@/lib/forms/follow-up";
-import { WHATS_NEW, whatsNewFor, type WhatsNewEntry } from "@/config/whats-new";
+import { WHATS_NEW, whatsNewFor, type WhatsNewRelease } from "@/config/whats-new";
 import type { TrainingCatalog } from "@/lib/ai-training/types";
 import type { AccessScope, Permission, Role } from "@/types";
 
@@ -455,10 +455,12 @@ const WHATS_NEW_LISTED = 15;
 
 /**
  * read_whats_new({since?}) (Pau, 26 Nov 2026; CLAUDE.md §5): the What's New page's list (`src/config/whats-new.ts`),
- * newest first, as this manager's page shows it: the page's own permission, and an entry about another page only when
- * their role may open that page (`whatsNewFor`). `since` (YYYY-MM-DD) keeps the entries from that day on.
+ * releases newest first, as this manager's page shows it: the page's own permission, and an entry about another page
+ * only when their role may open that page (`whatsNewFor`). Each entry comes with its tag (New / Improved), what it was
+ * like before, what changed, how to use it and the page it is about, so the answer can say how to use each one.
+ * `since` (YYYY-MM-DD) keeps the releases from that day on.
  */
-export async function readWhatsNew(context: DataToolContext, input: { since?: unknown }, entries: readonly WhatsNewEntry[] = WHATS_NEW): Promise<ToolResult> {
+export async function readWhatsNew(context: DataToolContext, input: { since?: unknown }, releases: readonly WhatsNewRelease[] = WHATS_NEW): Promise<ToolResult> {
   const matrix = activePermissionMatrix();
   const role = context.actor.role;
   if (!hasPermission(matrix, role, READER_PERMISSION.read_whats_new)) {
@@ -466,26 +468,41 @@ export async function readWhatsNew(context: DataToolContext, input: { since?: un
   }
   const since = text(input.since);
   const from = since && /^\d{4}-\d{2}-\d{2}$/.test(since) ? since : null;
-  const visible = whatsNewFor(role, (r, permission) => hasPermission(matrix, r, permission), entries).filter((entry) => !from || entry.date >= from);
-  const listed = visible.slice(0, WHATS_NEW_LISTED);
+  const visible = whatsNewFor(role, (r, permission) => hasPermission(matrix, r, permission), releases).filter((release) => !from || release.date >= from);
+  const total = visible.reduce((count, release) => count + release.entries.length, 0);
+  let left = WHATS_NEW_LISTED;
+  const listed = visible
+    .map((release) => {
+      const entries = release.entries.slice(0, Math.max(0, left));
+      left -= entries.length;
+      return { release, entries };
+    })
+    .filter((group) => group.entries.length > 0);
+  const shown = listed.reduce((count, group) => count + group.entries.length, 0);
   return {
     source: WHATS_NEW_SOURCE,
     app: appConfig().appName,
-    updates: listed.map((entry) => ({
-      date: formatBusinessDay(entry.date),
-      title: entry.title,
-      what: entry.description,
-      ...(entry.href ? { page: entry.href } : {}),
+    releases: listed.map(({ release, entries }) => ({
+      date: formatBusinessDay(release.date),
+      summary: release.summary,
+      updates: entries.map((entry) => ({
+        tag: entry.tag,
+        title: entry.title,
+        before: entry.before,
+        now: entry.now,
+        how_to_use: entry.howToUse,
+        ...(entry.showMe ? { show_me: { page: entry.showMe.label, link: entry.showMe.href } } : {}),
+      })),
     })),
-    ...(visible.length > listed.length ? { listed: listed.length, of: visible.length } : {}),
+    ...(total > shown ? { listed: shown, of: total } : {}),
     ...(from ? { since: formatBusinessDay(from) } : {}),
     note:
-      (listed.length === 0
+      (shown === 0
         ? from
           ? "Nothing new since that day. Say so, and that the What's New page lists the latest updates."
           : "The What's New page lists nothing yet. Say so."
-        : "These are the updates on the What's New page, newest first. Give each with its date and title and what it does, in plain words, as written; never add an update that is not listed.") +
-      (visible.length > listed.length ? ` ${listed.length} of ${visible.length} are listed; say the page has the rest.` : ""),
+        : "These are the updates on the What's New page, newest release first. For each, give its tag (New or Improved), title and what changed (now), and how to use it, in plain words, as written; offer its Show me page when it has one. Never add an update that is not listed.") +
+      (total > shown ? ` ${shown} of ${total} are listed; say the page has the rest.` : ""),
   };
 }
 
@@ -530,7 +547,7 @@ export function dataToolSpecs(config: AppConfig) {
     {
       name: "read_whats_new",
       description:
-        "What's new in " + config.appName + ": the What's New page's list of recent updates and new features (date, title, what it does, the page it is about), newest first, as this manager's page shows it. Use it for \"what's new?\", \"what's new in " + config.appName + "?\", \"any new features?\", \"what changed this week?\" (pass since). Never answer what's new from memory." + pagesToolLine(config.readablePages, "read_whats_new"),
+        "What's new in " + config.appName + ": the What's New page's list of recent updates and new features, releases newest first (date and summary), each update with its tag (New or Improved), what it was like before, what changed now, how to use it and its Show me page, as this manager's page shows it. Use it for \"what's new?\", \"what's new in " + config.appName + "?\", \"any new features?\", \"what changed this week?\" (pass since). Never answer what's new from memory." + pagesToolLine(config.readablePages, "read_whats_new"),
       input_schema: {
         type: "object",
         properties: {
