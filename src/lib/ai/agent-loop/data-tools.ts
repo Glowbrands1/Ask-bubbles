@@ -317,7 +317,7 @@ export const CALENDAR_SOURCE = "Calendar";
 const CALENDAR_LISTED = 60;
 
 /**
- * read_calendar({from?, to?}) (port from Ask Sunny; Pau, 26 Nov 2026; CLAUDE.md §5): the Calendar page's own read for this manager, so
+ * read_calendar({from?, to?}) (port from the sibling app; Pau, 26 Nov 2026; CLAUDE.md §5): the Calendar page's own read for this manager, so
  * "what's on my calendar this week?" and "when is my next L10?" are answered from it: their form follow-ups and HR
  * approvals (the forms pages' own scope and the one overdue rule), the weekly Google Reviews check per salon, their
  * reminders and their team's, and their L10 meetings from the Leadership Hub. Gated as the page is (`view_overview`).

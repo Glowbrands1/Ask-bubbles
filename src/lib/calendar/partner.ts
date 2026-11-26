@@ -15,7 +15,7 @@ import type { CalendarView } from "./types";
  * - One-time nonce (calendar_partner_nonces), a per-person rate limit, a 62-day range.
  * - The person is this app's ACTIVE account with that email (case-insensitive), read with that account's own role and
  *   stores, exactly as the /calendar page reads it for them. Unknown email, unsigned, stale or replayed: 404, the
- *   Hub's "nothing for you here". This app's data only (never Ask Sunny's), never time off, never L10 data (the Hub
+ *   Hub's "nothing for you here". This app's data only (never the sibling app's), never time off, never L10 data (the Hub
  *   has that).
  * Kept free of server-only imports so it is tested with fakes; the route passes the real reads.
  */

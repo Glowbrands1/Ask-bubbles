@@ -81,7 +81,7 @@ const ALL_SECTIONS: NavSection[] = [
     label: "Home",
     items: [
       { label: "Home", href: "/", icon: LayoutDashboard, permission: "view_overview", feature: "home" },
-      /* Port from Ask Sunny (Pau, 26 Nov 2026): one calendar with the Leadership Hub and Ask Sunny. */
+      /* Port from the sibling app (Pau, 26 Nov 2026): one calendar with the Leadership Hub and the sibling app. */
       { label: "Calendar", href: "/calendar", icon: CalendarCheck, permission: "view_overview" },
     ],
   },

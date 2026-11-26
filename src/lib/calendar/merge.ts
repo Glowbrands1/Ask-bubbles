@@ -7,7 +7,7 @@ import { CALENDAR_EVENT, SOURCE_LABELS, type CalendarEvent, type CalendarView, t
  */
 const WHAT: Record<string, string> = {
   "leadership-hub": "meetings and reminders from the Leadership Hub",
-  "ask-sunny": "Ask Sunny's forms and reminders",
+  "ask-sunny": "the sibling app's forms and reminders",
   "ask-bubbles": "Ask Bubbles' forms and reminders",
 };
 

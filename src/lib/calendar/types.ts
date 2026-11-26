@@ -10,7 +10,7 @@ export type CalendarSource = (typeof SOURCES)[number];
 
 export const SOURCE_LABELS: Record<CalendarSource, string> = {
   "leadership-hub": "Leadership Hub",
-  "ask-sunny": "Ask Sunny",
+  "ask-sunny": "the sibling app",
   "ask-bubbles": "Ask Bubbles",
 };
 
@@ -52,7 +52,7 @@ export interface CalendarView {
   from: string;
   to: string;
   events: CalendarEvent[];
-  /** One line per source that did not answer ("Couldn't load Ask Sunny's forms and reminders just now. …"). */
+  /** One line per source that did not answer ("Couldn't load the sibling app's forms and reminders just now. …"). */
   notes: string[];
 }
 

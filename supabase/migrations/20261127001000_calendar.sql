@@ -1,6 +1,6 @@
 -- ---------------------------------------------------------------------------
--- Port of the sibling app's 20261127001000_calendar.sql (Ask Sunny).
--- CALENDAR (Pau, 26 Nov 2026: one calendar in Ask Sunny, Ask Bubbles and the
+-- Port of the sibling app's 20261127001000_calendar.sql (the sibling app).
+-- CALENDAR (Pau, 26 Nov 2026: one calendar in this app, the sibling app and the
 -- Leadership Hub; design: Glowbrands1/leadership-hub docs/calendar-design.md).
 --
 -- The calendar copies nothing: follow-ups, HR approvals and Google Reviews are

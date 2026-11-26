@@ -7,10 +7,10 @@ import { lastResult, loopStandIn } from "./loop-stand-in";
 
 /**
  * ============================================================================
- * THE AI CAN READ THE CALENDAR, AND ADDS TO IT ONLY THROUGH A CARD (port from Ask Sunny; Pau, 26 Nov 2026)
+ * THE AI CAN READ THE CALENDAR, AND ADDS TO IT ONLY THROUGH A CARD (port from the sibling app; Pau, 26 Nov 2026)
  * ============================================================================
  *
- * The Calendar (one calendar with the Leadership Hub and Ask Sunny) ships with its reader (CLAUDE.md §5): read_calendar
+ * The Calendar (one calendar with the Leadership Hub and the sibling app) ships with its reader (CLAUDE.md §5): read_calendar
  * is the page's own read, and propose_reminder puts a reminder card on screen that the manager confirms. Asked in a
  * manager's words, through the real chat route:
  *   1. "what's on my calendar this week?" — this week's follow-ups reach the model, overdue flagged.
@@ -18,7 +18,7 @@ import { lastResult, loopStandIn } from "./loop-stand-in";
  *   3. "Add a reminder to my calendar for January 20 titled Order lamps" — a card on the answer; nothing saved.
  * Invented people only.
  */
-const REPORT = "Port from Ask Sunny (Pau, 26 Nov 2026): a Calendar in Ask Sunny, Ask Bubbles and the Leadership Hub, readable by the AI";
+const REPORT = "Port from the sibling app (Pau, 26 Nov 2026): a Calendar in this app, the sibling app and the Leadership Hub, readable by the AI";
 const FLAG = "AGENT_LOOP_ENABLED";
 /** The replay pack's signed-in account (replay-pack-e2e.test.ts). */
 const SUBJECT = "qa-manager";
