@@ -80,6 +80,8 @@ const ALL_SECTIONS: NavSection[] = [
     label: "Home",
     items: [
       { label: "Home", href: "/", icon: LayoutDashboard, permission: "view_overview", feature: "home" },
+      /* WHAT'S NEW (Pau, 26 Nov 2026): recent updates, from `src/config/whats-new.ts`; gated as Home is. */
+      { label: "What's New", href: "/whats-new", icon: Sparkles, permission: "view_overview" },
     ],
   },
   {

@@ -41,6 +41,7 @@ function visibleTo(role: Role): NavItem[] {
 
 const ROUTE_TO_FILE: Record<string, string> = {
   "/": "src/app/(app)/page.tsx",
+  "/whats-new": "src/app/(app)/whats-new/page.tsx",
   "/chat": "src/app/(app)/chat/page.tsx",
   "/history": "src/app/(app)/history/page.tsx",
   "/knowledge": "src/app/(app)/knowledge/page.tsx",

@@ -106,6 +106,7 @@ describe("the pages the AI can read", () => {
   it("each reader tool's handler checks READER_PERMISSION, not a copy of it", () => {
     const dataTools = readFileSync(join(ROOT, "src", "lib", "ai", "agent-loop", "data-tools.ts"), "utf8");
     expect(dataTools).toContain("READER_PERMISSION.read_follow_ups)");
+    expect(dataTools).toContain("READER_PERMISSION.read_whats_new)");
     // read_reviews reads the chat's reviews block, which checks the Google Reviews page's own permission.
     const reviewsBlock = readFileSync(join(ROOT, "src", "lib", "ai", "google-reviews-chat-read.ts"), "utf8");
     expect(reviewsBlock).toContain(`hasPermission(activePermissionMatrix(), input.role, "${READER_PERMISSION.read_reviews}")`);
