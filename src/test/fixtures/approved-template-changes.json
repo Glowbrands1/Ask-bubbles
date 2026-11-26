@@ -39,13 +39,13 @@
    "sourceKey": "dpoa",
    "path": ".document.blocks[6].field.label",
    "from": "List previously received coaching and/or corrective action with date signed",
-   "to": "List previous coaching and corrective actions and include date signed by employee in past 90 days"
+   "to": "List previous coaching and corrective actions and include date signed by employee"
   },
   {
    "sourceKey": "dpoa",
    "path": ".document.blocks[6].field.help",
    "from": "One per line: each coaching or corrective action previously received, with the date it was signed. Write \"None — first occurrence\" when there has been none.",
-   "to": "One per line: each coaching or corrective action received in the past 90 days, with the date the employee signed it. Write \"None — first occurrence\" when there has been none. Required."
+   "to": "One per line: each coaching or corrective action on file, with the date the employee signed it, including any waiting for HR approval or sent back. If none is found, \"N/A\" is filled in automatically when the form is finalized or sent for approval."
   },
   {
    "sourceKey": "dpoa",
