@@ -13,6 +13,7 @@ import {
 } from "@/lib/employees/woven/view-types";
 import { centralToday, changeLabel, employeeName, mappingSummary, scheduledDeparture, wovenStatusName } from "@/lib/employees/woven/views";
 import { cn } from "@/lib/utils/cn";
+import { AddressButton } from "./address-button";
 import { day, label, when } from "./format";
 
 /**
@@ -188,6 +189,7 @@ export function DirectoryTable({ page, query, sample }: { page: DirectoryPage; q
                   "Name",
                   "Woven ID",
                   "Work email",
+                  "Home address",
                   "Status",
                   "Position",
                   "Position ID",
@@ -223,6 +225,9 @@ export function DirectoryTable({ page, query, sample }: { page: DirectoryPage; q
                   <td className="px-3 py-2 font-mono text-[11.5px] text-muted-foreground">{row.externalEmployeeId}</td>
                   <td className="px-3 py-2">
                     {row.emailAddress ?? <Badge tone="failed" size="sm">missing</Badge>}
+                  </td>
+                  <td className="px-3 py-2">
+                    {sample ? <span className="text-muted-foreground">—</span> : <AddressButton directoryId={row.id} />}
                   </td>
                   <td className="px-3 py-2">
                     <Badge tone={STATUS_TONE[row.employmentStatus]} size="sm">
