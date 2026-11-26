@@ -62,7 +62,7 @@ const offerCase = (id: string, title: string, onFile: { name: string; archived: 
     t.loopModel!(model());
     const thread = t.thread();
     const reply = await thread.say(T1);
-    // CHANGED ON PURPOSE (Pau, 26 Nov 2026: "Ai saw prior forms but i need them here"; PRIOR_ON_FILE_ON_CARD_ENABLED, port from Ask Sunny): forms on file are put on the card's Prior actions by the app, each saying what it is, and never offered. "offered" now reads "on the card".
+    // CHANGED ON PURPOSE (Pau, 26 Nov 2026: "Ai saw prior forms but i need them here"; PRIOR_ON_FILE_ON_CARD_ENABLED, port from the sibling app): forms on file are put on the card's Prior actions by the app, each saying what it is, and never offered. "offered" now reads "on the card".
     const held = (thread.proposal as { priorActions?: string | null } | null)?.priorActions ?? "";
     if (offered) expect(held, reply.content).toMatch(/09\/10\/2026/);
     else expect(held, `a form that is not on file is on the card:\n${reply.content}`).not.toMatch(/09\/10\/2026/);

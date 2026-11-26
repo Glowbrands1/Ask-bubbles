@@ -5581,7 +5581,7 @@ export async function proposeForm(
   const priorParts = priorActionsRead ? [...(onFileBeside.length > 0 ? [priorsOnFileLine(onFileBeside)] : []), priorActionsRead, ...listedSteps] : [];
   const priorActionsStated = priorActionsRead ? priorParts.join(priorActionsRead.includes("\n") ? "\n" : "; ").slice(0, 600) : null;
   /*
-   * THE FORMS ON FILE GO ON THE CARD (Pau, 26 Nov 2026, port from Ask Sunny: "Ai saw prior forms but i need them here";
+   * THE FORMS ON FILE GO ON THE CARD (Pau, 26 Nov 2026, port from the sibling app: "Ai saw prior forms but i need them here";
    * PRIOR_ON_FILE_ON_CARD_ENABLED). This person's forms on file (finalized, or a draft with HR) are added to Prior actions
    * on their own, after the manager's own steps, each saying what it is, never twice for a date a kept step already has.
    * They are never "as you said": the manager's quote does not hold their dates. Off, they are offered, as before.

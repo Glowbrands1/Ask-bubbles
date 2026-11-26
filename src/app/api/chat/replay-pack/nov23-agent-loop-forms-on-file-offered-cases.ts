@@ -68,7 +68,7 @@ export const NOV23_AGENT_LOOP_FORMS_ON_FILE_OFFERED_CASES: ReplayCase[] = [
       t.loopModel!(model(() => undefined));
       const thread = t.thread();
       const reply = await thread.say(T1);
-      // CHANGED ON PURPOSE (Pau, 26 Nov 2026: "Ai saw prior forms but i need them here"; PRIOR_ON_FILE_ON_CARD_ENABLED, port from Ask Sunny): forms on file are put on the card's Prior actions by the app, each saying what it is, and never offered.
+      // CHANGED ON PURPOSE (Pau, 26 Nov 2026: "Ai saw prior forms but i need them here"; PRIOR_ON_FILE_ON_CARD_ENABLED, port from the sibling app): forms on file are put on the card's Prior actions by the app, each saying what it is, and never offered.
       expect(prior(thread), "the form on file is not on the card").toMatch(/Verbal Warning, finalized — 10\/02\/2026/);
       expect(reply.content, `the form on the card was offered too:\n${reply.content}`).not.toMatch(OFFER);
     },
@@ -83,7 +83,7 @@ export const NOV23_AGENT_LOOP_FORMS_ON_FILE_OFFERED_CASES: ReplayCase[] = [
       t.loopModel!(model(() => "Corrective Action Form, Verbal Warning — 10/02/2026"));
       const thread = t.thread();
       const reply = await thread.say(T1);
-      // CHANGED ON PURPOSE (Pau, 26 Nov 2026: "Ai saw prior forms but i need them here"; PRIOR_ON_FILE_ON_CARD_ENABLED, port from Ask Sunny): forms on file are put on the card's Prior actions by the app, each saying what it is, and never offered. The model's copy adds no second line.
+      // CHANGED ON PURPOSE (Pau, 26 Nov 2026: "Ai saw prior forms but i need them here"; PRIOR_ON_FILE_ON_CARD_ENABLED, port from the sibling app): forms on file are put on the card's Prior actions by the app, each saying what it is, and never offered. The model's copy adds no second line.
       expect(prior(thread).match(/10\/02\/2026/g) ?? [], prior(thread)).toHaveLength(1);
       expect(reply.content).not.toMatch(OFFER);
     },
@@ -99,7 +99,7 @@ export const NOV23_AGENT_LOOP_FORMS_ON_FILE_OFFERED_CASES: ReplayCase[] = [
       const thread = t.thread();
       await thread.say(T1);
       const reply = await thread.say("yes");
-      // CHANGED ON PURPOSE (Pau, 26 Nov 2026: "Ai saw prior forms but i need them here"; PRIOR_ON_FILE_ON_CARD_ENABLED, port from Ask Sunny): forms on file are put on the card's Prior actions by the app, each saying what it is, and never offered. A "yes" changes nothing: the form is already on the card, once.
+      // CHANGED ON PURPOSE (Pau, 26 Nov 2026: "Ai saw prior forms but i need them here"; PRIOR_ON_FILE_ON_CARD_ENABLED, port from the sibling app): forms on file are put on the card's Prior actions by the app, each saying what it is, and never offered. A "yes" changes nothing: the form is already on the card, once.
       expect(prior(thread).match(/10\/02\/2026/g) ?? [], prior(thread)).toHaveLength(1);
       expect(reply.content, "the offer was made again").not.toMatch(/Want me to add it to Prior actions/);
     },

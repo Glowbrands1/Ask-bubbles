@@ -72,7 +72,7 @@ export const NOV22_AGENT_LOOP_ADDING_PRIOR_STEP_KEEPS_ON_FILE_CASES: ReplayCase[
        * never says yes, so T4 adds the signing only. What this case still guards: the step the manager adds lands, and
        * nothing the manager did not state or accept is added.
        */
-      // CHANGED ON PURPOSE (Pau, 26 Nov 2026: "Ai saw prior forms but i need them here"; PRIOR_ON_FILE_ON_CARD_ENABLED, port from Ask Sunny): forms on file are put on the card's Prior actions by the app, each saying what it is, and never offered. What A13 guards again: adding a step never removes the form on file.
+      // CHANGED ON PURPOSE (Pau, 26 Nov 2026: "Ai saw prior forms but i need them here"; PRIOR_ON_FILE_ON_CARD_ENABLED, port from the sibling app): forms on file are put on the card's Prior actions by the app, each saying what it is, and never offered. What A13 guards again: adding a step never removes the form on file.
       expect(priorOf(model), "T3's card does not hold the CA on file").toMatch(/finalized — 10\/20\/2026/);
       const reply = await thread.say(T[3]!);
       expect(priorOf(model), `the signing was not added:\n${reply.content}`).toMatch(/10\/15\/2026/);

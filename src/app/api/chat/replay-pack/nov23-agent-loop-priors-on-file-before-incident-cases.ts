@@ -68,7 +68,7 @@ export const NOV23_AGENT_LOOP_PRIORS_ON_FILE_BEFORE_INCIDENT_CASES: ReplayCase[]
        * put on Prior actions by the AI. The before-incident filter (#1083) now applies to the offer: it names 10/02 and
        * never 11/10 or 11/17, and the card's Prior actions hold neither.
        */
-      // CHANGED ON PURPOSE (Pau, 26 Nov 2026: "Ai saw prior forms but i need them here"; PRIOR_ON_FILE_ON_CARD_ENABLED, port from Ask Sunny): forms on file are put on the card's Prior actions by the app, each saying what it is, and never offered. The before-incident filter (#1083) now applies to the card's own Prior actions.
+      // CHANGED ON PURPOSE (Pau, 26 Nov 2026: "Ai saw prior forms but i need them here"; PRIOR_ON_FILE_ON_CARD_ENABLED, port from the sibling app): forms on file are put on the card's Prior actions by the app, each saying what it is, and never offered. The before-incident filter (#1083) now applies to the card's own Prior actions.
       const offers = prior;
       if (priorFormsUpToTodayEnabled()) {
         /*
