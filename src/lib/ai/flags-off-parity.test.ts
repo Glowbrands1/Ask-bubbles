@@ -255,6 +255,12 @@ const ALLOWED_UI = [
   // Import's "couldn't confirm … is yours" line (QA, 12 Nov 2026, both apps): shown only for a "not_proven" decline,
   // which only CHAT_IMPORT_PROVEN_OWN_ENABLED returns. Off, the server never declines that way, so it never shows.
   "src/features/chat/import-local-history.tsx",
+  // "Dictate with your voice" (on the owner's agreed list; QA retest, 24 Nov 2026: "No upload or voice"; both apps,
+  // port of Ask Sunny 1b777d8): a mic beside Send and on the rating comment box, using the browser's own speech
+  // recognition. Input control only: words go into the box, nothing is sent on its own, no request or route changes,
+  // and where the browser cannot dictate (and in every test without a mocked SpeechRecognition) it renders nothing.
+  "src/components/dictate-button.tsx",
+  "src/features/chat/conversation-rating.tsx",
   // District Manager, 3 Nov 2026 (QA approved 5 Nov, Pau 6 Nov): the Reviews page and the admin Google Reviews
   // screen show the company's store number (Dawley Farms: 309; its Google code 338 stays the match key). Unflagged:
   // it is a data correction, identical for every store whose number is its code.

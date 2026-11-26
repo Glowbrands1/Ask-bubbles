@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Star } from "lucide-react";
 
+import { DictateButton, DictationStatus, useDictation } from "@/components/dictate-button";
 import { submitFeedback } from "@/lib/feedback/client";
 import { logTurnEvent } from "@/lib/analytics/telemetry";
 import {
@@ -113,6 +114,15 @@ export function ConversationRating({
   const [draft, setDraft] = useState<FeedbackDraft>(() => draftFrom(saved));
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  /*
+   * The same mic as the composer, on the comment box: some managers would
+   * rather say what was missing than type it. Words go into the box, capped at
+   * the comment limit like typing is, and are saved only with Submit.
+   */
+  const dictation = useDictation({
+    value: draft.comment,
+    onChange: (comment) => setDraft((d) => ({ ...d, comment: comment.slice(0, COMMENT_MAX_LENGTH) })),
+  });
 
   /*
    * ==========================================================================
@@ -159,6 +169,10 @@ export function ConversationRating({
     setBusy(false);
   }
 
+  // Words dictated for one conversation never land in another's comment box.
+  const cancelDictation = dictation.cancel;
+  useEffect(() => cancelDictation, [identity, cancelDictation]);
+
   /*
    * WHETHER THIS HOST GOT SOMETHING TO RATE.
    *
@@ -183,6 +197,7 @@ export function ConversationRating({
   if (!turnId) return null;
 
   const save = async () => {
+    dictation.cancel();
     const complaint = feedbackDraftProblem(draft);
     if (complaint) {
       setProblem(complaint);
@@ -424,24 +439,32 @@ export function ConversationRating({
 
       {/* ------------------------------------------------------ comment -- */}
       <div>
-        <label
-          htmlFor={`comment-${turnId}`}
-          className="text-[11.5px] font-bold text-foreground"
-        >
-          Anything Bubbles should do better?{" "}
-          <span className="font-normal text-muted-foreground">(optional)</span>
-        </label>
+        <div className="flex items-center justify-between gap-2">
+          <label
+            htmlFor={`comment-${turnId}`}
+            className="text-[11.5px] font-bold text-foreground"
+          >
+            Anything Bubbles should do better?{" "}
+            <span className="font-normal text-muted-foreground">(optional)</span>
+          </label>
+          <DictateButton dictation={dictation} disabled={busy} className="size-8" />
+        </div>
         <textarea
           id={`comment-${turnId}`}
           rows={3}
           value={draft.comment}
           disabled={busy}
           maxLength={COMMENT_MAX_LENGTH}
-          onChange={(event) =>
-            setDraft((d) => ({ ...d, comment: event.target.value }))
-          }
+          onChange={(event) => {
+            if (dictation.listening) dictation.cancel();
+            setDraft((d) => ({ ...d, comment: event.target.value }));
+          }}
           className="scroll-slim mt-1.5 w-full resize-none rounded-lg border border-border-strong bg-surface px-3 py-2 text-[13px] leading-snug text-foreground placeholder:text-placeholder-foreground focus-visible:border-brand-accent focus-visible:outline-none"
           placeholder="What worked, what was missing — the more specific, the more we can fix."
+        />
+        <DictationStatus
+          dictation={dictation}
+          className={cn("mt-1", dictation.isError ? "font-semibold text-foreground" : "text-muted-foreground")}
         />
       </div>
 
@@ -458,6 +481,7 @@ export function ConversationRating({
         <button
           type="button"
           onClick={() => {
+            dictation.cancel();
             setDraft(draftFrom(saved));
             setProblem(null);
             setOpen(false);

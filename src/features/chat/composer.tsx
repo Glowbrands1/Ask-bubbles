@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { ArrowUp, Info } from "lucide-react";
 
 import { BubbleMark } from "@/components/brand-mark";
+import { DictateButton, DictationStatus, useDictation } from "@/components/dictate-button";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/controls";
 import { Tooltip } from "@/components/ui/overlays";
@@ -52,6 +53,13 @@ const MODE_OPTIONS = MODES.map((mode) => ({
  * not the problem. A manager reading a screen does not distinguish "not built
  * yet" from "broken"; they see three controls that do not work. They come back
  * when they work.
+ *
+ * VOICE CAME BACK FIRST (QA retest, 24 Nov 2026: "No upload or voice"). The mic
+ * beside Send is `DictateButton` (components/dictate-button.tsx): the browser's
+ * own speech recognition, words into the box for the manager to edit, never
+ * sent on their own. It is not rendered at all where the browser cannot
+ * dictate, so it never becomes a dead control again. Send, or typing in the
+ * box, turns it off.
  *
  * WHAT THE NOTE KEEPS. The visible line is the first clause of the standing note
  * verbatim, not a summary of it, and the full text is on the info affordance
@@ -129,8 +137,13 @@ export function Composer({
   const length = chatLongMessageClientEnabled() ? messageLengthStatus(value, LONG_MESSAGE_LIMIT) : null;
   const overLimit = length !== null && !length.canSend;
 
+  const dictation = useDictation({ value, onChange });
+
   const submit = () => {
     if (!value.trim() || busy || overLimit) return;
+    // Send stops listening, and drops anything still on its way, so words
+    // finalized after Send cannot refill the box that was just cleared.
+    dictation.cancel();
     onSubmit();
   };
 
@@ -148,7 +161,12 @@ export function Composer({
         disabled={busy}
         autoFocus={autoFocus}
         aria-describedby={length?.notice ? "chat-input-length" : undefined}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => {
+          // Typing takes over from dictation: the next recognized words would
+          // otherwise overwrite the manager's edit.
+          if (dictation.listening) dictation.cancel();
+          onChange(event.target.value);
+        }}
         onKeyDown={(event) => {
           if (event.key === "Enter" && !event.shiftKey) {
             event.preventDefault();
@@ -189,8 +207,14 @@ export function Composer({
       <div className="mx-auto flex max-w-3xl items-center gap-3 rounded-[var(--radius-2xl)] border-2 border-primary bg-surface py-2 pr-2 pl-3.5 shadow-raised transition-shadow focus-within:shadow-[0_0_0_3px_var(--surface)]">
         <BubbleMark className="size-[26px] shrink-0" />
         <div className="flex min-w-0 flex-1 items-center">{field}</div>
+        <DictateButton dictation={dictation} disabled={busy} />
         {sendButton}
       </div>
+
+      <DictationStatus
+        dictation={dictation}
+        className={cn("mx-auto mt-2 max-w-3xl text-[12px] text-foreground", dictation.isError && "font-semibold")}
+      />
 
       {length?.notice ? (
         <p
