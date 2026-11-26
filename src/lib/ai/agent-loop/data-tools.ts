@@ -3,8 +3,10 @@ import { isGoogleReviewQuestion } from "@/lib/ai/google-reviews-chat";
 import { loadGoogleReviewsChatBlock } from "@/lib/ai/google-reviews-chat-read";
 import { assignmentTrackerText, canSeeAssignmentTracker, type AssignmentTracker } from "@/lib/ai-training/assignments";
 import { activePermissionMatrix, hasPermission } from "@/lib/permissions";
+import { pagesToolLine, type PageReaderTool } from "@/config/ai-readable-pages";
+import { FORM_RECORDS_PERMISSION } from "@/lib/forms/chat-form-records";
 import { relativeBusinessDay } from "@/lib/forms/follow-up";
-import type { AccessScope, Role } from "@/types";
+import type { AccessScope, Permission, Role } from "@/types";
 
 import { formatBusinessTime } from "@/lib/business-date";
 
@@ -316,7 +318,7 @@ const FOLLOW_UPS_LISTED = 25;
 export async function readFollowUps(context: DataToolContext, deps: DataToolDeps = DEFAULT_DATA_TOOL_DEPS): Promise<ToolResult> {
   const matrix = activePermissionMatrix();
   const role = context.actor.role;
-  if (!hasPermission(matrix, role, "view_overview") || !hasPermission(matrix, role, "view_form_monitoring")) {
+  if (!hasPermission(matrix, role, READER_PERMISSION.read_follow_ups) || !hasPermission(matrix, role, "view_form_monitoring")) {
     return { source: followUpsSource(), refused: "This account's role does not show follow-ups. Nothing was read; say so plainly, in one line, and give no count." };
   }
   let read: FollowUpQueueRead | null;
@@ -357,6 +359,20 @@ export async function readFollowUps(context: DataToolContext, deps: DataToolDeps
   };
 }
 
+/**
+ * The permission each page reader checks before it reads anything: the same one its page's gate takes
+ * (`src/config/ai-readable-pages.ts`; `ai-readable-pages.test.ts` holds the two together), so the AI never reads more
+ * than the page would show that manager. read_reviews' check is in the reviews block it reads
+ * (`google-reviews-chat-read.ts`, View reports); read_hr_approvals reads only the asker's own forms (HR: their queue),
+ * as the HR approval page shows them.
+ */
+export const READER_PERMISSION = {
+  read_reviews: "view_reports",
+  find_past_forms: FORM_RECORDS_PERMISSION,
+  read_hr_approvals: "view_form_monitoring",
+  read_follow_ups: "view_overview",
+} as const satisfies Record<PageReaderTool, Permission>;
+
 /* ---------------------------------------------------------------- registration --- */
 
 /** The data tools' specs, in the loop's tool-list shape (`run.ts`), with the app config's words. */
@@ -367,7 +383,7 @@ export function dataToolSpecs(config: AppConfig) {
     {
       name: "read_reviews",
       description:
-        "The Google Reviews page's figures for every " + place + ", with the manager's own " + places + " marked: qualifying reviews month to date against the monthly goal, this week and last, the average star, and the newest reviews; with L3 (last 3 full months), L6 (last 6 full months), YTD and each month when the manager asks for a period. Narrowed to a " + place + " the manager names.",
+        "The Google Reviews page's figures for every " + place + ", with the manager's own " + places + " marked: qualifying reviews month to date against the monthly goal, this week and last, the average star, and the newest reviews; with L3 (last 3 full months), L6 (last 6 full months), YTD and each month when the manager asks for a period. Narrowed to a " + place + " the manager names." + pagesToolLine(config.readablePages, "read_reviews"),
       input_schema: {
         type: "object",
         properties: {
@@ -386,7 +402,7 @@ export function dataToolSpecs(config: AppConfig) {
     {
       name: "read_follow_ups",
       description:
-        "Follow-ups on forms: how many are overdue, due this week and open, and which (employee, form, " + place + ", follow-up date), for the manager's own " + places + ", the same counts Home, the rail badge and the " + config.formsPageName + " show. Use it for \"how many follow-ups are overdue?\", \"what follow-ups do I have this week?\". Not HR approval (read_hr_approvals).",
+        "Follow-ups on forms: how many are overdue, due this week and open, and which (employee, form, " + place + ", follow-up date), for the manager's own " + places + ", the same counts Home, the rail badge and the " + config.formsPageName + " show. Use it for \"how many follow-ups are overdue?\", \"what follow-ups do I have this week?\". Not HR approval (read_hr_approvals)." + pagesToolLine(config.readablePages, "read_follow_ups"),
       input_schema: { type: "object", properties: {}, required: [] },
     },
     {
