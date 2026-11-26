@@ -335,6 +335,8 @@ export interface ChatMessage {
    * missing fact become a demo fact on the next turn.
    */
   formProposal?: ChatFormProposal;
+  /** A calendar reminder the chat proposed (propose_reminder): a card; nothing is saved until Add to calendar. */
+  reminderProposal?: { title: string; date: string; time: string | null; visibility: "only_me" | "my_team" };
   /**
    * Every proposal, when one message asked for more than one form. The first
    * is also `formProposal`. Each renders as its own card with its own Create.

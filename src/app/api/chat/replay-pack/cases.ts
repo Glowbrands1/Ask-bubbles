@@ -24,6 +24,8 @@ export interface ReplayAnswer {
   formProposal?: { templateKey?: string; employeeName?: string | null; employeeRole?: string | null; status?: string; subject?: string; locationId?: string | null; closeMatchNote?: string; formDate?: string | null; supportsInlineDraft?: boolean };
   formUpdate?: { instanceId: string; updated: string[] };
   formOpened?: { instanceId: string };
+  /** A calendar reminder card (propose_reminder): shown, never saved by the AI. */
+  reminderProposal?: { title: string; date: string; time: string | null; visibility: "only_me" | "my_team" };
   /** The answer's source cards, as the route returns them. */
   citations?: { documentTitle?: string; locator?: string; excerpt?: string }[];
 }
