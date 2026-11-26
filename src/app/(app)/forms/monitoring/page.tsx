@@ -286,7 +286,6 @@ export default async function FormMonitoringPage({
           </Notice>
         ) : (
           <>
-          {employeeSearchOffered ? <EmployeeFormSearchBox query="" /> : null}
           <MonitoringTable
             forms={forms}
             notice={formsIdentityIsUnverified() ? SYNTHETIC_DATA_NOTICE : null}
@@ -298,6 +297,7 @@ export default async function FormMonitoringPage({
             listLimit={listCapped ? LIST_LIMIT : null}
             demo={demo}
             mayDeleteFinalized={mayDeleteFinalizedForm(identity)}
+            search={employeeSearchOffered ? <EmployeeFormSearchBox query="" className="" /> : null}
           />
           </>
         )}
