@@ -15,7 +15,8 @@ const push = vi.fn();
 const markRead = vi.fn<(ids: string[] | null) => Promise<{ ok: boolean }>>(async () => ({ ok: true }));
 const dismiss = vi.fn<(ids: string[] | null) => Promise<{ ok: boolean }>>(async () => ({ ok: true }));
 const markUnread = vi.fn<(ids: string[]) => Promise<{ ok: boolean }>>(async () => ({ ok: true }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+const refresh = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh }) }));
 vi.mock("./actions", () => ({
   markNotificationsReadAction: (ids: string[] | null) => markRead(ids),
   dismissNotificationsAction: (ids: string[] | null) => dismiss(ids),
@@ -340,5 +341,86 @@ describe("the other app's waiting forms on the bar (Pau, 24 Nov 2026: \"fix\")",
     fireEvent.click(bar);
     expect(screen.getByRole("link", { name: /2 forms still need your decision/ }).getAttribute("href")).toBe("/forms/monitoring?view=hr");
     expect(screen.getByRole("link", { name: /1 in Other App needs your decision/ }).getAttribute("href")).toBe("/forms/monitoring?view=hr&app=sibling");
+  });
+});
+
+/*
+ * Pau, 26 Nov 2026, of the daily follow-up notices: "ability to click from notification that they have completed it like
+ * COmpleted or extend". A follow-up notice carries its form; the bell offers Completed and Extend on it, through the
+ * same follow-up route the Forms Register uses. Names are invented.
+ */
+describe("ability to click from notification that they have completed it like COmpleted or extend", () => {
+  const FORM = "0b6f3c1e-2d4a-4c5b-9e8f-112233445566";
+  const notice: BellData = {
+    unread: 1,
+    items: [
+      {
+        id: "fu1",
+        kind: "form_follow_up_overdue",
+        title: "Follow-up overdue",
+        body: "Your follow-up on the Corrective Action for Marlo Quint was due Nov 24 and is not marked done yet.",
+        href: `/forms/monitoring?followup=overdue&form=${FORM}`,
+        createdAt: new Date().toISOString(),
+        readAt: null,
+      },
+    ],
+  };
+  const calls: { url: string; method: string; body: unknown }[] = [];
+  function stubFetch(ok = true) {
+    calls.length = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init: RequestInit) => {
+        calls.push({ url, method: String(init.method), body: JSON.parse(String(init.body)) });
+        return new Response(JSON.stringify(ok ? { instance: {} } : { error: "This follow-up is already marked complete." }), { status: ok ? 200 : 409 });
+      }),
+    );
+  }
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    refresh.mockClear();
+  });
+
+  it("Completed marks the follow-up done and clears the notice", async () => {
+    stubFetch();
+    render(<NotificationBell data={notice} />);
+    fireEvent.click(screen.getByRole("button", { name: /Notifications/ }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Completed" }));
+    });
+    expect(calls).toEqual([{ url: `/api/forms/instances/${FORM}/follow-up`, method: "POST", body: { action: "complete" } }]);
+    expect(await screen.findByText("Marked done.")).toBeTruthy();
+    expect(dismiss).toHaveBeenCalledWith(["fu1"]);
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it("Extend sets a new follow-up date", async () => {
+    stubFetch();
+    render(<NotificationBell data={notice} />);
+    fireEvent.click(screen.getByRole("button", { name: /Notifications/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Extend" }));
+    fireEvent.change(screen.getByLabelText("New follow-up date"), { target: { value: "2030-01-15" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Save date" }));
+    });
+    expect(calls).toEqual([{ url: `/api/forms/instances/${FORM}/follow-up`, method: "PUT", body: { date: "2030-01-15" } }]);
+    expect(await screen.findByText("Moved to Jan 15.")).toBeTruthy();
+  });
+
+  it("a refusal is shown, and the notice stays", async () => {
+    stubFetch(false);
+    render(<NotificationBell data={notice} />);
+    fireEvent.click(screen.getByRole("button", { name: /Notifications/ }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Completed" }));
+    });
+    expect((await screen.findByRole("alert")).textContent).toMatch(/already marked complete/);
+    expect(dismiss).not.toHaveBeenCalled();
+  });
+
+  it("other notifications get no Completed / Extend", () => {
+    render(<NotificationBell data={data} />);
+    fireEvent.click(screen.getByRole("button", { name: /Notifications/ }));
+    expect(screen.queryByRole("button", { name: "Completed" })).toBeNull();
   });
 });
