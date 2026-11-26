@@ -127,7 +127,7 @@ describe("the live read", () => {
 
   it("reads that one employee's details and returns the line", async () => {
     const live = deps();
-    expect(await wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE }, live)).toBe("412 Invented Ln, Faketown, NE 68000");
+    expect(await wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE, role: "location_manager" }, live)).toBe("412 Invented Ln, Faketown, NE 68000");
     expect(live.asked).toEqual(["W-501"]);
   });
 
@@ -139,8 +139,8 @@ describe("the live read", () => {
 
   it("asks Woven nothing when the person is not exactly one", async () => {
     const live = deps();
-    expect(await wovenExitAddress({ employeeName: "Rowan Pike", scope: STORE }, live)).toBeNull();
-    expect(await wovenExitAddress({ employeeName: "Ash Brook", scope: GLOBAL }, live)).toBeNull();
+    expect(await wovenExitAddress({ employeeName: "Rowan Pike", scope: STORE, role: "location_manager" }, live)).toBeNull();
+    expect(await wovenExitAddress({ employeeName: "Ash Brook", scope: GLOBAL, role: "admin" }, live)).toBeNull();
     expect(live.asked).toEqual([]);
   });
 
@@ -150,19 +150,30 @@ describe("the live read", () => {
         throw new Error("Woven is down");
       },
     });
-    expect(await wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE }, failing)).toBeNull();
+    expect(await wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE, role: "location_manager" }, failing)).toBeNull();
     const noDirectory = deps({
       readDirectory: async () => {
         throw new Error("directory read failed");
       },
     });
-    expect(await wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE }, noDirectory)).toBeNull();
+    expect(await wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE, role: "location_manager" }, noDirectory)).toBeNull();
+  });
+
+  /* Pau, 26 Nov 2026, approved by Curt: "only Admins and Managers" — DMs, RMs and Store Directors. */
+  it.each(["admin", "district_manager", "regional_manager", "location_manager"] as const)("a %s gets the address", async (role) => {
+    expect(await wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE, role }, deps())).toBe("412 Invented Ln, Faketown, NE 68000");
+  });
+
+  it.each(["assistant_manager", "employee", null] as const)("a %s gets a blank line, and Woven is not asked", async (role) => {
+    const live = deps();
+    expect(await wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE, role }, live)).toBeNull();
+    expect(live.asked).toEqual([]);
   });
 
   it("a slow Woven leaves the line blank", async () => {
     vi.useFakeTimers();
     const slow = deps({ readDetails: () => new Promise(() => {}) });
-    const pending = wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE }, slow);
+    const pending = wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE, role: "location_manager" }, slow);
     await vi.advanceTimersByTimeAsync(10_000);
     expect(await pending).toBeNull();
   });
@@ -177,6 +188,6 @@ describe("the live read", () => {
     expect(wovenExitAddressEnabled({ WOVEN_EXIT_ADDRESS_ENABLED: "true" })).toBe(true);
     vi.stubEnv("WOVEN_EXIT_ADDRESS_ENABLED", "");
     // Off and no stand-ins: nothing is read at all.
-    expect(await wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE })).toBeNull();
+    expect(await wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE, role: "location_manager" })).toBeNull();
   });
 });
