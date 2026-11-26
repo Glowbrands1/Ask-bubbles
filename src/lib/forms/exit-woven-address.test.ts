@@ -58,6 +58,23 @@ describe("the one person the exit form names", () => {
     expect(exitEmployeeDirectoryId(ROWS, "Ash Brook", GLOBAL)).toBeNull();
   });
 
+  /*
+   * Port from the sibling app (production there, 26 Nov 2026): the exit form's employee had two active Woven rows, one at the
+   * store the form is filed for and one at the corporate Woven location (no store). A global manager saw both.
+   */
+  it("one name, a store row and a corporate row: the row at the form's store", () => {
+    const rows = [...ROWS, row("d-6", "Lyra", "Wendle", ["loc-0310"]), row("d-7", "Lyra", "Wendle", [])];
+    expect(exitEmployeeDirectoryId(rows, "Lyra Wendle", GLOBAL)).toBeNull();
+    expect(exitEmployeeDirectoryId(rows, "Lyra Wendle", GLOBAL, "loc-0310")).toBe("d-6");
+    expect(exitEmployeeDirectoryId(rows, "Lyra Wendle", GLOBAL, "loc-0311")).toBeNull();
+    expect(exitEmployeeDirectoryId(rows, "Ash Brook", GLOBAL, "loc-0311")).toBe("d-4");
+  });
+
+  it("two people by that name at the form's own store: still nobody", () => {
+    const rows = [...ROWS, row("d-8", "Ash", "Brook", ["loc-0310"])];
+    expect(exitEmployeeDirectoryId(rows, "Ash Brook", GLOBAL, "loc-0310")).toBeNull();
+  });
+
   it("a first name alone, no name, or no scope: nobody", () => {
     expect(exitEmployeeDirectoryId(ROWS, "Marlow", STORE)).toBeNull();
     expect(exitEmployeeDirectoryId(ROWS, "", STORE)).toBeNull();
@@ -110,14 +127,20 @@ describe("the live read", () => {
 
   it("reads that one employee's details and returns the line", async () => {
     const live = deps();
-    expect(await wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE }, live)).toBe("412 Invented Ln, Faketown, NE 68000");
+    expect(await wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE, role: "location_manager" }, live)).toBe("412 Invented Ln, Faketown, NE 68000");
     expect(live.asked).toEqual(["W-501"]);
+  });
+
+  it("a global manager's exit form reads the row at the form's store", async () => {
+    const live = deps({ wovenIdOf: async (id) => (id === "d-3" ? "W-503" : "W-504") });
+    expect(await wovenExitAddress({ employeeName: "Ash Brook", scope: GLOBAL, locationId: "loc-0310" }, live)).toBe("412 Invented Ln, Faketown, NE 68000");
+    expect(live.asked).toEqual(["W-503"]);
   });
 
   it("asks Woven nothing when the person is not exactly one", async () => {
     const live = deps();
-    expect(await wovenExitAddress({ employeeName: "Rowan Pike", scope: STORE }, live)).toBeNull();
-    expect(await wovenExitAddress({ employeeName: "Ash Brook", scope: GLOBAL }, live)).toBeNull();
+    expect(await wovenExitAddress({ employeeName: "Rowan Pike", scope: STORE, role: "location_manager" }, live)).toBeNull();
+    expect(await wovenExitAddress({ employeeName: "Ash Brook", scope: GLOBAL, role: "admin" }, live)).toBeNull();
     expect(live.asked).toEqual([]);
   });
 
@@ -127,19 +150,30 @@ describe("the live read", () => {
         throw new Error("Woven is down");
       },
     });
-    expect(await wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE }, failing)).toBeNull();
+    expect(await wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE, role: "location_manager" }, failing)).toBeNull();
     const noDirectory = deps({
       readDirectory: async () => {
         throw new Error("directory read failed");
       },
     });
-    expect(await wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE }, noDirectory)).toBeNull();
+    expect(await wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE, role: "location_manager" }, noDirectory)).toBeNull();
+  });
+
+  /* Pau, 26 Nov 2026, approved by Curt: "only Admins and Managers" — DMs, RMs and Store Directors. */
+  it.each(["admin", "district_manager", "regional_manager", "location_manager"] as const)("a %s gets the address", async (role) => {
+    expect(await wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE, role }, deps())).toBe("412 Invented Ln, Faketown, NE 68000");
+  });
+
+  it.each(["assistant_manager", "employee", null] as const)("a %s gets a blank line, and Woven is not asked", async (role) => {
+    const live = deps();
+    expect(await wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE, role }, live)).toBeNull();
+    expect(live.asked).toEqual([]);
   });
 
   it("a slow Woven leaves the line blank", async () => {
     vi.useFakeTimers();
     const slow = deps({ readDetails: () => new Promise(() => {}) });
-    const pending = wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE }, slow);
+    const pending = wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE, role: "location_manager" }, slow);
     await vi.advanceTimersByTimeAsync(10_000);
     expect(await pending).toBeNull();
   });
@@ -154,6 +188,6 @@ describe("the live read", () => {
     expect(wovenExitAddressEnabled({ WOVEN_EXIT_ADDRESS_ENABLED: "true" })).toBe(true);
     vi.stubEnv("WOVEN_EXIT_ADDRESS_ENABLED", "");
     // Off and no stand-ins: nothing is read at all.
-    expect(await wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE })).toBeNull();
+    expect(await wovenExitAddress({ employeeName: "Marlow Quince", scope: STORE, role: "location_manager" })).toBeNull();
   });
 });
