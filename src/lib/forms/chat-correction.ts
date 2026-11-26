@@ -49,7 +49,7 @@ import { correctCaFromChat } from "./ca-chat-corrections";
 const EMPLOYEE_NAME_KEY = "employee_name";
 import { enforcePersonEdit } from "./responsibility";
 import { namesIncidentTopic } from "./corrective-action-intake";
-import { NO_PRIOR_ACTION, priorLineDate, statedPriorActions } from "./prior-actions";
+import { isNoHistoryLine, NO_PRIOR_ACTION, priorLineDate, statedPriorActions } from "./prior-actions";
 import {
   WARNING_LEVEL_KEYS,
   WARNING_TYPE_KEY,
@@ -1186,7 +1186,8 @@ async function correctCorrectiveActionFacts(
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line !== "");
-  const kept = existing.filter((line) => line !== NO_PRIOR_ACTION);
+  // "N/A" (ALL_FIELDS_REQUIRED_ENABLED, written at send for approval) says no history, as "None — first occurrence" does.
+  const kept = existing.filter((line) => line !== NO_PRIOR_ACTION && !isNoHistoryLine(line));
   const added = priorLines.filter((line) => !kept.some((have) => priorLineKey(have) === priorLineKey(line)));
   if (added.length > 0) values[PRIOR_ACTIONS_KEY] = [...kept, ...added].join("\n");
   if (firstTime) {

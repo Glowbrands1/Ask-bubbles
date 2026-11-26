@@ -130,7 +130,7 @@ describe("installing an empty library", () => {
       version: 1,
       status: "published",
       // 4: Steps to Finish Termination without sibling-company system names (QA, 25 Oct 2026).
-      seed_revision: 4,
+      seed_revision: 5, // Pau, 25 Nov 2026 (changed on purpose)
     });
     expect(versionsOf("resignation-exit")).toHaveLength(1);
   });
@@ -394,7 +394,7 @@ describe("the Resignation/Exit Form's revision 2 (HR's Details lines)", () => {
 
     expect(result.revised).toEqual(["resignation-exit"]);
     // The seed is at revision 4 since QA, 25 Oct 2026 (neutral system names in the steps); the mechanism is unchanged.
-    expect(currentVersionOf("resignation-exit")).toMatchObject({ version: 2, status: "published", seed_revision: 4 });
+    expect(currentVersionOf("resignation-exit")).toMatchObject({ version: 2, status: "published", seed_revision: 5 /* Pau, 25 Nov 2026 */ });
     expect(currentVersionOf("resignation-exit")?.document).toEqual(exitSeed.document);
     expect(versionsOf("resignation-exit").find((row) => row.id === originalId)).toMatchObject({
       status: "archived",

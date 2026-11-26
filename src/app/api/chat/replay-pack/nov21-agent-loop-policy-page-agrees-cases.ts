@@ -77,7 +77,11 @@ export const NOV21_AGENT_LOOP_POLICY_PAGE_AGREES_CASES: ReplayCase[] = [
       const reply = await thread.say(SAID);
       expect(thread.proposal, `no card was made (the case proves nothing):\n${reply.content}`).not.toBeNull();
       const line = (thread.proposal as { policyLine?: string | null }).policyLine ?? "";
-      expect(line, "the card cites no Standards of Conduct").toMatch(/^Standards of Conduct Policy, JBA Policy Manual p\.\d+/);
+      /*
+       * Changed on purpose (LOOP_CARD_CITES_CONDUCT_LINE on in production, 25 Nov 2026): a register shortage cites the
+       * Standards of Conduct line it falls under, "Standards of Conduct — Register / Bank shortages", at that line's page.
+       */
+      expect(line, "the card cites no Standards of Conduct").toMatch(/^Standards of Conduct — Register \/ Bank shortages, JBA Policy Manual p\.\d+/);
       const cardPage = /p\.(\d+)/.exec(line)?.[1];
 
       const id = await thread.create();

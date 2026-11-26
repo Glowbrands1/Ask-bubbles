@@ -129,6 +129,25 @@ emails the link) and linked to Woven. The mailer's limit stops the hour and
 creates nothing for that person. Everybody hired before the date is left to
 an administrator (User Management, or the bulk provisioning).
 
+### The exit form's Permanent Address (built 25 Nov 2026; OFF)
+
+Pau, 25 Nov 2026: "can we auto add the permanent address in exit form? from
+woven?" With `WOVEN_EXIT_ADDRESS_ENABLED=true`, drafting an exit form whose
+Permanent Address the manager did not type reads that ONE employee's Woven
+details live and writes their home address into that line, saved with Woven
+as its source, and the draft's notice asks the manager to confirm it
+(`src/lib/forms/exit-woven-address.ts`). The employee must be exactly one
+Woven person by full name at a store the manager may see (terminated people
+included). Any doubt, a Woven error or a read slower than 6 seconds leaves the
+line blank, as before. The address the manager typed always wins.
+
+The directory still never stores an address: the sync reads none, and
+`safety.test.ts` still fails on any address column. It uses the same Woven
+login as the sync (`WOVEN_SUBSCRIPTION_KEY`, `WOVEN_USERNAME`,
+`WOVEN_PASSWORD`), which must be allowed to see employee addresses: the
+read-only validation lists which sensitive keys Woven returns (look for
+`Address`) without their values.
+
 ### Decisions Buff needs to make
 
 - Which Woven positions map to which Ask Bubbles roles

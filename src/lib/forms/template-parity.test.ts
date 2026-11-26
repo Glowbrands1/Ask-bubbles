@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import approved from "@/test/fixtures/approved-template-changes.json";
 import snapshot from "@/test/fixtures/ask-sunny-published-templates.json";
 
+import { withoutSharedNov25ExitChanges } from "@/test/nov25-exit-changes";
 import { APPROVED_REMOVAL_DESCRIPTION_CHANGES, APPROVED_REMOVALS, withApprovedRemovals } from "@/test/approved-removals";
 
 import { RETIRED_TEMPLATE_KEYS } from "@/config/company/forms/retired";
@@ -106,6 +107,8 @@ function withoutUnpublishedPayrollAmount(key: string, document: unknown): unknow
 const RENAMED: Readonly<Record<string, string>> = { "stc-exit": "resignation-exit" };
 
 
+
+
 /**
  * EXPLICITLY APPROVED CONTENT CHANGES (not branding, not Salon -> Store, not
  * client -> guest). Each entry is one exact sentence, from the Ask Sunny
@@ -201,8 +204,8 @@ const APPROVED_CONTENT_CHANGES: { decision: string; from: string; to: string }[]
   // Revision 7 (client request, template approved 4 Nov 2026) added its own sentence after revision 6's; revision 8 (HR via Pau, 19 Nov 2026) adds one after that, so the note below carries all three (DM-3 and HR-1).
   // Revision 8 (HR via Pau, 19 Nov 2026) adds its sentence after revision 7's; its label, help and required mark are below.
   { decision: "DM-3 + HR-1 — Corrective Action revision 6, 7 and 8 note", from: DPOA_NOTE_REVISION_5, to: DPOA_NOTE_REVISION_5.replace(" Forms filed against earlier versions", ` ${DPOA_REVISION_6} ${DPOA_REVISION_7} ${DPOA_REVISION_8} Forms filed against earlier versions`) },
-  { decision: "HR-1 — history box help", from: "One per line: each coaching or corrective action previously received, with the date it was signed. Write \"None — first occurrence\" when there has been none.", to: "One per line: each coaching or corrective action received in the past 90 days, with the date the employee signed it. Write \"None — first occurrence\" when there has been none. Required." },
-  { decision: "HR-1 — history box label", from: "List previously received coaching and/or corrective action with date signed", to: "List previous coaching and corrective actions and include date signed by employee in past 90 days" },
+  { decision: "HR-1 — history box help", from: "One per line: each coaching or corrective action previously received, with the date it was signed. Write \"None — first occurrence\" when there has been none.", to: "One per line: each coaching or corrective action on file, with the date the employee signed it, including any waiting for HR approval or sent back. If none is found, \"N/A\" is filled in automatically when the form is finalized or sent for approval." }, // Changed on purpose (Pau, 26 Nov 2026: "just remove the 90 day wording"; N/A is written by the app).
+  { decision: "HR-1 — history box label", from: "List previously received coaching and/or corrective action with date signed", to: "List previous coaching and corrective actions and include date signed by employee" }, // Changed on purpose (Pau, 26 Nov 2026: "just remove the 90 day wording").
   /*
    * QA, 25 Oct 2026 (Pau's answers): Buff City Soap uses MyGlow and Sunlync,
    * so both exit steps keep the source wording and only the tanning clause
@@ -293,7 +296,7 @@ describe("the migrated templates are the reference platform's published template
         comparable({ ...template, document: withApprovedRemovals(RENAMED[template.key] ?? template.key, template.document) }),
         comparable({
           ...(seed as unknown as Record<string, unknown>),
-          document: withoutUnpublishedPayrollAmount(seed!.key, seed!.document),
+          document: withoutSharedNov25ExitChanges(seed!.key, withoutUnpublishedPayrollAmount(seed!.key, seed!.document)),
         }),
         "",
         found,

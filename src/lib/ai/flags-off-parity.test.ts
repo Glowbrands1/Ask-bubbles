@@ -215,6 +215,11 @@ const ALLOWED_UI = [
   // "Finalize and send for approval" and HR's approval panel, the Forms Register's Pending HR approval tab and "Your
   // forms with HR" list, the Overview card, and the HR review page. Off, none of them renders and Finalize is as before.
   "src/features/forms/hr-approval-lists.tsx",
+  // BLANK FIELDS OUTLINED ON THE FORM (Pau, 25 Nov 2026, both apps; port from Ask Sunny: "add a pop up that there are
+  // missing fields and highlight it in both apps"): ResponsiveForm's `missing` prop outlines the fields Finalize refused
+  // as blank; the pop-up is in inline-form.tsx (listed below). Only after a refusal for blank fields; otherwise every
+  // field renders as before.
+  "src/features/forms/document/responsive-form.tsx",
   "src/features/forms/hr-approval-panel.tsx",
   "src/features/forms/hr-approval-screen.tsx",
   "src/app/(app)/forms/hr-approval/",
@@ -263,6 +268,10 @@ const ALLOWED_UI = [
   "src/features/chat/message-bubble.tsx",
   "src/features/chat/composer.tsx",
   "src/features/chat/inline-form.tsx",
+  // The exit form's notice dates (Pau, 25 Nov 2026: "dates can NOT be entered into the Date that notice was given and
+  // Date that notice was fulfilled fields UNLESS Submitted & Fulfilled Notice box is checked"; port from Ask Sunny): the
+  // form card greys the two dates out with a note until that box is ticked. Exit form only; every other field as before.
+  "src/features/forms/document/responsive-form.tsx",
   "src/components/shell/global-search.tsx",
   "src/components/shell/hides-form-monitoring.ts",
   // App switcher gains a Leadership Hub link, shown only when the server says the signed-in

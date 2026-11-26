@@ -272,7 +272,7 @@ import {
  * with the prior-actions list (`prior-actions.ts`).
  */
 const PREVIOUS_ACTION_DATE_KEY = LEGACY_PREVIOUS_ACTION_DATE_KEY;
-import { exitDetailValues, exitStatedKeys, readExitDetails } from "@/lib/forms/exit-details";
+import { EXIT_PERMANENT_ADDRESS_KEY, exitDetailValues, exitStatedKeys, readExitDetails } from "@/lib/forms/exit-details";
 import {
   WARNING_LEVEL_KEYS,
   WARNING_LEVEL_STATED_KEYS,
@@ -830,6 +830,34 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
             exitStatedKeys(),
           )
       : [];
+    /*
+     * THE PERMANENT ADDRESS FROM WOVEN (Pau, 25 Nov 2026: "can we auto add the permanent address in exit form? from
+     * woven?"). WOVEN_EXIT_ADDRESS_ENABLED: where the manager typed no address and the line is still empty, the
+     * employee's home address is read live from Woven (`exit-woven-address.ts`: exactly one person by that name at a
+     * store this manager may see) and written into that one line, with Woven as its provenance and a notice to confirm
+     * it. Nothing is stored anywhere else. Off, or with any doubt, the line stays blank as before.
+     */
+    const wovenAddressFilled: string[] = [];
+    if (
+      isExitForm &&
+      !exitDetails?.permanentAddress &&
+      !exitStatedFacts.includes(EXIT_PERMANENT_ADDRESS_KEY) &&
+      !(loaded.values ?? []).some((row) => row.fieldKey === EXIT_PERMANENT_ADDRESS_KEY && (row.value ?? "").trim() !== "")
+    ) {
+      const { wovenExitAddress, wovenExitAddressEnabled } = await import("@/lib/forms/exit-woven-address");
+      const address = wovenExitAddressEnabled()
+        ? await wovenExitAddress({ employeeName: loaded.instance.employeeName, scope: actor.scope })
+        : null;
+      if (address) {
+        const only = new Set([EXIT_PERMANENT_ADDRESS_KEY]);
+        const stated = { values: { [EXIT_PERMANENT_ADDRESS_KEY]: address }, checked: {} };
+        wovenAddressFilled.push(
+          ...(formEditSingleWriterEnabled()
+            ? await (await import("@/lib/forms/form-write")).statedWrite(id, stated, actor.id, only, { notes, statedSource: "woven" })
+            : await applyStatedFacts(id, stated, actor.id, only, "woven")),
+        );
+      }
+    }
 
     /*
      * ========================================================================
@@ -3245,6 +3273,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         evidence.removed.length > 0 ? EVIDENCE_REMOVED_NOTICE : null,
         evidence.unattributed ? UNATTRIBUTED_REPORT_NOTICE : null,
         exit && exit.detailsRemoved.length > 0 ? EXIT_DETAILS_TRIMMED_NOTICE : null,
+        // WOVEN_EXIT_ADDRESS_ENABLED: the Permanent Address came from Woven, so the manager confirms it.
+        wovenAddressFilled.length > 0 ? (await import("@/lib/forms/exit-woven-address")).WOVEN_EXIT_ADDRESS_NOTICE : null,
         caPolicy && !eventSection ? caPolicyAmbiguousNotice(caPolicy) : null,
         /*
          * The manual's standing, said when the quoted manual is not the JBA
@@ -3319,6 +3349,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
       sources: grounding.sources,
       /** Fields filled from the manager's own statements, not by the model. */
       statedFacts: [...statedFacts, ...exitStatedFacts, ...warningStatedFacts],
+      /** WOVEN_EXIT_ADDRESS_ENABLED: lines filled from Woven rather than the manager's words (the exit form's Permanent Address). */
+      ...(wovenAddressFilled.length > 0 ? { wovenFilled: wovenAddressFilled } : {}),
       /**
        * Type of Warning: the level the manager stated for THIS form (null when
        * they did not, and the box is left for them), and any level the model

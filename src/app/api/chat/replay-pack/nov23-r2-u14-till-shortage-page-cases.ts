@@ -59,7 +59,7 @@ export const NOV23_R2_U14_TILL_SHORTAGE_PAGE_CASES: ReplayCase[] = [
       const reply = await thread.say(SAID);
       expect(thread.proposal, `no card was made (the case proves nothing):\n${reply.content}`).not.toBeNull();
       const line = (thread.proposal as { policyLine?: string | null }).policyLine ?? "";
-      expect(line, `the card cites the heading's page, not the shortage line's:\n${line}`).toBe("Standards of Conduct Policy, JBA Policy Manual p.13");
+      expect(line, `the card cites the heading's page, not the shortage line's:\n${line}`).toBe("Standards of Conduct — Register / Bank shortages, JBA Policy Manual p.13"); // Changed on purpose: LOOP_CARD_CITES_CONDUCT_LINE on in production (25 Nov 2026) names the line, at the same page
       const id = await thread.create();
       expect(t.values(id).policy_language ?? "", "Create quoted no Register / Bank shortages line").toMatch(/Register \/ Bank shortages/);
       expect(t.values(id).policy_violated, "Create saved a different policy line from the card's").toBe(line);

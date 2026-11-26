@@ -175,7 +175,7 @@ describe("the six approved guest corrections", () => {
       "dmit-epp-dmit": 3,
       "prescreen-phone-interview": 3,
       // 4: Steps to Finish Termination without sibling-company system names (QA, 25 Oct 2026).
-      "resignation-exit": 4,
+      "resignation-exit": 5, // 5: Pau, 25 Nov 2026 (written-notice wording, Permanent Address line); changed on purpose.
       coaching: 2,
       // Revision 6: the Action Plan as two sentences (District Manager feedback, 21 Oct 2026).
       dpoa: 8, // CHANGED ON PURPOSE, revision 8 (HR via Pau, 19 Nov 2026): two required history boxes; revision 7 (4 Nov 2026) made Type of Offense four boxes.

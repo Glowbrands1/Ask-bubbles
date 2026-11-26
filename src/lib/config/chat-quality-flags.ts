@@ -29,6 +29,28 @@ export function requiredFieldsAtFinalizeEnabled(): boolean {
   return envFlag("REQUIRED_FIELDS_AT_FINALIZE_ENABLED");
 }
 
+/**
+ * ALL_FIELDS_REQUIRED_ENABLED (Pau, 25 Nov 2026; default off; same flag in both apps; QA audits, then flips it): "update
+ * all forms so that they cannot submit for approval if all field are not filled out". On: Finalize and "Finalize and
+ * send for approval" refuse a form with anything its creator fills still blank (`required-fields.ts`
+ * blankBeforeSubmission; signatures, hand-filled and employee lines are done in person and never asked for), and a
+ * blank Corrective Action history box is written "N/A" instead of refused. Off, only fields a version marks `required`
+ * are checked, and only with REQUIRED_FIELDS_AT_FINALIZE_ENABLED on.
+ */
+export function allFieldsRequiredEnabled(): boolean {
+  return envFlag("ALL_FIELDS_REQUIRED_ENABLED");
+}
+
+/**
+ * EXIT_ALL_FIELDS_REQUIRED_ENABLED (Pau, 25 Nov 2026; default off; same flag in both apps): "On the Exit Form, can the
+ * parameters be set so that every field must be completed or the form will not submit to HR?" On: the exit form is
+ * held to `blankBeforeSubmission` at Finalize and "Finalize and send for approval" even while ALL_FIELDS_REQUIRED_ENABLED
+ * is off (with it on, every form already is), so it also refuses an exit form with no Resignation Details box ticked.
+ */
+export function exitAllFieldsRequiredEnabled(): boolean {
+  return envFlag("EXIT_ALL_FIELDS_REQUIRED_ENABLED");
+}
+
 /** Claude tool-use reading of a form turn, and routing that reading off search. */
 export function formToolsEnabled(): boolean {
   return envFlag("FORM_TOOLS_ENABLED");
@@ -6138,4 +6160,28 @@ export function adminCardAsksSalonEnabled(): boolean {
  */
 export function loopCardCitesConductLineEnabled(): boolean {
   return envFlag("LOOP_CARD_CITES_CONDUCT_LINE_ENABLED");
+}
+
+/**
+ * CREATE_FORM_BUTTON_PICKS_FORM (port from the sibling app; Pau, 25 Nov 2026; default off; same flag in both apps): in the
+ * sibling app, a manager pressed "Create a form from this conversation" three times; the agent loop told them to press
+ * Create draft themselves with no card under its reply, then said no new card was made because a draft was already open.
+ * This app's loop answers the button the same way. On: the button's turn tells the loop it was pressed and what is on
+ * screen, the model picks the form the conversation needs and makes its card, a card on screen is proposed again so it is
+ * under the reply (handed back once when it is not), and an open draft is named (`agent-loop/create-form-button.ts`).
+ * Off, as before.
+ */
+export function createFormButtonPicksFormEnabled(): boolean {
+  return envFlag("CREATE_FORM_BUTTON_PICKS_FORM_ENABLED");
+}
+
+/**
+ * ANSWER_MODE_ON_LOOP (port from the sibling app; the owner, 26 Nov 2026: one engine for every answer mode; default
+ * off): Quick and Detailed turns are answered by the agent loop, like Standard, instead of the older chat path
+ * (`agent-loop/switch.ts` no longer skips them). The chosen mode reaches the loop as one line about the answer's length
+ * (`agent-loop/prompt.ts`); Quick never shortens a card, a question the card needs or a policy citation. Off, Quick and
+ * Detailed go to the older path as before.
+ */
+export function answerModeOnLoopEnabled(): boolean {
+  return envFlag("ANSWER_MODE_ON_LOOP_ENABLED");
 }

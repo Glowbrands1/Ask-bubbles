@@ -181,7 +181,7 @@ describe("the four approved wording changes", () => {
     // resignation-exit is 4 since its Steps to Finish Termination dropped the tanning clause (QA, 25 Oct 2026).
     // tanning-consultant-interview is back at 5 as the Team Member Interview Form; round 2 is at 4 (Pau, 23 Nov 2026).
     for (const key of ["coaching", "dpoa", "policy-review", "follow-up-coaching", "position-transfer", "prescreen-phone-interview", "resignation-exit", "management-interview-round-2", "tanning-consultant-interview"]) {
-      expect(seed(key).revision, key).toBe(({ coaching: 2, dpoa: 8 /* revision 8, HR via Pau, 19 Nov 2026 (revision 7, 4 Nov 2026: Type of Offense) */, "policy-review": 2, "follow-up-coaching": 2, "position-transfer": 1, "prescreen-phone-interview": 3, "resignation-exit": 4, "management-interview-round-2": 4, "tanning-consultant-interview": 5 } as Record<string, number>)[key]);
+      expect(seed(key).revision, key).toBe(({ coaching: 2, dpoa: 8 /* revision 8, HR via Pau, 19 Nov 2026 (revision 7, 4 Nov 2026: Type of Offense) */, "policy-review": 2, "follow-up-coaching": 2, "position-transfer": 1, "prescreen-phone-interview": 3, "resignation-exit": 5 /* Pau, 25 Nov 2026: written-notice wording, Permanent Address line */, "management-interview-round-2": 4, "tanning-consultant-interview": 5 } as Record<string, number>)[key]);
     }
   });
 
