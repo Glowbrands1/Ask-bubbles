@@ -325,7 +325,9 @@ describe("a clip that passes", () => {
     const response = await POST(request("overview", { fields: { conversationId: `conv_${Date.now().toString(36)}zzzzzzzz` } }));
     expect(response.status).toBe(200);
     const config = JSON.parse(await ((providerCalls[0].body as FormData).get("config") as Blob).text());
-    expect(config.keyterms_prompt).not.toContain("Dorian Felsworth");
+    // CHANGED ON PURPOSE (the owner, 27 Nov 2026: "i said Curt, it spelled it as Kurt"): the scoped roster is now a hint
+    // on every clip, so "Dorian Felsworth" is sent here as a roster name. What someone else's conversation must never
+    // give is its turns, and that is still pinned.
     expect(config).not.toHaveProperty("conversation_context");
   });
 
@@ -458,3 +460,33 @@ describe("never a blank body (QA, 27 Nov 2026)", () => {
   });
 });
 
+
+describe('"i said Curt, it spelled it as Kurt" (the owner, 27 Nov 2026; ported from Ask Sunny)', () => {
+  /*
+   * The report's people are swapped for invented ones of the same shape: the directory's "Cade Holloway", heard by the
+   * provider as "Kade Holloway". This pins both halves: the name is SENT as a hint on the first clip, before anybody
+   * typed it, and a mishearing that still comes back is corrected before the text reaches the box.
+   */
+  async function rosterWithCade() {
+    const { loadScopedRoster } = await import("@/lib/forms/employee-roster");
+    vi.mocked(loadScopedRoster).mockResolvedValueOnce([
+      { id: "e7", firstName: "Cade", lastName: "Holloway", locationIds: ["loc-0001"] },
+    ] as never);
+  }
+
+  it("the scoped roster is sent as hints on the first clip", async () => {
+    await rosterWithCade();
+    await POST(request("chat"));
+    const config = JSON.parse(await ((providerCalls[0].body as FormData).get("config") as Blob).text());
+    expect(config.keyterms_prompt).toContain("Cade Holloway");
+  });
+
+  it("i said Cade, it spelled it as Kade: the box gets the directory spelling, and no log line names them", async () => {
+    await rosterWithCade();
+    providerResponses = [new Response(JSON.stringify({ text: "Hey can you create a CA for Kade Holloway please", audio_duration_ms: 3200 }), { status: 200 })];
+    const response = await POST(request("chat"));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ text: "Hey can you create a CA for Cade Holloway please" });
+    expect(logs.join("\n")).not.toMatch(/Holloway|Cade|Kade/);
+  });
+});
