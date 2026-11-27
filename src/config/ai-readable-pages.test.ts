@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { READER_PERMISSION } from "@/lib/ai/agent-loop/data-tools";
+import { READER_ADMIN_CONSOLE, READER_PERMISSION } from "@/lib/ai/agent-loop/data-tools";
 import { agentLoopTools } from "@/lib/ai/agent-loop/run";
 import { rulesBookText } from "@/lib/ai/agent-loop/rules-book";
 import { BUBBLES_CONFIG } from "@/lib/ai/agent-loop/app-config";
@@ -96,6 +96,9 @@ describe("the pages the AI can read", () => {
       expect(names, `${entry.route}: ${entry.reader.tool} is not one of the loop's tools`).toContain(entry.reader.tool);
       if (entry.kind === "page" && "permission" in entry.access) {
         expect(READER_PERMISSION[entry.reader.tool], `${entry.route}: ${entry.reader.tool} checks a different permission than the page, so the AI would read more or less than the page shows`).toBe(entry.access.permission);
+        // Port from the sibling app (Pau, 27 Nov 2026, the Knowledge Base list): an admin console page's reader also
+        // checks the admin console, as the page does; and a reader of a page that is not one does not refuse that role.
+        expect(READER_ADMIN_CONSOLE.has(entry.reader.tool), `${entry.route}: the page ${entry.access.adminConsole ? "is" : "is not"} an admin console page; READER_ADMIN_CONSOLE must say the same for ${entry.reader.tool}`).toBe(entry.access.adminConsole === true);
       }
       expect(entry.reader.figures.length, `${entry.route}: name the figures`).toBeGreaterThan(0);
       expect(entry.reader.periods.length, `${entry.route}: name the periods`).toBeGreaterThan(0);
@@ -107,6 +110,7 @@ describe("the pages the AI can read", () => {
     const dataTools = readFileSync(join(ROOT, "src", "lib", "ai", "agent-loop", "data-tools.ts"), "utf8");
     expect(dataTools).toContain("READER_PERMISSION.read_follow_ups)");
     expect(dataTools).toContain("READER_PERMISSION.read_whats_new)");
+    expect(dataTools).toContain("READER_PERMISSION.read_knowledge_documents) || !canAccessAdminConsole(role)");
     expect(dataTools).toContain("READER_PERMISSION.read_calendar)");
     // read_reviews reads the chat's reviews block, which checks the Google Reviews page's own permission.
     const reviewsBlock = readFileSync(join(ROOT, "src", "lib", "ai", "google-reviews-chat-read.ts"), "utf8");

@@ -293,6 +293,10 @@ const ALLOWED_UI = [
   "src/features/admin/permissions-matrix.tsx",
   "src/features/chat/message-bubble.tsx",
   "src/features/chat/composer.tsx",
+  // PHONE DENSITY (the owner, 27 Nov 2026: "can u compact the apps in phone view pls eveyrthing is too large"; port of
+  // Ask Sunny 1d93d6c): the page frame and page titles take tighter gutters and a 22px title below 640px only. Every
+  // class from `sm` up is unchanged, so desktop renders as before; no chat, form or AI behaviour changes.
+  "src/components/ui/layout.tsx",
   "src/features/chat/inline-form.tsx",
   // The exit form's notice dates (Pau, 25 Nov 2026: "dates can NOT be entered into the Date that notice was given and
   // Date that notice was fulfilled fields UNLESS Submitted & Fulfilled Notice box is checked"; port from Ask Sunny): the
