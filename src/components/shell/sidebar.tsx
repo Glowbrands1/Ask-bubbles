@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils/cn";
 import { GlobalSearch } from "./global-search";
 import { AppSwitcher } from "./app-switcher";
 import { NAV_SECTIONS, isActivePath } from "./navigation";
+import { useWhatsNewVisible } from "@/features/whats-new/whats-new-access";
 import { UserMenu } from "./user-menu";
 import { NotificationBell } from "@/features/notifications/notification-bell";
 import type { BellData } from "@/lib/notifications/types";
@@ -61,10 +62,13 @@ export function SidebarNav({
    * demo's role switcher previews exactly what each role will see. The rail is
    * not the boundary — the page guards and the API are.
    */
+  const whatsNewVisible = useWhatsNewVisible();
   const sections = NAV_SECTIONS.map((section) => ({
     ...section,
     items: section.items.filter((item) => {
       if (section.admin && !isAdmin) return false;
+      // What's New: only for whom the server says (the owner, 27 Nov 2026: "live but on my own page only").
+      if (item.whatsNew && !whatsNewVisible) return false;
       /*
        * Checked ALONGSIDE the section flag and BEFORE the demo bypass, for the
        * same reason: who administers the platform is a fixed decision rather
