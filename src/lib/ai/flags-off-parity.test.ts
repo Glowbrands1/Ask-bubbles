@@ -310,6 +310,15 @@ const ALLOWED_UI = [
   "src/app/privacy/page.tsx",
   "src/features/public/public-page.tsx",
   "src/features/auth/login-screen.tsx",
+  /*
+   * VOICE INPUT (the owner, 27 Nov 2026, VOICE_INPUT_ENABLED, default off, plus the VOICE_INPUT_USERS pilot list): one
+   * shared mic component (src/features/voice/) in every AI chat box — the composer, chat-screen, the (app) layout and the
+   * L10 assistant are listed above; the Overview ask band and the report ask bar are below. Off, or for anyone not on the
+   * list, `VoiceControl` renders its children only and the boxes render and send exactly as before.
+   */
+  "src/features/voice/",
+  "src/features/dashboard/ask-band.tsx",
+  "src/features/reports/ask-about-report.tsx",
 ];
 
 /*
