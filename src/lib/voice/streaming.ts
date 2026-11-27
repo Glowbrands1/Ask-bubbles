@@ -10,7 +10,7 @@ import { MAX_SECONDS } from "./voice-limits";
  * ============================================================================
  *
  * The owner, 27 Nov 2026: "it also has this feature and it transcribes as you talk then when done, press check mark and
- * auto send" (ported from Ask Sunny). The browser streams the microphone straight to AssemblyAI's v3 streaming WebSocket
+ * auto send" (ported from the sibling app). The browser streams the microphone straight to AssemblyAI's v3 streaming WebSocket
  * (`wss://streaming.assemblyai.com/v3/ws`), so the words appear as they are said. It never holds the API key: the
  * server mints a short-lived token (`POST https://token.assemblyai.com/v1/token`, `product: "streaming"`), after the
  * same access, pilot-list and usage checks as a recording, and the browser opens the socket with `?token=`.

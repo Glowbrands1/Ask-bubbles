@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils/cn";
  * The owner's reference (27 Nov 2026), its layout and not its look: the box turns into the words so far, growing as
  * they are said; under them a full-width row of thin bars moving with the voice (flat when silent); on the right a
  * light ✕ (stop and drop) and a dark ✓ (stop and send). Nothing else shows in the box while dictating. Ask Bubbles'
- * own colours: the ✓ is the same Dark Tokyo Green as Send (ported from Ask Sunny).
+ * own colours: the ✓ is the same Dark Tokyo Green as Send (ported from the sibling app).
  *
  * With reduced motion asked for, the bars do not move: a still row of dots, and the words "Listening" in their place.
  * The live words are announced politely; the two buttons have names ("Cancel dictation", "Send").
