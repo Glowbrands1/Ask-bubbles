@@ -12,6 +12,7 @@ import { useAppStore } from "@/lib/store/app-store";
 
 import { useHidesFormMonitoring } from "./hides-form-monitoring";
 import { NAV_SECTIONS } from "./navigation";
+import { useWhatsNewVisible } from "@/features/whats-new/whats-new-access";
 
 /**
  * Search across what this browser already holds: the screens on the rail,
@@ -45,6 +46,8 @@ export function GlobalSearch() {
   const { documents, forms: storeForms } = useAppStore();
   // ASD_NO_FORM_MONITORING: form hits and the screen open the Forms Register, so a reader without it gets neither.
   const hidesMonitoring = useHidesFormMonitoring();
+  // What's New: searchable only by whom the server says, as the sidebar (the owner, 27 Nov 2026).
+  const whatsNewVisible = useWhatsNewVisible();
   const forms = hidesMonitoring ? NO_FORMS : storeForms;
   const [query, setQuery] = useState("");
 
@@ -53,7 +56,7 @@ export function GlobalSearch() {
     if (q.length < 2) return [];
 
     const screens: Hit[] = NAV_SECTIONS.flatMap((section) =>
-      section.items.filter((item) => !(hidesMonitoring && item.permission === "view_form_monitoring")).map((item) => ({
+      section.items.filter((item) => !(hidesMonitoring && item.permission === "view_form_monitoring") && !(item.whatsNew && !whatsNewVisible)).map((item) => ({
         id: `screen-${item.href}`,
         label: item.label,
         detail: section.label,
@@ -83,7 +86,7 @@ export function GlobalSearch() {
         (hit) => hit.label.toLowerCase().includes(q) || hit.detail.toLowerCase().includes(q),
       )
       .slice(0, 24);
-  }, [query, documents, forms, hidesMonitoring]);
+  }, [query, documents, forms, hidesMonitoring, whatsNewVisible]);
 
   return (
     <div>

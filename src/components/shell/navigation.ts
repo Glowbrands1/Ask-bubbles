@@ -25,7 +25,6 @@ import {
 } from "@/features/reports/reports-routes";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { REPORTS_SECTION_LABEL } from "@/lib/reporting/registry";
-import { whatsNewEnabled } from "@/config/whats-new";
 import type { Permission } from "@/types";
 
 export interface NavItem {
@@ -65,6 +64,11 @@ export interface NavItem {
    * Matched as a prefix, exactly as `href` is.
    */
   activePrefix?: string;
+  /**
+   * What's New's entry: shown only to the people the server says see it (`whatsNewVisibleFor`, handed down by the
+   * layout as `useWhatsNewVisible()`): everyone once NEXT_PUBLIC_WHATS_NEW_ENABLED is on, else WHATS_NEW_USERS only.
+   */
+  whatsNew?: true;
   /** The company feature this item belongs to; absent when the feature is off. */
   feature?: CompanyFeature;
 }
@@ -85,8 +89,8 @@ const ALL_SECTIONS: NavSection[] = [
       { label: "Home", href: "/", icon: LayoutDashboard, permission: "view_overview", feature: "home" },
       /* Port from the sibling app (Pau, 26 Nov 2026): one calendar with the Leadership Hub and the sibling app. */
       { label: "Calendar", href: "/calendar", icon: CalendarCheck, permission: "view_overview" },
-      /* WHAT'S NEW (Pau, 26 Nov 2026): recent updates, from `src/config/whats-new.ts`; gated as Home is. Hidden for everyone until rolled out (Pau, 27 Nov 2026; `whatsNewEnabled`). */
-      ...(whatsNewEnabled() ? [{ label: "What's New", href: "/whats-new", icon: Sparkles, permission: "view_overview" as const }] : []),
+      /* WHAT'S NEW (Pau, 26 Nov 2026): recent updates, from `src/config/whats-new.ts`; gated as Home is. Hidden until rolled out (Pau, 27 Nov 2026), except for WHATS_NEW_USERS (the owner: "live but on my own page only"): `whatsNew`, decided on the server. */
+      { label: "What's New", href: "/whats-new", icon: Sparkles, permission: "view_overview", whatsNew: true },
     ],
   },
   {

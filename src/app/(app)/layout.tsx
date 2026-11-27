@@ -13,6 +13,8 @@ import { hrQueueSummary } from "@/lib/forms/hr-approval";
 import { siblingHrWaiting } from "@/lib/partner/sibling-hr-waiting";
 import { voiceInputEnabledFor } from "@/lib/voice/voice-config";
 import { VoiceAccessProvider, type VoiceAccess } from "@/features/voice/voice-access";
+import { WhatsNewAccessProvider } from "@/features/whats-new/whats-new-access";
+import { whatsNewVisibleFor } from "@/lib/whats-new/whats-new-access";
 import { CalendarPopup } from "@/features/calendar/calendar-popup";
 
 /**
@@ -105,6 +107,19 @@ async function waitingForHr(identity: Awaited<ReturnType<typeof pageIdentity>>):
 }
 
 /**
+ * WHAT'S NEW: whether the signed-in person sees its sidebar entry and search hit, decided here from the verified session
+ * (`whatsNewVisibleFor`: everyone once NEXT_PUBLIC_WHATS_NEW_ENABLED is on, else WHATS_NEW_USERS). The browser is told
+ * yes or no, never the list. Hidden on any error.
+ */
+async function whatsNewForLayout(): Promise<boolean> {
+  try {
+    return whatsNewVisibleFor((await pageIdentity()) ?? {});
+  } catch {
+    return false;
+  }
+}
+
+/**
  * THE FLOATING CALENDAR (port from the sibling app; the owner, 27 Nov 2026): for the people the Calendar page itself lets
  * in (view_overview), the pop-up's key for this person (their user id, to remember where they left it). Null: no pop-up.
  */
@@ -119,7 +134,7 @@ async function calendarPopupFor(): Promise<{ userKey: string } | null> {
 }
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  const [overdueFollowUps, showAppSwitcher, showLeadershipHub, meetingTabs, bell, voiceAccess, calendarPopup] = await Promise.all([
+  const [overdueFollowUps, showAppSwitcher, showLeadershipHub, meetingTabs, bell, voiceAccess, calendarPopup, whatsNew] = await Promise.all([
     overdueCount(),
     pageShowsAppSwitcher(),
     pageShowsLeadershipHubTab(),
@@ -128,9 +143,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     bellForLayout(),
     voiceAccessForLayout(),
     calendarPopupFor(),
+    whatsNewForLayout(),
   ]);
   return (
     <VoiceAccessProvider value={voiceAccess}>
+    <WhatsNewAccessProvider visible={whatsNew}>
     <AppShell
       overdueFollowUps={overdueFollowUps}
       showAppSwitcher={showAppSwitcher}
@@ -142,6 +159,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       {/* Mounted here so it stays open, where it was, while the person moves between pages. */}
       {calendarPopup ? <CalendarPopup userKey={calendarPopup.userKey} /> : null}
     </AppShell>
+    </WhatsNewAccessProvider>
     </VoiceAccessProvider>
   );
 }
