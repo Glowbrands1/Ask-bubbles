@@ -46,6 +46,7 @@ ${statsLine}- read_form_deletions: administrators only: who deleted a form, when
 - propose_reminder: a reminder card for the Calendar that the manager confirms; it saves nothing itself.
 - read_whats_new: the What's New page: recent updates and new features in ${config.appName}, newest first.
 - read_ai_training: AI Training's published lessons (track, module, week, title, summary), on a topic if asked.
+- read_knowledge_documents: administrators only: the Knowledge Base's document list (title, status, source, last updated, why one failed).
 
 How ${config.appName} fills a form (the company's rules, from real manager and HR reports):
 
