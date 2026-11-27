@@ -1,3 +1,4 @@
+import { AI_READABLE_PAGES, type AiReadablePage } from "@/config/ai-readable-pages";
 import { BUBBLES_METRICS, BUBBLES_POLICY_GUARDS, bubblesLoopContent, BUBBLES_LOOP_JOB_TITLES, BUBBLES_LOOP_ROLE_WORDS } from "@/config/company/agent-loop";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { loadScopedRoster, readDirectoryFacts, readDirectoryRoster } from "@/lib/forms/employee-roster";
@@ -175,6 +176,12 @@ export interface AppConfig {
     readonly account: RegExp;
     readonly spelledOut: readonly { readonly short: string; readonly long: RegExp }[];
   };
+  /**
+   * The app's pages and the tool that reads each for the AI, or why none does (`src/config/ai-readable-pages.ts`; port
+   * of the sibling app's f039): the data tools' descriptions and the rules book's Business data line are written from
+   * it. Unset: no page line.
+   */
+  readonly readablePages?: readonly AiReadablePage[];
 }
 
 /** Ask Bubbles: the brand's names and place words, plus the staff system and form keys of this app. */
@@ -200,6 +207,7 @@ export const BUBBLES_CONFIG: AppConfig = {
   policyGuards: BUBBLES_POLICY_GUARDS,
   formsPageName: "Forms Register",
   metrics: BUBBLES_METRICS,
+  readablePages: AI_READABLE_PAGES,
 };
 
 let active: AppConfig = BUBBLES_CONFIG;

@@ -1,4 +1,5 @@
 import {
+  BookOpenCheck,
   BarChart3,
   FileStack,
   Gauge,
@@ -80,6 +81,8 @@ const ALL_SECTIONS: NavSection[] = [
     label: "Home",
     items: [
       { label: "Home", href: "/", icon: LayoutDashboard, permission: "view_overview", feature: "home" },
+      /* WHAT'S NEW (Pau, 26 Nov 2026): recent updates, from `src/config/whats-new.ts`; gated as Home is. */
+      { label: "What's New", href: "/whats-new", icon: Sparkles, permission: "view_overview" },
     ],
   },
   {
@@ -187,6 +190,8 @@ const ALL_SECTIONS: NavSection[] = [
         permission: "view_ai_usage",
         feature: "aiUsage",
       },
+      /* QA, 24 Nov 2026: the list of every page the AI can read, from the page registry. */
+      { label: "AI-readable pages", href: "/admin/ai-readable-pages", icon: BookOpenCheck, permission: "view_ai_usage", adminOnly: true },
       { label: "User Management", href: "/admin/users", icon: Users, permission: "manage_users" },
       {
         label: "Integrations",

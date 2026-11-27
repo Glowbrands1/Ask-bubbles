@@ -1,3 +1,4 @@
+import { pagesToolLine } from "@/config/ai-readable-pages";
 import { withCardOpening } from "./card-opening";
 import { exitReadBackMismatch, withoutUnsavedExitLines } from "./exit-read-back";
 import { EXIT_METHOD_LABELS } from "@/lib/forms/exit-details";
@@ -484,7 +485,7 @@ function buildAgentLoopTools(config: AppConfig, planSteps = false) {
   },
   {
     name: "find_past_forms",
-    description: "List the forms on file (" + config.formsPageName + ") for one employee, or, with no employee_name, every form of a kind or period (\"who got a CA this month?\": form and date_from/date_to), or every form about a topic (\"any forms about cash handling this month?\", \"who's been written up for dress code?\": about, with form and dates if given). Only when the manager asks about forms on file or history; never otherwise.",
+    description: "List the forms on file (" + config.formsPageName + ") for one employee, or, with no employee_name, every form of a kind or period (\"who got a CA this month?\": form and date_from/date_to), or every form about a topic (\"any forms about cash handling this month?\", \"who's been written up for dress code?\": about, with form and dates if given). Only when the manager asks about forms on file or history; never otherwise." + pagesToolLine(config.readablePages, "find_past_forms"),
     input_schema: object({
       employee_name: { type: "string", description: "The employee the manager named. Leave it out for a list of every form of a kind or period." },
       form: { type: "string", description: "The form the manager named (\"coaching\", \"CA\"), if any." },

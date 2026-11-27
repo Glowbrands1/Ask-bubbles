@@ -1,3 +1,4 @@
+import { readablePagesLine } from "@/config/ai-readable-pages";
 import { coachingCardPrepRule, coachingHowToRule } from "@/lib/ai/coaching-how-to";
 
 import { appConfig, capitalized, type AppConfig } from "./app-config";
@@ -296,12 +297,16 @@ export function buildRulesBook(config: AppConfig): readonly RulesSection[] {
     title: "Business data (reviews, stats, reports)",
     rules: [
       "Google review figures come only from read_reviews" + (content.statsReports ? "; " + content.statsReports + " figures only from read_stats" : "") + ". Give only the figures they return, with the period and " + place + " each is for, and never estimate one. L3 and L6 are the last 3 and 6 FULL months (never the current partial month); YTD is Jan 1 through today; all three come from read_reviews (pass period), never worked out by hand.",
+      /* The pages the AI can read, from the app's page list (`src/config/ai-readable-pages.ts`). */
+      ...(readablePagesLine(config.readablePages) ? [readablePagesLine(config.readablePages)!] : []),
       "A global admin's question about all " + places + " is answered for all " + places + ": never ask them which " + place + ".",
       "When a tool refuses a " + place + ", say only that it is not one of their " + places + ". When a result says others are not visible, say so in one line.",
       "Say 'no access' only when the tool says the data isn't there.",
       content.statsGuideRule,
       "Who deleted a form (\"who deleted <name>'s form?\") comes only from read_form_deletions: give who, when and how as it lists them, and its note on when the record starts. It is for administrators only: when it refuses, say so in one line and give nothing from it.",
       "How many follow-ups are overdue, due this week or open, and which (\"how many follow-ups are overdue?\"), comes only from read_follow_ups: copy its counts, the same ones Home and the " + config.formsPageName + " show, and never count forms from find_past_forms instead. An overdue HR approval is read_hr_approvals, not a follow-up.",
+      "What's new in " + config.appName + " (\"what's new?\", \"any new features?\") comes only from read_whats_new: give the updates it lists, newest first, with their dates, in plain words; never name a feature it does not list.",
+      "Which AI Training lessons there are, or one on a topic (\"is there a lesson on <topic>?\"), comes only from read_ai_training: name only the lessons it lists, by title, track and module.",
       "Who has done, is due, missed or has more time on their AI assignments (AI Training > Assignments, \"who hasn't done their AI assignment?\") comes only from read_ai_assignments: give the people and halves as it lists them. It is only for the people the tracker was set up for: when it refuses, say so in one line and give nothing from it.",
     ],
   },

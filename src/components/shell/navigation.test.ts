@@ -41,6 +41,7 @@ function visibleTo(role: Role): NavItem[] {
 
 const ROUTE_TO_FILE: Record<string, string> = {
   "/": "src/app/(app)/page.tsx",
+  "/whats-new": "src/app/(app)/whats-new/page.tsx",
   "/chat": "src/app/(app)/chat/page.tsx",
   "/history": "src/app/(app)/history/page.tsx",
   "/knowledge": "src/app/(app)/knowledge/page.tsx",
@@ -51,6 +52,7 @@ const ROUTE_TO_FILE: Record<string, string> = {
   "/reviews": "src/app/(app)/reviews/page.tsx",
   "/admin/analytics": "src/app/(app)/admin/analytics/page.tsx",
   "/admin/ai-usage": "src/app/(app)/admin/ai-usage/page.tsx",
+  "/admin/ai-readable-pages": "src/app/(app)/admin/ai-readable-pages/page.tsx",
   "/admin/users": "src/app/(app)/admin/users/page.tsx",
   "/admin/integrations": "src/app/(app)/admin/integrations/page.tsx",
 };
