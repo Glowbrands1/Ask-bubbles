@@ -1716,3 +1716,21 @@
   .training-callout-pink { background: var(--training-callout-pink); }
   .training-callout-red { background: var(--training-callout-red); }
 }
+
+/*
+ * PHONE DENSITY (27 Nov 2026, from the owner on a phone: "can u compact the apps in phone view pls
+ * eveyrthing is too large"). Below 640px every Tailwind spacing step (padding, gaps, margins, sizes)
+ * is 12% smaller, so cards, bars and rows take less of a small screen; desktop and tablet are unchanged.
+ * Form fields stay at 16px on phones: iOS zooms the whole page into any field under 16px when tapped.
+ * Unlayered on purpose, so it wins over the utilities layer.
+ */
+@media (max-width: 639px) {
+  :root {
+    --spacing: 0.22rem;
+  }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}

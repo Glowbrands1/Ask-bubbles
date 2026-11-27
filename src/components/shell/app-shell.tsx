@@ -192,7 +192,7 @@ export function AppShell({
         </header>
 
         {/* Once-a-day "we're updating the chat" notice: dialog on desktop, banner on phones. */}
-        <UpdateNotice />
+        <UpdateNotice phoneBanner={!pathname?.startsWith("/chat")} />
 
         {/* Mobile drawer */}
         {drawerOpen ? (
