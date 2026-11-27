@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowUp, FileText, Info, Paperclip, X } from "lucide-react";
 
 import { BubbleMark } from "@/components/brand-mark";
+import { useIsPhone } from "@/components/shell/update-notice";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/controls";
 import { Tooltip } from "@/components/ui/overlays";
@@ -129,6 +130,8 @@ export function Composer({
   autoFocus?: boolean;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Phone: one short line of placeholder, so the empty field is one row tall rather than three.
+  const isPhone = useIsPhone();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileNote, setFileNote] = useState("");
   const attaching = Boolean(onFilesChange);
@@ -202,8 +205,8 @@ export function Composer({
             submit();
           }
         }}
-        placeholder="Ask about policy, coaching, operations or performance — or ask Bubbles to draft a form"
-        className="scroll-slim max-h-50 w-full resize-none bg-transparent text-[14px] leading-relaxed text-foreground placeholder:text-placeholder-foreground focus-visible:outline-none"
+        placeholder={isPhone ? "Ask Bubbles or draft a form" : "Ask about policy, coaching, operations or performance — or ask Bubbles to draft a form"}
+        className="scroll-slim max-h-36 w-full resize-none bg-transparent text-[16px] leading-snug sm:max-h-50 sm:text-[14px] sm:leading-relaxed text-foreground placeholder:text-placeholder-foreground focus-visible:outline-none"
       />
     </>
   );
@@ -260,7 +263,7 @@ export function Composer({
       shows against the canvas.
     */
     <div
-      className="shrink-0 px-4 pt-3.5 pb-3 sm:px-6"
+      className="shrink-0 px-4 pt-2 pb-2 max-sm:px-3 sm:px-6 sm:pt-3.5 sm:pb-3"
       onDragOver={(event) => {
         if (attaching && event.dataTransfer?.types?.includes("Files")) event.preventDefault();
       }}
@@ -292,8 +295,8 @@ export function Composer({
           ))}
         </ul>
       ) : null}
-      <div className="mx-auto flex max-w-3xl items-center gap-3 rounded-[var(--radius-2xl)] border-2 border-primary bg-surface py-2 pr-2 pl-3.5 shadow-raised transition-shadow focus-within:shadow-[0_0_0_3px_var(--surface)]">
-        <BubbleMark className="size-[26px] shrink-0" />
+      <div className="mx-auto flex max-w-3xl items-center gap-1.5 rounded-[var(--radius-2xl)] border-2 border-primary bg-surface py-1.5 pr-1.5 pl-3.5 shadow-raised sm:gap-3 sm:py-2 sm:pr-2 transition-shadow focus-within:shadow-[0_0_0_3px_var(--surface)]">
+        <BubbleMark className="hidden size-[26px] shrink-0 sm:block" />
         <div className="flex min-w-0 flex-1 items-center">{field}</div>
         {attachButton}
         {sendButton}
@@ -327,7 +330,7 @@ export function Composer({
         accepting questions. Both are gone: rating is a passive action at the
         foot of the conversation and nothing in the composer consults it.
       */}
-      <div className="mx-auto mt-2.5 flex max-w-3xl flex-wrap items-center gap-3.5">
+      <div className="mx-auto mt-2 flex max-w-3xl flex-wrap items-center gap-x-3.5 gap-y-1.5 sm:mt-2.5">
         <AnswerModeControl mode={mode} onModeChange={onModeChange} />
         {/* Charcoal: it sits on the chat canvas, where grey would be 3.7:1. */}
         <p className="min-w-50 flex-1 text-[12px] leading-snug font-medium text-foreground">
