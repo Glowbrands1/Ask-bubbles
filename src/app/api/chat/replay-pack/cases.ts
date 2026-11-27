@@ -24,6 +24,8 @@ export interface ReplayAnswer {
   formProposal?: { templateKey?: string; employeeName?: string | null; employeeRole?: string | null; status?: string; subject?: string; locationId?: string | null; closeMatchNote?: string; formDate?: string | null; supportsInlineDraft?: boolean };
   formUpdate?: { instanceId: string; updated: string[] };
   formOpened?: { instanceId: string };
+  /** A calendar reminder card (propose_reminder): shown, never saved by the AI. */
+  reminderProposal?: { title: string; date: string; time: string | null; visibility: "only_me" | "my_team" };
   /** The answer's source cards, as the route returns them. */
   citations?: { documentTitle?: string; locator?: string; excerpt?: string }[];
 }
@@ -53,6 +55,8 @@ export interface ReplayContext {
   directory(rows: readonly DirectoryRow[]): void;
   /** Every knowledge search's query this case, in order (POLICY_CARRY_RETRIEVAL, 12 Nov 2026). */
   searches?(): string[];
+  /** What the knowledge search returns this case, as indexed rows (port of the sibling app's helper, 26 Nov 2026). */
+  knowledgeHas?(rows: readonly Record<string, unknown>[]): void;
   /**
    * The full policy manual a policy question reads (`loadFullManualPlan`), as indexed chunks; this case only. Without
    * it the pack reads no manual. Used to put a source excerpt through the production path.
@@ -103,6 +107,8 @@ export interface ReplayContext {
   forms(): Record<string, unknown>[];
   /** The FORMS ON FILE block the answering model was last given (empty when none): FORMS_ON_FILE_DATE_RANGE, 18 Nov 2026. */
   lastFormRecords?(): string;
+  /** The attached files the answering model (the older path) was last given, as content blocks (none: []). Chat attachments, 26 Nov 2026. */
+  lastAttachments?(): readonly unknown[];
   /** The REPORT DATA block the answering model was last given (empty when none): Google reviews in chat, 18 Nov 2026. */
   lastReportData?(): string;
   /** The answering model's last system prompt (its report-figure rule): Google reviews in chat, 18 Nov 2026. */

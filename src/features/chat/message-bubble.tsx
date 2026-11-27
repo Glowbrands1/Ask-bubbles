@@ -1,8 +1,9 @@
 "use client";
 
+import { ReminderProposalCard } from "@/features/calendar/reminder-card";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, FilePlus2, Loader2, RotateCcw, Settings2, UserRound } from "lucide-react";
+import { AlertTriangle, FilePlus2, FileText, Loader2, RotateCcw, Settings2, UserRound } from "lucide-react";
 
 import { BubbleMark } from "@/components/brand-mark";
 import { RichText } from "@/components/rich-text";
@@ -104,6 +105,21 @@ export function MessageBubble({
           <p className="text-[14px] leading-relaxed whitespace-pre-wrap text-selected-foreground">
             {message.content}
           </p>
+          {/* The files sent with this question, by name (their bytes are not kept: `features/chat/attachments.ts`). */}
+          {message.attachments && message.attachments.length > 0 ? (
+            <ul aria-label="Attached files" className="mt-2 flex flex-wrap gap-1.5">
+              {message.attachments.map((file, index) => (
+                <li
+                  key={`${file.filename}-${index}`}
+                  data-testid="sent-chat-attachment"
+                  className="inline-flex max-w-full items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-[11.5px] font-semibold text-foreground"
+                >
+                  <FileText aria-hidden className="size-3.5 shrink-0" />
+                  <span className="truncate">{file.filename}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
           <p className="mt-1.5 text-[11px] text-sidebar-muted">
             {formatChatTime(message.createdAt)}
           </p>
@@ -186,6 +202,8 @@ export function MessageBubble({
             sources; each card creates and drafts only its own form, and
             records only its own reference (`instanceRefFor`).
           */}
+          {message.reminderProposal ? <ReminderProposalCard proposal={message.reminderProposal} refId={`r-${message.id}`} /> : null}
+
           {proposalsOf(message).map((proposal, index) => (
             <React.Fragment key={proposal.proposalId}>
               <FormProposalCard

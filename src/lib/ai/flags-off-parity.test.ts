@@ -203,6 +203,13 @@ const ALLOWED_UI = [
   // gains a section scoped to `.training-prose` and `.training-callout-*`.
   "src/app/(app)/ai-training/",
   "src/features/ai-training/",
+  // WHAT'S NEW and the AI-READABLE PAGES list (Paulyne, 26 Nov 2026, both apps; QA, 24 Nov 2026, could not find the list
+  // of pages the AI can read): two new pages and their screens only, with one rail entry each (navigation.ts, listed
+  // below). Read-only lists from typed config; no existing page, chat or form behaviour changes, no flag involved.
+  "src/app/(app)/whats-new/",
+  "src/features/whats-new/",
+  "src/app/(app)/admin/ai-readable-pages/",
+  "src/features/admin/ai-readable-pages-screen.tsx",
   // IN-APP BELL (Pau, 23 Nov 2026: "port the notification bell to Bubbles", for the HR form approval; port from Ask
   // Sunny 30cac4c): a new bell component and its mark-read action. It renders only for someone with a notification:
   // in the rail on desktop (sidebar.tsx), in the top bar on phones (app-shell.tsx), read by the (app) layout; all
@@ -224,6 +231,17 @@ const ALLOWED_UI = [
   // saved): a Home address column whose button asks Woven for one person's address on click. Admin page only.
   "src/features/admin/woven/directory-table.tsx",
   "src/features/admin/woven/address-button.tsx",
+  // THE CALENDAR (Pau, 26 Nov 2026, both apps: one calendar with the Leadership Hub, "+ New event" and the chat's
+  // reminder card): a new page and its own components, reached only from the new Calendar entry. No existing screen
+  // changes; the chat bubble mounts the reminder card only when an answer carries one.
+  "src/app/(app)/calendar/page.tsx",
+  "src/features/calendar/calendar-view.tsx",
+  "src/features/calendar/new-event.tsx",
+  "src/features/calendar/reminder-card.tsx",
+  // The named account sees every address without clicking (Pau, 26 Nov 2026: "for my access only"; WOVEN_ADDRESS_LIST_EMAILS):
+  // the Woven page passes the yes/no down to the directory. Admin page only.
+  "src/app/(app)/admin/integrations/woven/[view]/page.tsx",
+  "src/features/admin/woven/woven-view-screen.tsx",
   "src/features/forms/hr-approval-panel.tsx",
   "src/features/forms/hr-approval-screen.tsx",
   "src/app/(app)/forms/hr-approval/",

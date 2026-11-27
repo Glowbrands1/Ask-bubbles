@@ -63,6 +63,9 @@ const store: FakeStore = {
   form_hr_reminder_sends: [],
   app_notifications: [],
   app_users: [],
+  // The Calendar (26 Nov 2026, migration 20261127001000): personal reminders and the Hub read's nonces.
+  calendar_reminders: [],
+  calendar_partner_nonces: [],
 } as unknown as FakeStore;
 
 // Production builds with it (NEXT_PUBLIC_, read once when the role table loads): an Assistant Manager may create forms.
@@ -99,6 +102,8 @@ vi.mock("@/lib/knowledge/full-manual-load", async (importOriginal) => {
 const state = vi.hoisted(() => ({
   /** POLICY_CARRY_RETRIEVAL (#180 rebuilt, 12 Nov 2026): every knowledge search's query, in order (`searches`). */
   knowledgeQueries: [] as string[],
+  /** What the knowledge search returns this case (`knowledgeHas`; port of the sibling app's helper, 26 Nov 2026); none by default. */
+  knowledgeRows: [] as Record<string, unknown>[],
   /** What the slot model reads on the next turns (`slotsRead`), as a production trace shows it. */
   /** Chunks the pinned manual also has, when a case sets them (`manualAlsoHas`); none by default. */
   manualExtra: [] as Record<string, unknown>[],
@@ -117,6 +122,8 @@ const state = vi.hoisted(() => ({
   chatModelCalls: 0,
   /** The FORMS ON FILE block the answering model was last given (`lastFormRecords`). */
   lastFormRecords: "",
+  /** The attached files the answering model was last given (`lastAttachments`). */
+  lastAttachments: [] as unknown[],
   /** The REPORT DATA and the system prompt the answering model was last given (`lastReportData`, `lastSystem`). */
   lastReportData: "",
   lastSystem: "",
@@ -327,9 +334,10 @@ vi.mock("@/lib/ai/call-claude", () => ({
       usage: { inputTokens: 10, outputTokens: 5, cacheReadTokens: 0, cacheWriteTokens: 0 },
     };
   },
-  callClaude: async (input?: { system?: string; reportData?: string | null; formRecords?: string | null; formEditTool?: { data: string; onToolUse: (call: unknown) => void } | null }) => {
+  callClaude: async (input?: { system?: string; reportData?: string | null; formRecords?: string | null; attachments?: readonly unknown[]; formEditTool?: { data: string; onToolUse: (call: unknown) => void } | null }) => {
     state.chatModelCalls += 1;
     state.lastFormRecords = String(input?.formRecords ?? "");
+    state.lastAttachments = [...(input?.attachments ?? [])];
     state.lastReportData = String(input?.reportData ?? "");
     state.lastSystem = String(input?.system ?? "");
     if (input?.formEditTool) {
@@ -458,7 +466,7 @@ vi.mock("@/lib/knowledge/providers/supabase", () => ({
     }
     async match(query?: { query?: unknown }) {
       state.knowledgeQueries.push(String(query?.query ?? ""));
-      return [];
+      return state.knowledgeRows;
     }
     async fetchRoleGrounding(role: { id: string }) {
       return {
@@ -512,7 +520,7 @@ vi.mock("@/lib/knowledge/recall-match", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/knowledge/recall-match")>()),
   matchRecallKnowledge: async (input?: { query?: unknown }) => {
     state.knowledgeQueries.push(String(input?.query ?? ""));
-    return [];
+    return state.knowledgeRows;
   },
 }));
 
@@ -852,6 +860,7 @@ beforeEach(async () => {
   store.form_instances = new JoiningRows() as never;
   state.slotReading = "none";
   state.lastFormRecords = "";
+  state.lastAttachments = [];
   state.lastReportData = "";
   state.lastSystem = "";
   fullManual.document = null;
@@ -860,6 +869,7 @@ beforeEach(async () => {
   state.manualExtra = [];
   state.manualBase = null;
   state.knowledgeQueries = [];
+  state.knowledgeRows = [];
   state.reading = {};
   state.draft = { values: {} };
   state.revision = { values: {} };
@@ -1032,6 +1042,9 @@ function context(): ReplayContext {
       state.directory = rows as never;
     },
     searches: () => [...state.knowledgeQueries],
+    knowledgeHas: (rows) => {
+      state.knowledgeRows = [...rows];
+    },
     fullManual: (document) => {
       fullManual.document = document;
     },
@@ -1086,6 +1099,7 @@ function context(): ReplayContext {
     calls: () => ({ chat: state.chatModelCalls, draft: state.draftCalls, revision: state.revisionCalls, tool: state.toolCalls, patch: patchScript.calls }),
     forms: () => store.form_instances as never,
     lastFormRecords: () => state.lastFormRecords,
+    lastAttachments: () => state.lastAttachments,
     lastReportData: () => state.lastReportData,
     lastSystem: () => state.lastSystem,
     draftPrompts: () => [...draftAsked],

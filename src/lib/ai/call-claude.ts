@@ -117,6 +117,11 @@ export interface CallClaudeInput {
   /** Summary of turns outside that budget. Used only when historyPolicy is "budget". */
   readonly priorSummary?: string | null;
   readonly question: string;
+  /**
+   * The files attached to this question, as Messages API blocks (`lib/chat/attachments.server.ts`), put ahead of the
+   * turn's text. Absent: the message is exactly as before.
+   */
+  readonly attachments?: readonly import("@/lib/chat/attachments.server").AnthropicAttachmentBlock[];
   readonly maxTokens: number;
   /**
    * A stable block placed after the instructions and before the per-turn
@@ -207,6 +212,15 @@ export function claudeSystemPayload(system: string, cachedContext?: string | nul
   return blocks;
 }
 
+/** The attached files ahead of the turn's text (documents before the question); no files, the content as it was. */
+export function withAttachmentBlocks<T extends { type: "text"; text: string }>(
+  content: string | T[],
+  files: CallClaudeInput["attachments"],
+): string | (T | NonNullable<CallClaudeInput["attachments"]>[number])[] {
+  if (!files || files.length === 0) return content;
+  return [...files, ...(typeof content === "string" ? [{ type: "text" as const, text: content } as T] : content)];
+}
+
 export async function callClaude(input: CallClaudeInput): Promise<string> {
   const client = getAnthropicClient();
 
@@ -264,7 +278,8 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
                 role: "user" as const,
                 // Every context block and then the question, in that order: the
                 // question last is what keeps a long briefing from burying it.
-                content: [
+                // Attached files go ahead of it all (documents before the question).
+                content: withAttachmentBlocks([
                   input.grounding,
                   ...(input.reportData ? [input.reportData] : []),
                   ...(input.personMemory ? [input.personMemory] : []),
@@ -274,7 +289,7 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
                   ...(input.formEditTool ? [input.formEditTool.data] : []),
                   ...(input.glossary ? [input.glossary] : []),
                   `QUESTION\n\n${input.question}`,
-                ].join("\n\n"),
+                ].join("\n\n"), input.attachments),
               },
             ],
             ...(input.formEditTool

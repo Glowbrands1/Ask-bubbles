@@ -257,6 +257,7 @@ export function useInlineAsk({ reportContext, onActiveChange, surface }: InlineA
             coverage: response.coverage ?? "not_applicable",
             followUpSuggestions: response.followUpSuggestions,
             formProposal: response.formProposal,
+            reminderProposal: response.reminderProposal,
             ...(response.formProposals && response.formProposals.length > 1
               ? { formProposals: response.formProposals }
               : {}),
