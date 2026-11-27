@@ -3,7 +3,7 @@ import "server-only";
 import { FORM_FAMILY_READ_PERMISSIONS } from "@/config/company/forms/categories";
 
 import { AuthError } from "@/lib/auth/types";
-import { activePermissionMatrix, asdNoFormMonitoringEnabled, hasPermission } from "@/lib/permissions";
+import { activePermissionMatrix, asdNoFormMonitoringEnabled, canAccessAdminConsole, hasPermission } from "@/lib/permissions";
 
 import { authorizeForms, type FormsActor } from "./access";
 import {
@@ -85,6 +85,11 @@ export type InstanceAction =
  * disagree, which is what a hand-written `where` clause beside a guard always
  * eventually does.
  */
+/** An administrator (`canAccessAdminConsole`) on a verified account. */
+export function opensAsAdmin(actor: Pick<FormsActor, "role" | "verified">): boolean {
+  return actor.verified === true && actor.role !== null && canAccessAdminConsole(actor.role);
+}
+
 export function actorMaySeeInstance(
   actor: FormsActor,
   instance: InstanceRow,
@@ -94,15 +99,17 @@ export function actorMaySeeInstance(
   // PRIVATE_CREATOR_FORMS: before every other rule, global and preview included. See `private-creators.ts`.
   if (hiddenAsPrivate(actor, instance, options)) return false;
   // HR APPROVAL: a form HR has not approved exists only for its creator and HR — administrators and preview included.
-  if (hiddenWhileAwaitingHr(actor, instance)) return false;
   /*
-   * HR opens every form in their queue, whatever its store (task H, 27 Nov 2026; port from Ask Sunny). The queue, the
-   * bell and the calendar list every form waiting for HR with no store limit (`listHrQueue`), but opening one went
-   * through the reader's store scope: an approver whose account covers no store, or not that one, got a 404 from the
-   * very link the bell and the calendar gave them. Only while the form is with HR, only for an account on
-   * `form_hr_approvers`, only with the flag on.
+   * HR AND ADMINISTRATORS OPEN EVERY FORM WITH HR, whatever its store (task H, 27 Nov 2026; port from Ask Sunny). The
+   * queue, the bell and the calendar list every form waiting for HR with no store limit (`listHrQueue`), but opening one
+   * went through the reader's store scope: an approver whose account covers no store, or not that one, got a 404 from
+   * the very link the bell and the calendar gave them. The owner, the same day, asked whether admins may open these
+   * forms too: "yes admin" (`canAccessAdminConsole`). Opening only: lists still leave them out for admins, and HR's notes
+   * and decision stay with the creator, the sender and HR (`mayReadHrDecision`). Only while the form is with HR, only
+   * with the flag on.
    */
-  if (actor.hrApprover === true && hrApprovalEnabled() && awaitingHr(instance.hrApprovalState)) return true;
+  if (hrApprovalEnabled() && awaitingHr(instance.hrApprovalState) && (actor.hrApprover === true || opensAsAdmin(actor))) return true;
+  if (hiddenWhileAwaitingHr(actor, instance)) return false;
   // Demo: unverified identity, no scope, no enforcement. See `location-scope`.
   const visibility = actor.visibility;
   if (!visibility) return true;
