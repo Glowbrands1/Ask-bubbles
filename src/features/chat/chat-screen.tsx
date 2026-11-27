@@ -1147,6 +1147,7 @@ export function ChatScreen() {
           onFilesChange={setPendingFiles}
           fileError={fileError}
           conversationId={activeId}
+          onVoiceSend={(text, voice) => void send(text, { files: pendingFiles, voice })}
         />
       </div>
 

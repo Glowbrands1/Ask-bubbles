@@ -19,7 +19,7 @@ import { LONG_MESSAGE_LIMIT, messageLengthStatus } from "@/lib/chat/message-limi
 import { chatLongMessageClientEnabled } from "@/lib/config/chat-quality-flags";
 import { CHAT_ATTACH_ACCEPT, MAX_FILES_PER_MESSAGE, attachmentProblem } from "@/lib/attachments/file-parts";
 import type { AnswerMode } from "@/types";
-import { useVoiceDraft, VoiceButton, VoiceControl, VoiceNotice } from "@/features/voice/voice-button";
+import { useVoiceDraft, VoiceButton, VoiceControl, VoiceLivePanel, VoiceNotice } from "@/features/voice/voice-button";
 
 /** VOICE_INPUT_ENABLED: what a dictated question adds to its send (nothing when it was typed). */
 export type VoiceSendFields = { inputMode?: "voice"; voiceTraceId?: string; voiceEdited?: boolean };
@@ -112,6 +112,7 @@ export function Composer({
   onFilesChange,
   fileError,
   conversationId,
+  onVoiceSend,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -136,6 +137,8 @@ export function Composer({
   autoFocus?: boolean;
   /** VOICE_INPUT_ENABLED: this conversation, so the voice route can read its names as spelling hints (its own only). */
   conversationId?: string | null;
+  /** Live dictation's ✓: send this text now (whatever is typed in the box first, then the spoken words). */
+  onVoiceSend?: (text: string, voice: VoiceSendFields) => void;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // Phone: one short line of placeholder, so the empty field is one row tall rather than three.
@@ -283,7 +286,20 @@ export function Composer({
       at the foot of the screen; while you type it takes a White halo that
       shows against the canvas.
     */
-    <VoiceControl surface="chat" conversationId={conversationId} disabled={busy} onText={onVoiceText}>
+    <VoiceControl
+      surface="chat"
+      conversationId={conversationId}
+      disabled={busy}
+      onText={onVoiceText}
+      onSend={
+        onVoiceSend
+          ? (spoken, traceId) => {
+              const text = value.trim() ? `${value.replace(/\s+$/, "")} ${spoken}` : spoken;
+              onVoiceSend(text, { inputMode: "voice", voiceTraceId: traceId, voiceEdited: false });
+            }
+          : undefined
+      }
+    >
     <div
       className="shrink-0 px-4 pt-2 pb-2 max-sm:px-3 sm:px-6 sm:pt-3.5 sm:pb-3"
       onDragOver={(event) => {
@@ -317,7 +333,8 @@ export function Composer({
           ))}
         </ul>
       ) : null}
-      <div className="mx-auto flex max-w-3xl items-center gap-1.5 rounded-[var(--radius-2xl)] border-2 border-primary bg-surface py-1.5 pr-1.5 pl-3.5 shadow-raised sm:gap-3 sm:py-2 sm:pr-2 transition-shadow focus-within:shadow-[0_0_0_3px_var(--surface)]">
+      <div className="relative mx-auto flex max-w-3xl items-center gap-1.5 rounded-[var(--radius-2xl)] border-2 border-primary bg-surface py-1.5 pr-1.5 pl-3.5 shadow-raised sm:gap-3 sm:py-2 sm:pr-2 transition-shadow focus-within:shadow-[0_0_0_3px_var(--surface)]">
+        <VoiceLivePanel />
         <BubbleMark className="hidden size-[26px] shrink-0 sm:block" />
         <div className="flex min-w-0 flex-1 items-center">{field}</div>
         {attachButton}
