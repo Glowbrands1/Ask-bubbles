@@ -264,7 +264,7 @@ export function AskBand({
           )}
           </div>
           {/* The approved rounded hand-lettered greeting (option 2). */}
-          <h1 className="display-lettering text-[31px] text-band-foreground sm:text-[48px]">
+          <h1 className="display-lettering text-[24px] text-band-foreground sm:text-[48px]">
             {greeting}, {greetingName}
           </h1>
         </div>
