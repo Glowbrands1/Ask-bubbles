@@ -1,7 +1,7 @@
 /**
  * THE CALENDAR'S HOLIDAYS (the owner, 27 Nov 2026: "can you also add holidays in the calendar in all apps pls US holiday").
- * One list, the same in the Leadership Hub, Ask Sunny and Ask Bubbles (each keeps its own copy of this file: change all
- * three together). Every date is worked out in code for any year (src/lib/calendar/holidays.ts); nothing is fetched.
+ * One list, the same in every app that shows the calendar (each keeps its own copy of this file: change them
+ * together). Every date is worked out in code for any year (src/lib/calendar/holidays.ts); nothing is fetched.
  *
  *   federal     the 11 US federal holidays. A fixed-date one that falls on a Saturday is also marked on the Friday
  *               before, and on a Sunday the Monday after, as "(observed)".
