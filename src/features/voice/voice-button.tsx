@@ -7,6 +7,9 @@ import { cn } from "@/lib/utils/cn";
 import { VOICE_CHECK, VOICE_HINT, VOICE_NOTICE } from "@/lib/voice/voice-messages";
 
 import { useVoiceAccess } from "./voice-access";
+import { LiveDictationPanel } from "./live-dictation-panel";
+import { useMicrophones } from "./mic-choice";
+import { liveDictationSupported, useLiveDictation } from "./use-live-dictation";
 import { useVoiceRecorder, voiceRecordingSupported, WARNING_SECONDS, type VoiceSurface } from "./use-voice-recorder";
 
 /**
@@ -23,6 +26,12 @@ import { useVoiceRecorder, voiceRecordingSupported, WARNING_SECONDS, type VoiceS
  * (`MediaRecorder`, `getUserMedia`) and it is not an in-app browser (Slack, Teams, Gmail). The transcript is handed to
  * the box (`onText`), which appends it to its own text; Send is the box's own and unchanged. Typed text is never touched
  * on a failure. The first tap shows the notice once; the choice is kept in this browser per user id.
+ *
+ * LIVE DICTATION (the owner, 27 Nov 2026: "it transcribes as you talk then when done, press check mark and auto send";
+ * ported from the sibling app). A box that gives `onSend` and places `<VoiceLivePanel>` over its input row gets the words as
+ * they are said, with ✓ to send (the names spelled as the directory spells them, on the server) and ✕ to drop. Where
+ * the browser cannot stream, or the server will not start a stream, the same tap records instead, as before, and the
+ * words go into the box to be checked. Boxes without `onSend` record, as before.
  */
 
 export interface VoiceControlProps {
@@ -32,13 +41,23 @@ export interface VoiceControlProps {
   /** The box is busy (a turn in flight): the mic is disabled. */
   readonly disabled?: boolean;
   readonly onText: (text: string, traceId: string) => void;
+  /** Live dictation's ✓: send this text now. Turns live dictation on for the box (with `<VoiceLivePanel>` placed). */
+  readonly onSend?: (text: string, traceId: string) => void;
   readonly children: ReactNode;
 }
 
 type Recorder = ReturnType<typeof useVoiceRecorder>;
 
+type Live = ReturnType<typeof useLiveDictation>;
+
 interface VoiceState {
   readonly recorder: Recorder;
+  readonly live: Live;
+  readonly microphones: ReturnType<typeof useMicrophones>;
+  /** A live-dictation refusal or failure, said where every voice error is. */
+  readonly liveError: string | null;
+  /** The live words went into the box (the limit, a hidden tab): "Check the words". */
+  readonly liveChecked: boolean;
   readonly disabled: boolean;
   readonly askingConsent: boolean;
   readonly tap: () => void;
@@ -79,34 +98,69 @@ export function VoiceControl(props: VoiceControlProps) {
   return <ActiveVoiceControl {...props} userKey={access.userKey} />;
 }
 
-function ActiveVoiceControl({ surface, meetingKey, conversationId, disabled = false, onText, children, userKey }: VoiceControlProps & { userKey: string | null }) {
-  const recorder = useVoiceRecorder({ surface, meetingKey, conversationId, onText });
+function ActiveVoiceControl({ surface, meetingKey, conversationId, disabled = false, onText, onSend, children, userKey }: VoiceControlProps & { userKey: string | null }) {
+  // The owner, 27 Nov 2026: "i think i need to choose which mic because i have usb mic not built in".
+  const microphones = useMicrophones();
+  const { refresh: refreshMicrophones } = microphones;
+  const onMicrophoneOpened = useCallback(() => void refreshMicrophones(), [refreshMicrophones]);
+  const recorder = useVoiceRecorder({ surface, meetingKey, conversationId, onText, deviceId: microphones.chosen, onMicrophoneOpened });
   const [askingConsent, setAskingConsent] = useState(false);
+  const [liveError, setLiveError] = useState<string | null>(null);
+  const [liveChecked, setLiveChecked] = useState(false);
   const { phase, start, stop, clearDone } = recorder;
+  const live = useLiveDictation({
+    surface,
+    meetingKey,
+    conversationId,
+    deviceId: microphones.chosen,
+    onMicrophoneOpened,
+    onSend: (text, meta) => onSend?.(text, meta.traceId),
+    onText: (text, meta) => {
+      setLiveChecked(true);
+      onText(text, meta.traceId);
+    },
+    onFallback: () => void start(),
+    onError: (message) => setLiveError(message),
+  });
+  const liveOn = Boolean(onSend) && liveDictationSupported();
+  const dictating = live.state.kind !== "idle";
+  const { start: startLive } = live;
 
   /* Sending (the box turns busy) clears "Check the words". */
   useEffect(() => {
     if (disabled) clearDone();
   }, [disabled, clearDone]);
+  const [wasDisabled, setWasDisabled] = useState(disabled);
+  if (wasDisabled !== disabled) {
+    setWasDisabled(disabled);
+    if (disabled) setLiveChecked(false);
+  }
+
+  const begin = useCallback(() => {
+    setLiveError(null);
+    setLiveChecked(false);
+    if (liveOn) void startLive();
+    else void start();
+  }, [liveOn, start, startLive]);
 
   const tap = useCallback(() => {
     if (phase === "recording") {
       stop();
       return;
     }
-    if (disabled || phase === "uploading" || phase === "requesting") return;
+    if (disabled || dictating || phase === "uploading" || phase === "requesting") return;
     if (!readConsent(userKey)) {
       setAskingConsent(true);
       return;
     }
-    void start();
-  }, [disabled, phase, start, stop, userKey]);
+    begin();
+  }, [begin, dictating, disabled, phase, stop, userKey]);
 
   const accept = useCallback(() => {
     saveConsent(userKey, "yes");
     setAskingConsent(false);
-    void start();
-  }, [start, userKey]);
+    begin();
+  }, [begin, userKey]);
 
   const decline = useCallback(() => {
     saveConsent(userKey, "no");
@@ -114,8 +168,8 @@ function ActiveVoiceControl({ surface, meetingKey, conversationId, disabled = fa
   }, [userKey]);
 
   const value = useMemo<VoiceState>(
-    () => ({ recorder, disabled, askingConsent, tap, accept, decline }),
-    [recorder, disabled, askingConsent, tap, accept, decline],
+    () => ({ recorder, live, microphones, liveError, liveChecked, disabled, askingConsent, tap, accept, decline }),
+    [recorder, live, microphones, liveError, liveChecked, disabled, askingConsent, tap, accept, decline],
   );
   return <VoiceContext.Provider value={value}>{children}</VoiceContext.Provider>;
 }
@@ -128,10 +182,10 @@ function clock(seconds: number): string {
 export function VoiceButton({ className, timerClassName }: { className?: string; timerClassName?: string }) {
   const state = useContext(VoiceContext);
   if (!state) return null;
-  const { recorder, disabled, tap } = state;
+  const { recorder, live, disabled, tap } = state;
   const { phase, seconds } = recorder;
   const recording = phase === "recording";
-  const working = phase === "uploading" || phase === "requesting";
+  const working = phase === "uploading" || phase === "requesting" || live.state.kind !== "idle";
   const label = recording ? "Stop recording" : working ? "Transcribing your recording" : "Speak your message";
   return (
     <>
@@ -160,6 +214,30 @@ export function VoiceButton({ className, timerClassName }: { className?: string;
 }
 
 /**
+ * The box while dictating, laid over the box's input row by the box (an absolutely placed element inside it): the
+ * words so far, the level wave, ✕ and ✓. Renders nothing unless live dictation is running.
+ */
+export function VoiceLivePanel({ className }: { className?: string }) {
+  const state = useContext(VoiceContext);
+  if (!state || state.live.state.kind === "idle") return null;
+  const { live } = state;
+  const current = live.state;
+  return (
+    <div data-testid="voice-live" className={cn("absolute inset-0 z-10 rounded-[inherit]", className)}>
+      <LiveDictationPanel
+        text={current.kind === "live" || current.kind === "finishing" ? current.text : ""}
+        levels={live.levels}
+        seconds={current.kind === "live" ? current.seconds : 0}
+        connecting={current.kind === "connecting"}
+        finishing={current.kind === "finishing"}
+        onCancel={() => void live.cancel()}
+        onSend={() => void live.send()}
+      />
+    </div>
+  );
+}
+
+/**
  * Everything voice says, in one place under the box: the first-use notice, the recording warning, the cut-off offer,
  * "Check the words", every error (role="alert"), and the standing hint line.
  */
@@ -170,8 +248,9 @@ export function VoiceNotice({ className, id }: { className?: string; id?: string
     if (state?.askingConsent) acceptRef.current?.focus();
   }, [state?.askingConsent]);
   if (!state) return null;
-  const { recorder, askingConsent, accept, decline } = state;
-  const { phase, seconds, error } = recorder;
+  const { recorder, live, microphones, askingConsent, accept, decline, liveError, liveChecked } = state;
+  const { phase, seconds } = recorder;
+  const error = recorder.error ?? liveError;
   const buttonClass = "min-h-9 rounded-full border border-current px-3 text-[12px] font-semibold";
   return (
     <div id={id} data-testid="voice-notice" className={cn("text-[12px] leading-snug", className)}>
@@ -217,7 +296,31 @@ export function VoiceNotice({ className, id }: { className?: string; id?: string
           </button>
         </div>
       ) : null}
-      {phase === "done" ? <p role="status">{VOICE_CHECK}</p> : null}
+      {phase === "done" || liveChecked ? <p role="status">{VOICE_CHECK}</p> : null}
+      {/*
+       * WHICH MICROPHONE: only when this browser has more than one. Their names show once the browser has been allowed a
+       * microphone; before that, "Microphone 1", "Microphone 2". The choice is kept in this browser.
+       */}
+      {microphones.microphones.length > 1 ? (
+        <label className="flex flex-wrap items-center gap-1.5 opacity-80">
+          Microphone
+          <select
+            aria-label="Microphone"
+            data-testid="voice-microphone"
+            value={microphones.chosen ?? ""}
+            disabled={phase === "recording" || phase === "uploading" || phase === "requesting" || live.state.kind !== "idle"}
+            onChange={(event) => microphones.choose(event.target.value || null)}
+            className="max-w-[16rem] truncate rounded-md border border-border bg-surface px-1.5 py-0.5 text-[12px] font-semibold text-foreground"
+          >
+            <option value="">Default microphone</option>
+            {microphones.microphones.map((microphone) => (
+              <option key={microphone.id} value={microphone.id}>
+                {microphone.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       <p className="opacity-80">{VOICE_HINT}</p>
     </div>
   );
