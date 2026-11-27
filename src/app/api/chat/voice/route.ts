@@ -14,6 +14,7 @@ import { isSameOriginRequest } from "@/lib/google-reviews/csrf";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import type { AccessScope, Role } from "@/types";
 import { buildChatHints, buildMeetingHints } from "@/lib/voice/keyterms";
+import { correctSpokenNames } from "@/lib/voice/spoken-names";
 import { transcribeVoice, VOICE_ENDPOINT, VOICE_PROVIDER, type VoiceMime } from "@/lib/voice/transcribe";
 import { voiceInputEnabledFor, voiceProviderKey } from "@/lib/voice/voice-config";
 import { MAX_BYTES, MAX_SECONDS, MIN_BYTES, MIN_SECONDS, ROUTE_MAX_SECONDS } from "@/lib/voice/voice-limits";
@@ -52,7 +53,8 @@ import {
  * can run before the upload is read (e). Both are validated strictly; an unknown parameter or form field is refused.
  *
  * NOTHING IS KEPT: the audio lives in this request's memory only, no Storage call is made, and no log line carries the
- * transcript, a name, an email or the hint list (counts and codes only). The text is returned as the provider wrote it.
+ * transcript, a name, an email or the hint list (counts and codes only). The text is returned as the provider wrote it,
+ * except a name misheard as one scoped person's or store's spelling, which is written that way (`spoken-names.ts`).
  */
 
 export const runtime = "nodejs";
@@ -269,7 +271,12 @@ async function postVoice(request: Request): Promise<Response> {
 
   switch (outcome) {
     case "ok":
-      return NextResponse.json({ text, traceId });
+      /*
+       * Names spelled as the directory spells them (the owner, 27 Nov 2026: "i said Curt, it spelled it as Kurt"; ported
+       * from Ask Sunny): a heard word that sounds like exactly one scoped person's or store's spelling is written that
+       * way. The list stays here; the text still goes into the box for the person to read and edit before sending.
+       */
+      return NextResponse.json({ text: hints.vocabulary ? correctSpokenNames(text, hints.vocabulary) : text, traceId });
     case "no_speech":
       return refuse(NOTHING_HEARD);
     case "too_long":
