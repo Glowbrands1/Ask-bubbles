@@ -62,6 +62,8 @@ import { MONTHLY_BUDGET_REPLY } from "@/lib/ai/spend-guard";
 import { MAX_BYTES } from "@/lib/voice/voice-limits";
 import { VOICE_MESSAGES } from "@/lib/voice/voice-messages";
 import { POST } from "./route";
+import { l10Viewer, listMyMeetings } from "@/features/l10/data.server";
+import { modelSpendGuard } from "@/lib/ai/spend-guard";
 
 const OWN_CONVERSATION = `conv_${Date.now().toString(36)}abcdefgh`;
 const ORIGIN = "https://bubbles.example.test";
@@ -403,7 +405,10 @@ describe("every refusal says one of the agreed sentences", () => {
     const body = await response.json();
     expect(body.error).toBe(message);
     expect(body.error).not.toMatch(/No answer was produced/);
-    expect(rpcCalls[1].args).toMatchObject({ p_status: "failed" });
+    // QA, 27 Nov 2026: a clear rejection (400, 401, 413, 415) counts 0 seconds; anything else keeps the reported length.
+    const cleared = [400, 401, 413, 415].includes(providerStatus);
+    expect(rpcCalls[1].args).toMatchObject({ p_status: "failed", p_audio_seconds: cleared ? 0 : null });
+    expect((traceRows[0].slots as { spend: { audio_seconds: number }[] }).spend[0].audio_seconds).toBe(cleared ? 0 : 3.2);
     expect(traceRows[0]).toMatchObject({ succeeded: false, error_status: providerStatus });
   });
 
@@ -414,3 +419,42 @@ describe("every refusal says one of the agreed sentences", () => {
     expect((await response.json()).error).toBe(VOICE_MESSAGES.nothingHeard);
   });
 });
+
+describe("never a blank body (QA, 27 Nov 2026)", () => {
+  const unexpected = () => Object.assign(new Error("ada@example.test said coach dorian"), { name: "HubDownError" });
+
+  async function expectUnavailable(response: Response) {
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: VOICE_MESSAGES.unavailable, code: "voice_unavailable" });
+    for (const line of logs) expect(line).not.toMatch(/ada@|dorian|said/i);
+    expect(logs.some((line) => /HubDownError/.test(line))).toBe(true);
+    expect(providerCalls).toHaveLength(0);
+  }
+
+  it("l10Viewer throwing is the unavailable sentence, not a blank 500", async () => {
+    vi.mocked(l10Viewer).mockRejectedValueOnce(unexpected());
+    await expectUnavailable(await POST(request("l10", { query: { meetingKey: "bcs-dm" } })));
+  });
+
+  it("listMyMeetings throwing is the unavailable sentence, not a throw", async () => {
+    vi.mocked(listMyMeetings).mockRejectedValueOnce(unexpected());
+    await expectUnavailable(await POST(request("l10", { query: { meetingKey: "bcs-dm" } })));
+  });
+
+  it("the spend guard throwing is the unavailable sentence", async () => {
+    vi.mocked(modelSpendGuard).mockRejectedValueOnce(unexpected());
+    await expectUnavailable(await POST(request("chat")));
+  });
+
+  it("a hint reader blowing up mid-request still answers in JSON", async () => {
+    const { getOwnConversation } = await import("@/lib/chat/store");
+    vi.mocked(getOwnConversation).mockImplementationOnce(() => {
+      throw unexpected();
+    });
+    // The hint builder swallows its own reader failures: the clip still goes through.
+    const response = await POST(request("chat", { fields: { conversationId: OWN_CONVERSATION } }));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ text: expect.any(String) });
+  });
+});
+

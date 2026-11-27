@@ -12,7 +12,7 @@ import {
   clampClipSeconds,
   manilaDayStart,
 } from "./voice-limits";
-import { claimVoiceUsage, finishVoiceUsage, type RpcClient, type VoiceSurface } from "./voice-usage";
+import { claimVoiceUsage, finishedAudioSeconds, finishVoiceUsage, spendAudioSeconds, type RpcClient, type VoiceSurface } from "./voice-usage";
 
 /**
  * THE CAPS, ON THE REAL MIGRATION (PGlite). Every claim goes through `voice_usage_claim` exactly as the route calls it.
@@ -24,7 +24,7 @@ let db: PGlite;
 let rpc: RpcClient;
 
 beforeAll(async () => {
-  t = await createMigratedTestDatabase(["20260829000100_extensions", "20261127001000_voice_usage"]);
+  t = await createMigratedTestDatabase(["20260829000100_extensions", "20261127002000_voice_usage"]);
   db = t.db;
   rpc = {
     async rpc(fn, args) {
@@ -65,11 +65,13 @@ function claim(input: { userId?: string; storeId?: string | null; surface?: Voic
 }
 
 /** Rows written directly, to stand for a day's earlier use. */
-async function seed(rows: number, input: { userId?: string; storeId?: string | null; seconds: number; at: Date; status?: string }) {
+async function seed(rows: number, input: { userId?: string; storeId?: string | null; seconds: number; at: Date; status?: string; audioSeconds?: number | null }) {
   for (let i = 0; i < rows; i += 1) {
+    const status = input.status ?? "succeeded";
+    const audio = input.audioSeconds !== undefined ? input.audioSeconds : status === "pending" ? null : input.seconds;
     await db.query(
       `insert into public.voice_usage (created_at, user_id, store_id, surface, status, reported_seconds, audio_seconds) values ($1, $2, $3, 'chat', $4, $5, $6)`,
-      [input.at.toISOString(), input.userId ?? "user-ada", input.storeId === undefined ? "loc-0001" : input.storeId, input.status ?? "succeeded", input.seconds, input.status === "pending" ? null : input.seconds],
+      [input.at.toISOString(), input.userId ?? "user-ada", input.storeId === undefined ? "loc-0001" : input.storeId, status, input.seconds, audio],
     );
   }
 }
@@ -113,7 +115,7 @@ describe("the voice caps (voice_usage_claim)", () => {
     expect(clampClipSeconds(0)).toBe(0.5);
   });
 
-  it("a failed clip does not count; a succeeded one counts its real audio length", async () => {
+  it("a succeeded clip counts its real audio length; a finished row is not finished again", async () => {
     const first = await claim({ clipSeconds: 60 });
     if (first.kind !== "claimed") throw new Error("expected a claim");
     await finishVoiceUsage(rpc, { id: first.id, succeeded: true, audioSeconds: 4 });
@@ -121,6 +123,53 @@ describe("the voice caps (voice_usage_claim)", () => {
     expect(row).toEqual({ status: "succeeded", audio_seconds: "4.00" });
     await finishVoiceUsage(rpc, { id: first.id, succeeded: false, audioSeconds: null }); // already finished: unchanged
     expect((await db.query<{ status: string }>("select status from public.voice_usage")).rows[0].status).toBe("succeeded");
+  });
+
+  /* QA on the pull request, 27 Nov 2026: a failed request is still a call to the provider. */
+  it("failed requests count toward the per-minute cap", async () => {
+    for (let i = 0; i < PER_USER_PER_MINUTE; i += 1) {
+      const claimed = await claim({ clipSeconds: 1 });
+      if (claimed.kind !== "claimed") throw new Error("expected a claim");
+      await finishVoiceUsage(rpc, { id: claimed.id, succeeded: false, audioSeconds: finishedAudioSeconds({ status: 400, errorClass: "bad_audio", audioSeconds: null }) });
+    }
+    expect((await claim({ clipSeconds: 1 })).kind).toBe("user_minute");
+  });
+
+  it("failed requests count toward the per-day cap, even rejected ones that count 0 seconds", async () => {
+    await seed(PER_USER_PER_DAY, { seconds: 0.5, at: minutesBefore(NOON_MANILA, 30), status: "failed", audioSeconds: 0 });
+    expect((await claim({ clipSeconds: 1 })).kind).toBe("user_day");
+  });
+
+  it("a failure with no answer (status 0, a timeout) keeps its reported seconds against the audio caps", async () => {
+    await seed(29, { seconds: 60, at: minutesBefore(NOON_MANILA, 30) }); // 1740 s
+    const pending = await claim({ clipSeconds: 50 }); // 1790 s
+    if (pending.kind !== "claimed") throw new Error("expected a claim");
+    const kept = finishedAudioSeconds({ status: 0, errorClass: "timeout", audioSeconds: null });
+    expect(kept).toBeNull();
+    await finishVoiceUsage(rpc, { id: pending.id, succeeded: false, audioSeconds: kept });
+    expect((await db.query<{ audio_seconds: string | null }>("select audio_seconds from public.voice_usage where id = $1", [pending.id])).rows[0].audio_seconds).toBeNull();
+    expect((await claim({ clipSeconds: 20 })).kind).toBe("user_day"); // 1790 + 20 > 1800
+    for (const status of [429, 500, 503, 504]) expect(finishedAudioSeconds({ status, errorClass: "x", audioSeconds: null })).toBeNull();
+    expect(finishedAudioSeconds({ status: 200, errorClass: "invalid_response", audioSeconds: null })).toBeNull();
+  });
+
+  it("a clear rejection (415) frees its seconds", async () => {
+    await seed(29, { seconds: 60, at: minutesBefore(NOON_MANILA, 30) }); // 1740 s
+    const rejected = await claim({ clipSeconds: 50 }); // 1790 s while pending
+    if (rejected.kind !== "claimed") throw new Error("expected a claim");
+    expect((await claim({ clipSeconds: 20 })).kind).toBe("user_day");
+    const freed = finishedAudioSeconds({ status: 415, errorClass: "unsupported_media_type", audioSeconds: null });
+    expect(freed).toBe(0);
+    await finishVoiceUsage(rpc, { id: rejected.id, succeeded: false, audioSeconds: freed });
+    expect((await claim({ clipSeconds: 20 })).kind).toBe("claimed"); // 1740 + 0 + 20 <= 1800
+    for (const status of [400, 401, 413]) expect(finishedAudioSeconds({ status, errorClass: "x", audioSeconds: null })).toBe(0);
+  });
+
+  it("the spend meter is charged by the same rule", () => {
+    expect(spendAudioSeconds({ status: 200, errorClass: null, audioSeconds: 4.2 }, 10)).toBe(4.2);
+    expect(spendAudioSeconds({ status: 0, errorClass: "timeout", audioSeconds: null }, 12)).toBe(12);
+    expect(spendAudioSeconds({ status: 503, errorClass: "service_unavailable", audioSeconds: null }, 999)).toBe(60);
+    expect(spendAudioSeconds({ status: 415, errorClass: "unsupported_media_type", audioSeconds: null }, 12)).toBe(0);
   });
 
   it("store: the store's 90 minutes cover every person there", async () => {

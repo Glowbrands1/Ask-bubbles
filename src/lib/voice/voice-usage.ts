@@ -11,7 +11,7 @@ import {
 /**
  * THE VOICE CAPS, COUNTED IN THE DATABASE (VOICE_INPUT_ENABLED).
  *
- * `claimVoiceUsage` calls `voice_usage_claim` (migration 20261127001000): one step that counts this person's, this
+ * `claimVoiceUsage` calls `voice_usage_claim` (migration 20261127002000): one step that counts this person's, this
  * store's and the company's pending plus succeeded clips since Manila midnight (and the person's in the last 60 s) and,
  * when every cap has room, writes a pending row and returns its id. It runs BEFORE the vendor call. A pending row
  * counts as the browser's clip length (clamped) until `finishVoiceUsage` marks it, and is never released.
@@ -69,6 +69,24 @@ export async function claimVoiceUsage(
   }
 }
 
+/** A provider answer that says it processed nothing: the clip counts 0 audio seconds. */
+export const CLEAR_REJECTIONS: ReadonlySet<number> = new Set([400, 401, 413, 415]);
+
+/**
+ * The audio seconds a finished clip writes to its row (QA, 27 Nov 2026): the provider's length on success; 0 only after
+ * a clear rejection (400, 401, 413, 415); null for any other failure (no answer, 429, 5xx, a bad answer), so the row keeps
+ * the clamped length the browser reported, because the provider may have processed and charged for it.
+ */
+export function finishedAudioSeconds(result: { status: number; errorClass: string | null; audioSeconds: number | null }): number | null {
+  if (result.errorClass === null) return result.audioSeconds;
+  return CLEAR_REJECTIONS.has(result.status) ? 0 : null;
+}
+
+/** The seconds the spend meter is charged: the same rule, with null read as the clamped reported length. */
+export function spendAudioSeconds(result: { status: number; errorClass: string | null; audioSeconds: number | null }, clipSeconds: number): number {
+  return finishedAudioSeconds(result) ?? clampClipSeconds(clipSeconds);
+}
+
 /** Marks the pending row. A failure is a warning only: the pending row still counts against the caps. */
 export async function finishVoiceUsage(
   client: RpcClient,
@@ -94,6 +112,8 @@ export interface VoiceTraceInput {
   readonly errorStatus: number | null;
   readonly errorClass: string | null;
   readonly audioSeconds: number | null;
+  /** What the spend meter is charged (`spendAudioSeconds`). */
+  readonly spendAudioSeconds: number;
   readonly bytes: number;
   readonly mime: string;
   readonly keytermCount: number;
@@ -129,7 +149,7 @@ export function voiceTraceRow(input: VoiceTraceInput): Record<string, unknown> {
         retried: input.retried,
         outcome: input.outcome,
       },
-      spend: [{ source: "voice", audio_seconds: audioSeconds ?? 0, usd_per_hour: USD_PER_HOUR }],
+      spend: [{ source: "voice", audio_seconds: Math.round(input.spendAudioSeconds * 100) / 100, usd_per_hour: USD_PER_HOUR }],
     },
   };
 }

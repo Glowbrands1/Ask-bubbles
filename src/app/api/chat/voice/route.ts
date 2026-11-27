@@ -19,7 +19,15 @@ import { voiceInputEnabledFor, voiceProviderKey } from "@/lib/voice/voice-config
 import { MAX_BYTES, MAX_SECONDS, MIN_BYTES, MIN_SECONDS, ROUTE_MAX_SECONDS } from "@/lib/voice/voice-limits";
 import { sniffMime, VOICE_MESSAGES } from "@/lib/voice/voice-messages";
 import { chatHintSources, meetingHintSources } from "@/lib/voice/voice-sources.server";
-import { claimVoiceUsage, finishVoiceUsage, voiceTraceRow, type RpcClient, type VoiceSurface } from "@/lib/voice/voice-usage";
+import {
+  claimVoiceUsage,
+  finishedAudioSeconds,
+  finishVoiceUsage,
+  spendAudioSeconds,
+  voiceTraceRow,
+  type RpcClient,
+  type VoiceSurface,
+} from "@/lib/voice/voice-usage";
 
 /**
  * ============================================================================
@@ -100,7 +108,16 @@ function logCode(code: string, status: number | string): void {
 }
 
 export async function POST(request: Request) {
-  return withSpendMeter("voice", () => postVoice(request));
+  /*
+   * NEVER A BLANK BODY (QA, 27 Nov 2026): anything unexpected (a reader, the Hub, the spend guard) is the plain
+   * "not available" sentence, and the log line carries the error's name only, never its message, text or an email.
+   */
+  try {
+    return await withSpendMeter("voice", () => postVoice(request));
+  } catch (error) {
+    logCode(`unexpected_${error instanceof Error ? error.name.replace(/[^A-Za-z0-9_]/g, "").slice(0, 40) || "Error" : "non_error"}`, 503);
+    return refuse(UNAVAILABLE);
+  }
 }
 
 async function postVoice(request: Request): Promise<Response> {
@@ -121,7 +138,14 @@ async function postVoice(request: Request): Promise<Response> {
   if (surface === "l10") {
     const viewer = await l10Viewer();
     if (!viewer) return refuse(NOT_FOUND);
-    const meetings = await listMyMeetings();
+    let meetings: Awaited<ReturnType<typeof listMyMeetings>>;
+    try {
+      meetings = await listMyMeetings();
+    } catch (error) {
+      // The Hub could not be asked: not a refusal of the person, and never a throw.
+      logCode(`hub_unavailable_${error instanceof Error ? error.name.replace(/[^A-Za-z0-9_]/g, "").slice(0, 40) : "non_error"}`, 503);
+      return refuse(UNAVAILABLE);
+    }
     if (!meetings.some((meeting) => meeting.key === meetingKey)) return refuse(NOT_FOUND);
     caller = { userId: viewer.userId, email: viewer.email, role: viewer.role, scope: viewer.scope };
   } else {
@@ -220,7 +244,8 @@ async function postVoice(request: Request): Promise<Response> {
   const text = result.errorClass === null ? result.text : "";
   const outcome = outcomeOf(result.status, result.errorClass, text);
   const traceId = claim.id;
-  await finishVoiceUsage(rpc, { id: claim.id, succeeded: outcome === "ok" || outcome === "no_speech", audioSeconds: result.audioSeconds });
+  // QA, 27 Nov 2026: 0 seconds only after a clear rejection; any other failure keeps the reported length (null).
+  await finishVoiceUsage(rpc, { id: claim.id, succeeded: outcome === "ok" || outcome === "no_speech", audioSeconds: finishedAudioSeconds(result) });
   await writeTrace(
     voiceTraceRow({
       userId: caller.userId,
@@ -230,6 +255,7 @@ async function postVoice(request: Request): Promise<Response> {
       errorStatus: result.status,
       errorClass: result.errorClass ?? (outcome === "no_speech" ? "no_speech" : null),
       audioSeconds: result.audioSeconds,
+      spendAudioSeconds: spendAudioSeconds(result, clipSeconds),
       bytes: audio.byteLength,
       mime: declared,
       keytermCount: hints.keyterms.length,

@@ -7,14 +7,22 @@
 --
 -- `voice_usage_claim` decides and records in ONE step, under a transaction
 -- advisory lock, so two overlapping requests cannot both pass a cap: it counts
--- pending plus succeeded rows since Manila midnight (and in the last 60 seconds
--- for the per-minute cap) and, when every cap has room, inserts a PENDING row
--- and returns its id. The vendor is called only after that row exists.
+-- the rows since Manila midnight (and in the last 60 seconds for the per-minute
+-- cap) and, when every cap has room, inserts a PENDING row and returns its id.
+-- The vendor is called only after that row exists.
 --
--- A pending row counts as the clip length the browser reported (clamped to
--- 0.5-60 s) until it is finished, and it is never released: a crash still
--- counts. `voice_usage_finish` marks it succeeded (with the provider's audio
--- length) or failed. No audio, transcript, name or email is stored here.
+-- WHAT COUNTS (QA on the pull request, 27 Nov 2026):
+--   requests (per minute, per day): EVERY row the person started, pending,
+--     succeeded or failed. Each one was a call to the provider.
+--   audio seconds (person, store, company): coalesce(audio_seconds,
+--     reported_seconds) over every row. A pending row has no audio_seconds, so
+--     it counts the clip length the browser reported (clamped to 0.5-60 s) and
+--     is never released: a crash still counts. `voice_usage_finish` writes the
+--     provider's audio length on success, 0 only after a clear provider
+--     rejection (HTTP 400, 401, 413 or 415: nothing was processed), and leaves
+--     it null for any other failure (no answer, 429, 5xx, a bad answer), which
+--     keeps the reported length because the provider may have processed it.
+-- No audio, transcript, name or email is stored here.
 --
 -- RLS is enabled and forced with no policies, and anon / authenticated hold no
 -- grant on the table or the functions: a signed-in browser cannot insert,
@@ -85,7 +93,7 @@ begin
 
   select count(*), min(created_at) into v_minute_count, v_oldest
     from public.voice_usage
-   where user_id = p_user_id and status in ('pending', 'succeeded')
+   where user_id = p_user_id
      and created_at > v_now - interval '60 seconds' and created_at <= v_now;
   if v_minute_count >= p_per_minute then
     return jsonb_build_object(
@@ -94,32 +102,30 @@ begin
     );
   end if;
 
-  select count(*),
-         coalesce(sum(case when status = 'pending' then reported_seconds else coalesce(audio_seconds, reported_seconds) end), 0)
+  select count(*), coalesce(sum(coalesce(audio_seconds, reported_seconds)), 0)
     into v_day_count, v_user_seconds
     from public.voice_usage
-   where user_id = p_user_id and status in ('pending', 'succeeded')
+   where user_id = p_user_id
      and created_at >= v_day_start and created_at <= v_now;
   if v_day_count >= p_per_day or v_user_seconds + v_clip > p_user_seconds then
     return jsonb_build_object('ok', false, 'reason', 'user_day');
   end if;
 
   if p_store_id is not null and p_store_id <> '' then
-    select coalesce(sum(case when status = 'pending' then reported_seconds else coalesce(audio_seconds, reported_seconds) end), 0)
+    select coalesce(sum(coalesce(audio_seconds, reported_seconds)), 0)
       into v_store_seconds
       from public.voice_usage
-     where store_id = p_store_id and status in ('pending', 'succeeded')
+     where store_id = p_store_id
        and created_at >= v_day_start and created_at <= v_now;
     if v_store_seconds + v_clip > p_store_seconds then
       return jsonb_build_object('ok', false, 'reason', 'store_day');
     end if;
   end if;
 
-  select coalesce(sum(case when status = 'pending' then reported_seconds else coalesce(audio_seconds, reported_seconds) end), 0)
+  select coalesce(sum(coalesce(audio_seconds, reported_seconds)), 0)
     into v_company_seconds
     from public.voice_usage
-   where status in ('pending', 'succeeded')
-     and created_at >= v_day_start and created_at <= v_now;
+   where created_at >= v_day_start and created_at <= v_now;
   if v_company_seconds + v_clip > p_company_seconds then
     return jsonb_build_object('ok', false, 'reason', 'company_day');
   end if;
