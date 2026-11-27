@@ -238,6 +238,10 @@ const ALLOWED_UI = [
   "src/features/calendar/calendar-view.tsx",
   "src/features/calendar/new-event.tsx",
   "src/features/calendar/reminder-card.tsx",
+  // WHO OWNS A FORM'S FOLLOW-UP (the owner, 27 Nov 2026, approved "ok to all"; port from Ask Sunny): the owner control
+  // under a follow-up date in the Forms Register's row and on the form. Shown only on a form with an open follow-up; it
+  // reads and writes through its own route, whose checks decide. No chat behaviour changes.
+  "src/features/forms/follow-up-owner-picker.tsx",
   // THE FLOATING CALENDAR (port from the sibling app; the owner, 27 Nov 2026: "can we make the calendar pop up and be
   // resizable so anytime we go in other tabs it stays there"): a launcher button and a window over the app, mounted in the
   // layout, showing the Calendar page's own view. No chat or form behaviour changes.
