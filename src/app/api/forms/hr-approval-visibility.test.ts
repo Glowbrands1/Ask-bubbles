@@ -94,6 +94,12 @@ const VIEWERS = {
 } as const;
 type Viewer = keyof typeof VIEWERS;
 const KNOWS: Viewer[] = ["the creator (a store manager)", "HR (a district manager on the approver list)"];
+/**
+ * Who may OPEN a waiting form by id, as a PDF and in its history: those who know of it, and administrators. Changed
+ * on purpose (owner, 27 Nov 2026, asked whether admins may open these forms: "yes admin"). Lists still leave them out
+ * for administrators, and HR's notes stay with the creator, the sender and HR.
+ */
+const OPENS: Viewer[] = [...KNOWS, "admin", "developer"];
 /** Who reads the store's ordinary forms at all (global readers and the store's own). */
 const READS_STORE: Viewer[] = [
   "the creator (a store manager)",
@@ -251,22 +257,25 @@ const NOT_APPROVED = [WAITING, SENT_BACK, REJECTED, SENT_FOR_ASSISTANT];
 
 describe("a form waiting for HR, by every route, for every viewer", () => {
   it.each(Object.keys(VIEWERS) as Viewer[])("%s", async (viewer) => {
-    const knows = KNOWS.includes(viewer);
+    const opens = OPENS.includes(viewer);
     const readsStore = READS_STORE.includes(viewer);
     const { detail, list, pdf, history } = await load(viewer, ON);
 
     const response = await list.GET(new Request("https://app.test/api/forms/instances"));
     expect(response.status).toBe(200);
     const listed = ((await response.json()) as { instances: { id: string }[] }).instances.map((entry) => entry.id);
-    for (const id of NOT_APPROVED) expect(listed.includes(id), `list: ${id}`).toBe(knows);
+    // The mocked list read ignores the query's hide filter, so this is the route's own check (`actorMaySeeInstance`),
+    // which now lets administrators through; the real list still leaves the forms out for them, by the query's
+    // `hideAwaitingHrExceptCreatedBy` (asserted in "the list query leaves waiting forms out before its limit" below).
+    for (const id of NOT_APPROVED) expect(listed.includes(id), `list: ${id}`).toBe(opens);
     // Approved reads as any finalized form, for everybody who reads the store.
     expect(listed.includes(APPROVED)).toBe(readsStore);
     expect(listed.includes(ORDINARY)).toBe(readsStore);
 
     for (const id of NOT_APPROVED) {
-      expect((await detail.GET(req("GET"), params(id))).status, `by id: ${id}`).toBe(knows ? 200 : 404);
-      expect((await pdf.GET(req("GET"), params(id))).status, `pdf: ${id}`).toBe(knows ? 200 : 404);
-      expect((await history.GET(req("GET"), params(id))).status, `history: ${id}`).toBe(knows ? 200 : 404);
+      expect((await detail.GET(req("GET"), params(id))).status, `by id: ${id}`).toBe(opens ? 200 : 404);
+      expect((await pdf.GET(req("GET"), params(id))).status, `pdf: ${id}`).toBe(opens ? 200 : 404);
+      expect((await history.GET(req("GET"), params(id))).status, `history: ${id}`).toBe(opens ? 200 : 404);
     }
   });
 });
