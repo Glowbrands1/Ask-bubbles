@@ -17,6 +17,7 @@ import { formatBusinessTime } from "@/lib/business-date";
 
 import { appConfig, type AppConfig } from "./app-config";
 import { untrusted as envelope, type ToolActor, type ToolEffects, type ToolResult } from "./tools";
+import { NOT_ATTENDEE_FOR_MODEL, meetingNamed } from "@/features/l10/lib/access";
 
 /*
  * ============================================================================
@@ -388,12 +389,13 @@ export async function readCalendar(context: DataToolContext, input: Record<strin
       ...(e.status ? { status: e.status } : {}),
       ...(e.location ? { [place]: e.location } : {}),
       ...(e.kind === "reminder" ? { who_can_see: e.visibility ?? "only_me", made_by: e.by ?? "you" } : {}),
+      ...(e.oneOff ? { changed_for_this_date_only: true } : {}),
       app: e.source,
     })),
     ...(view.events.length > listed.length ? { listed: listed.length, of: view.events.length } : {}),
     ...(view.notes.length ? { not_loaded: view.notes } : {}),
     note:
-      "This is the manager's Calendar page for these dates (Central time). what: meeting = an L10 from the Leadership Hub (time_ct null means the Hub has no start time set yet: say so, never guess one); form-follow-up and hr-approval use the same overdue rule as the Overview and the forms pages; google-reviews = the weekly check of a " + place + "'s Google Reviews; reminder = a personal or team reminder. " +
+      "This is the manager's Calendar page for these dates (Central time). what: meeting = an L10 from the Leadership Hub (time_ct null means the Hub has no start time set yet: say so, never guess one; changed_for_this_date_only means that date's time was changed for that date only, and its weekly time is unchanged; a cancelled date is not listed); form-follow-up and hr-approval use the same overdue rule as the Overview and the forms pages; google-reviews = the weekly check of a " + place + "'s Google Reviews; reminder = a personal or team reminder. " +
       (view.notes.length ? "not_loaded lists sources that did not answer: say which, and never say there is nothing from them. " : "") +
       "Time off is never on the calendar. To ADD a reminder use propose_reminder.",
   };
@@ -420,8 +422,11 @@ export async function readMeetingDetails(context: DataToolContext, input: Record
   }
   if (read.state === "off") return { source: MEETINGS_SOURCE, reason_code: "scope", error: "The Leadership Hub is not connected for this account, so its L10 details cannot be read. Say so; never guess a time or who attends." };
   if (read.state === "failed") return { source: MEETINGS_SOURCE, reason_code: "read_failed", error: "The L10 details could not be read from the Leadership Hub just now. Say so; never guess a time or who attends." };
-  if (read.meetings.length === 0) return { source: MEETINGS_SOURCE, reason_code: "no_meetings", error: "This manager has no L10 here that the Leadership Hub lists for them. Say so plainly." };
   const picked = pickMeetings(read.meetings, named);
+  // A real meeting the Hub does not list for this person: they are not an attendee (nor an admin). The owner's words and
+  // nothing about it (the owner, 27 Nov 2026; src/features/l10/lib/access.ts).
+  if (picked.length === 0 && meetingNamed(named)) return { source: MEETINGS_SOURCE, reason_code: "not_attendee", error: NOT_ATTENDEE_FOR_MODEL };
+  if (read.meetings.length === 0) return { source: MEETINGS_SOURCE, reason_code: "no_meetings", error: "This manager has no L10 here that the Leadership Hub lists for them. Say so plainly." };
   if (picked.length === 0) {
     return { source: MEETINGS_SOURCE, reason_code: "no_match", error: `No L10 this manager can open here matches "${named}". Say so, and name the ones they can open.`, meetings_here: read.meetings.map((m) => m.name) };
   }
@@ -436,7 +441,7 @@ export async function readMeetingDetails(context: DataToolContext, input: Record
       leader: m.leader ?? null,
       attendees: m.attendees,
     })),
-    note: "From the Leadership Hub, live. day null = no day set; time_ct null = no start time set yet: say so, never guess one. The day and time are set in the Leadership Hub (its Calendar). For the dates of upcoming meetings use read_calendar.",
+    note: "From the Leadership Hub, live. day null = no day set; time_ct null = no start time set yet: say so, never guess one. A meeting's attendees and admins change its time on the Calendar (every week or only one date). For the dates of upcoming meetings use read_calendar.",
   };
 }
 
