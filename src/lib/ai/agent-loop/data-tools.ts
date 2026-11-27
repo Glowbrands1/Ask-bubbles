@@ -706,7 +706,7 @@ export function dataToolSpecs(config: AppConfig) {
     {
       name: "read_calendar",
       description:
-        "The manager's Calendar: their form follow-ups and HR approvals by due date, the weekly Google Reviews check for each of their " + places + ", their reminders and their team's, and their L10 meetings (day and Central time) from the Leadership Hub. from/to are YYYY-MM-DD (default today and the next 13 days, at most 62 days). Use it for \"what's on my calendar this week?\", \"when is my next L10?\", \"what do I have on Friday?\". Time off is never on it.",
+        "The manager's Calendar: their form follow-ups and HR approvals by due date, the weekly Google Reviews check for each of their " + places + ", their reminders and their team's, and their L10 meetings (day and Central time) from the Leadership Hub. from/to are YYYY-MM-DD (default today and the next 13 days, at most 62 days). Use it for \"what's on my calendar this week?\", \"when is my next L10?\", \"what do I have on Friday?\". Time off is never on it." + pagesToolLine(config.readablePages, "read_calendar"),
       input_schema: {
         type: "object",
         properties: {
