@@ -5,7 +5,9 @@
  * report's ask bar and the L10 assistant): one person's minute, day and audio-seconds caps cover all of them together,
  * because the usage table counts by person, store and company, never by box.
  *
- * DAYS START AT MANILA MIDNIGHT (Asia/Manila, UTC+8, no daylight saving), not UTC: 16:00 UTC is the start of a new day.
+ * DAYS RUN MIDNIGHT TO MIDNIGHT US CENTRAL (America/Chicago, the business's time zone), with daylight saving: a day is
+ * 23 hours in March and 25 in November. The owner, 27 Nov 2026, asked whether the voice day should reset at Manila or
+ * Central midnight: "central".
  */
 
 /** Longest clip the browser records; it stops itself here. */
@@ -35,14 +37,44 @@ export const RETRY_MAX_WAIT_MS = 2000;
 /** Budget buffer: AssemblyAI Sync's list price is $0.30 an hour, keyterms included. */
 export const USD_PER_HOUR = 0.35;
 
-/** Manila is UTC+8 all year. */
-export const MANILA_OFFSET_MS = 8 * 60 * 60 * 1000;
+/** The voice caps' day: the business's time zone. `voice_usage_claim` uses the same zone name (the tests check). */
+export const VOICE_DAY_TIME_ZONE = "America/Chicago";
 
-/** The instant the Manila day containing `now` began (Manila midnight), as a Date. */
-export function manilaDayStart(now: Date = new Date()): Date {
-  const shifted = now.getTime() + MANILA_OFFSET_MS;
-  const midnight = shifted - (((shifted % 86_400_000) + 86_400_000) % 86_400_000);
-  return new Date(midnight - MANILA_OFFSET_MS);
+const ZONE_PARTS = new Intl.DateTimeFormat("en-US", {
+  timeZone: VOICE_DAY_TIME_ZONE,
+  hourCycle: "h23",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+});
+
+/** The zone's wall clock at `at`, as if it were UTC, minus `at`: the zone's offset then, in ms (negative in Central). */
+function zoneOffsetMs(at: number): number {
+  const parts = Object.fromEntries(ZONE_PARTS.formatToParts(new Date(at)).map((part) => [part.type, part.value]));
+  const wall = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute), Number(parts.second));
+  return wall - Math.floor(at / 1000) * 1000;
+}
+
+/**
+ * The instant the Central day containing `now` began (Central midnight): the same day start `voice_usage_claim`
+ * computes with `date_trunc('day', now at time zone 'America/Chicago') at time zone 'America/Chicago'`. The zone maths
+ * is Intl's, never a fixed offset, so it is right on both sides of a daylight-saving change.
+ */
+export function voiceDayStart(now: Date = new Date()): Date {
+  const local = new Date(now.getTime() + zoneOffsetMs(now.getTime()));
+  const midnightAsUtc = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate());
+  // Midnight's own offset (it can differ from `now`'s on a change day); twice, as the first guess may be an hour out.
+  let start = midnightAsUtc - zoneOffsetMs(midnightAsUtc);
+  start = midnightAsUtc - zoneOffsetMs(start);
+  return new Date(start);
+}
+
+/** The instant the next Central day begins: 23, 24 or 25 hours after this one began. */
+export function nextVoiceDayStart(now: Date = new Date()): Date {
+  return voiceDayStart(new Date(voiceDayStart(now).getTime() + 36 * 60 * 60 * 1000));
 }
 
 /** The clip length the browser reported, clamped to what one clip can be: what a pending row counts. */

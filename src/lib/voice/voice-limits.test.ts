@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import type { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
@@ -10,7 +12,9 @@ import {
   PER_USER_PER_DAY,
   PER_USER_PER_MINUTE,
   clampClipSeconds,
-  manilaDayStart,
+  VOICE_DAY_TIME_ZONE,
+  nextVoiceDayStart,
+  voiceDayStart,
 } from "./voice-limits";
 import { claimVoiceUsage, finishedAudioSeconds, finishVoiceUsage, spendAudioSeconds, type RpcClient, type VoiceSurface } from "./voice-usage";
 
@@ -24,7 +28,7 @@ let db: PGlite;
 let rpc: RpcClient;
 
 beforeAll(async () => {
-  t = await createMigratedTestDatabase(["20260829000100_extensions", "20261127002000_voice_usage"]);
+  t = await createMigratedTestDatabase(["20260829000100_extensions", "20261127002000_voice_usage", "20261127004000_voice_usage_central_day"]);
   db = t.db;
   rpc = {
     async rpc(fn, args) {
@@ -52,7 +56,7 @@ beforeEach(async () => {
   await db.exec("delete from public.voice_usage");
 });
 
-const NOON_MANILA = new Date("2026-11-27T04:00:00Z"); // 12:00 in Manila
+const NOON_CENTRAL = new Date("2026-11-27T18:00:00Z"); // 12:00 CST, far from either midnight
 
 function claim(input: { userId?: string; storeId?: string | null; surface?: VoiceSurface; clipSeconds?: number; now?: Date } = {}) {
   return claimVoiceUsage(rpc, {
@@ -60,7 +64,7 @@ function claim(input: { userId?: string; storeId?: string | null; surface?: Voic
     storeId: input.storeId === undefined ? "loc-0001" : input.storeId,
     surface: input.surface ?? "chat",
     clipSeconds: input.clipSeconds ?? 10,
-    now: input.now ?? NOON_MANILA,
+    now: input.now ?? NOON_CENTRAL,
   });
 }
 
@@ -92,23 +96,23 @@ describe("the voice caps (voice_usage_claim)", () => {
     expect(refused).toMatchObject({ kind: "user_minute" });
     expect(refused.kind === "user_minute" && refused.retryAfterSeconds).toBeGreaterThan(0);
     // A minute later it passes again.
-    expect((await claim({ clipSeconds: 1, now: new Date(NOON_MANILA.getTime() + 61_000) })).kind).toBe("claimed");
+    expect((await claim({ clipSeconds: 1, now: new Date(NOON_CENTRAL.getTime() + 61_000) })).kind).toBe("claimed");
   });
 
   it("per day: the 121st clip of the day is refused", async () => {
-    await seed(PER_USER_PER_DAY, { seconds: 1, at: minutesBefore(NOON_MANILA, 30) });
+    await seed(PER_USER_PER_DAY, { seconds: 1, at: minutesBefore(NOON_CENTRAL, 30) });
     expect((await claim({ clipSeconds: 1 })).kind).toBe("user_day");
   });
 
   it("audio minutes: a clip that would pass 30 minutes of the person's day is refused", async () => {
-    await seed(30, { seconds: 59.5, at: minutesBefore(NOON_MANILA, 30) }); // 1785 s
+    await seed(30, { seconds: 59.5, at: minutesBefore(NOON_CENTRAL, 30) }); // 1785 s
     expect(PER_USER_AUDIO_SECONDS_PER_DAY).toBe(1800);
     expect((await claim({ clipSeconds: 20 })).kind).toBe("user_day");
     expect((await claim({ clipSeconds: 10 })).kind).toBe("claimed");
   });
 
   it("a pending row counts as the clip length the browser reported, clamped, and is never released", async () => {
-    await seed(29, { seconds: 60, at: minutesBefore(NOON_MANILA, 30), status: "pending" }); // 1740 s pending (a crash)
+    await seed(29, { seconds: 60, at: minutesBefore(NOON_CENTRAL, 30), status: "pending" }); // 1740 s pending (a crash)
     expect((await claim({ clipSeconds: 999 })).kind).toBe("claimed"); // counted as 60 s: 1800
     expect((await claim({ clipSeconds: 0.5 })).kind).toBe("user_day");
     expect(clampClipSeconds(999)).toBe(60);
@@ -136,12 +140,12 @@ describe("the voice caps (voice_usage_claim)", () => {
   });
 
   it("failed requests count toward the per-day cap, even rejected ones that count 0 seconds", async () => {
-    await seed(PER_USER_PER_DAY, { seconds: 0.5, at: minutesBefore(NOON_MANILA, 30), status: "failed", audioSeconds: 0 });
+    await seed(PER_USER_PER_DAY, { seconds: 0.5, at: minutesBefore(NOON_CENTRAL, 30), status: "failed", audioSeconds: 0 });
     expect((await claim({ clipSeconds: 1 })).kind).toBe("user_day");
   });
 
   it("a failure with no answer (status 0, a timeout) keeps its reported seconds against the audio caps", async () => {
-    await seed(29, { seconds: 60, at: minutesBefore(NOON_MANILA, 30) }); // 1740 s
+    await seed(29, { seconds: 60, at: minutesBefore(NOON_CENTRAL, 30) }); // 1740 s
     const pending = await claim({ clipSeconds: 50 }); // 1790 s
     if (pending.kind !== "claimed") throw new Error("expected a claim");
     const kept = finishedAudioSeconds({ status: 0, errorClass: "timeout", audioSeconds: null });
@@ -154,7 +158,7 @@ describe("the voice caps (voice_usage_claim)", () => {
   });
 
   it("a clear rejection (415) frees its seconds", async () => {
-    await seed(29, { seconds: 60, at: minutesBefore(NOON_MANILA, 30) }); // 1740 s
+    await seed(29, { seconds: 60, at: minutesBefore(NOON_CENTRAL, 30) }); // 1740 s
     const rejected = await claim({ clipSeconds: 50 }); // 1790 s while pending
     if (rejected.kind !== "claimed") throw new Error("expected a claim");
     expect((await claim({ clipSeconds: 20 })).kind).toBe("user_day");
@@ -173,7 +177,7 @@ describe("the voice caps (voice_usage_claim)", () => {
   });
 
   it("store: the store's 90 minutes cover every person there", async () => {
-    await seed(90, { userId: "user-bea", seconds: 59.9, at: minutesBefore(NOON_MANILA, 30) }); // 5391 s at loc-0001
+    await seed(90, { userId: "user-bea", seconds: 59.9, at: minutesBefore(NOON_CENTRAL, 30) }); // 5391 s at loc-0001
     expect(PER_STORE_AUDIO_SECONDS_PER_DAY).toBe(5400);
     expect((await claim({ userId: "user-cy", clipSeconds: 10 })).kind).toBe("store_day");
     expect((await claim({ userId: "user-cy", storeId: "loc-0002", clipSeconds: 10 })).kind).toBe("claimed");
@@ -182,7 +186,7 @@ describe("the voice caps (voice_usage_claim)", () => {
 
   it("company: three hours a day across every store and person", async () => {
     for (let store = 0; store < 4; store += 1) {
-      await seed(45, { userId: `user-${store}`, storeId: `loc-90${store}`, seconds: 60, at: minutesBefore(NOON_MANILA, 30) });
+      await seed(45, { userId: `user-${store}`, storeId: `loc-90${store}`, seconds: 60, at: minutesBefore(NOON_CENTRAL, 30) });
     }
     expect(COMPANY_AUDIO_SECONDS_PER_DAY).toBe(10800);
     expect((await claim({ userId: "user-dee", storeId: "loc-0009", clipSeconds: 1 })).kind).toBe("company_day");
@@ -196,20 +200,72 @@ describe("the voice caps (voice_usage_claim)", () => {
     for (const surface of surfaces) expect((await claim({ clipSeconds: 1, surface })).kind).toBe("user_minute");
   });
 
-  it("the day starts at Manila midnight: 15:59:59 UTC is the old day, 16:00:00 UTC the new one", async () => {
-    expect(manilaDayStart(new Date("2026-11-27T15:59:59Z")).toISOString()).toBe("2026-11-26T16:00:00.000Z");
-    expect(manilaDayStart(new Date("2026-11-27T16:00:00Z")).toISOString()).toBe("2026-11-27T16:00:00.000Z");
+  it("the day starts at Central midnight (the owner: \"central\"): 23:59:59 CST is the old day, 00:00:00 CST the new one", async () => {
+    expect(voiceDayStart(new Date("2026-11-28T05:59:59Z")).toISOString()).toBe("2026-11-27T06:00:00.000Z");
+    expect(voiceDayStart(new Date("2026-11-28T06:00:00Z")).toISOString()).toBe("2026-11-28T06:00:00.000Z");
 
-    // A full day of the person's audio, the last clip at 15:59:59 UTC (23:59:59 in Manila).
-    await seed(30, { seconds: 59, at: new Date("2026-11-27T15:00:00Z") });
-    await seed(1, { seconds: 29, at: new Date("2026-11-27T15:59:59Z") }); // 1799 s in all
-    expect((await claim({ clipSeconds: 5, now: new Date("2026-11-27T15:59:59.500Z") })).kind).toBe("user_day");
-    // One second later it is a new Manila day.
-    expect((await claim({ clipSeconds: 5, now: new Date("2026-11-27T16:00:00Z") })).kind).toBe("claimed");
+    // A full day of the person's audio, the last clip at 05:59:59 UTC (23:59:59 CST).
+    await seed(30, { seconds: 59, at: new Date("2026-11-28T05:00:00Z") });
+    await seed(1, { seconds: 29, at: new Date("2026-11-28T05:59:59Z") }); // 1799 s in all
+    expect((await claim({ clipSeconds: 5, now: new Date("2026-11-28T05:59:59.500Z") })).kind).toBe("user_day");
+    // One second later it is a new Central day.
+    expect((await claim({ clipSeconds: 5, now: new Date("2026-11-28T06:00:00Z") })).kind).toBe("claimed");
+  });
+
+  it("Manila's midnight (16:00 UTC, 10:00 CST) is no longer a reset", async () => {
+    await seed(31, { seconds: 59, at: new Date("2026-11-27T15:00:00Z") }); // 1829 s
+    expect((await claim({ clipSeconds: 5, now: new Date("2026-11-27T16:30:00Z") })).kind).toBe("user_day");
+  });
+
+  it("in summer (CDT) the day starts at 05:00 UTC", async () => {
+    expect(voiceDayStart(new Date("2026-07-16T04:59:59Z")).toISOString()).toBe("2026-07-15T05:00:00.000Z");
+    await seed(31, { seconds: 59, at: new Date("2026-07-15T20:00:00Z") });
+    expect((await claim({ clipSeconds: 5, now: new Date("2026-07-16T04:59:59Z") })).kind).toBe("user_day");
+    expect((await claim({ clipSeconds: 5, now: new Date("2026-07-16T05:00:00Z") })).kind).toBe("claimed");
+  });
+
+  it("the spring change day (Sun 8 Mar 2026) is 23 hours: 06:00 UTC to 05:00 UTC", async () => {
+    expect(voiceDayStart(new Date("2026-03-08T08:00:00Z")).toISOString()).toBe("2026-03-08T06:00:00.000Z"); // 03:00 CDT
+    expect(nextVoiceDayStart(new Date("2026-03-08T12:00:00Z")).toISOString()).toBe("2026-03-09T05:00:00.000Z");
+    await seed(31, { seconds: 59, at: new Date("2026-03-08T06:30:00Z") }); // 00:30 CST
+    expect((await claim({ clipSeconds: 5, now: new Date("2026-03-09T04:59:59Z") })).kind).toBe("user_day"); // 23:59:59 CDT
+    expect((await claim({ clipSeconds: 5, now: new Date("2026-03-09T05:00:00Z") })).kind).toBe("claimed");
+  });
+
+  it("the autumn change day (Sun 1 Nov 2026) is 25 hours: 05:00 UTC to 06:00 UTC", async () => {
+    expect(voiceDayStart(new Date("2026-11-01T07:30:00Z")).toISOString()).toBe("2026-11-01T05:00:00.000Z"); // 01:30 CST, the repeated hour
+    expect(nextVoiceDayStart(new Date("2026-11-01T12:00:00Z")).toISOString()).toBe("2026-11-02T06:00:00.000Z");
+    await seed(31, { seconds: 59, at: new Date("2026-11-01T05:30:00Z") }); // 00:30 CDT
+    expect((await claim({ clipSeconds: 5, now: new Date("2026-11-02T05:59:59Z") })).kind).toBe("user_day"); // 23:59:59 CST
+    expect((await claim({ clipSeconds: 5, now: new Date("2026-11-02T06:00:00Z") })).kind).toBe("claimed");
+  });
+
+  it("voiceDayStart is the SQL day start at every hour across both change days, in the migration's zone", async () => {
+    const sql = readFileSync("supabase/migrations/20261127004000_voice_usage_central_day.sql", "utf8")
+      .split("\n")
+      .filter((line) => !line.trimStart().startsWith("--"))
+      .join("\n");
+    expect(VOICE_DAY_TIME_ZONE).toBe("America/Chicago");
+    expect(sql.match(/at time zone '([^']+)'/g)?.every((match) => match.includes(VOICE_DAY_TIME_ZONE))).toBe(true);
+    expect(sql).not.toMatch(/Manila|interval '-?\d+ hours'/);
+    const instants: string[] = [];
+    for (const start of ["2026-03-07T00:00:00Z", "2026-10-31T00:00:00Z", "2026-11-26T00:00:00Z"]) {
+      for (let hour = 0; hour < 72; hour += 1) {
+        const at = new Date(start).getTime() + hour * 3_600_000;
+        instants.push(new Date(at).toISOString(), new Date(at + 3_599_000).toISOString());
+      }
+    }
+    const rows = (
+      await db.query<{ at: string; day_start: string }>(
+        `select at::text as at, (date_trunc('day', at::timestamptz at time zone 'America/Chicago') at time zone 'America/Chicago')::text as day_start from unnest($1::text[]) as at`,
+        [instants],
+      )
+    ).rows;
+    for (const row of rows) expect(voiceDayStart(new Date(row.at)).toISOString(), row.at).toBe(new Date(row.day_start).toISOString());
   });
 
   it("two overlapping requests: the second is refused", async () => {
-    await seed(30, { seconds: 59.5, at: minutesBefore(NOON_MANILA, 30) }); // 1785 s: room for one 10 s clip
+    await seed(30, { seconds: 59.5, at: minutesBefore(NOON_CENTRAL, 30) }); // 1785 s: room for one 10 s clip
     const [a, b] = await Promise.all([claim({ clipSeconds: 10 }), claim({ clipSeconds: 10 })]);
     expect([a.kind, b.kind].sort()).toEqual(["claimed", "user_day"]);
   });
@@ -236,10 +292,13 @@ describe("the voice caps (voice_usage_claim)", () => {
     expect(grants).toEqual([]);
     const rls = (await db.query<{ relrowsecurity: boolean; relforcerowsecurity: boolean }>(`select relrowsecurity, relforcerowsecurity from pg_class where relname = 'voice_usage'`)).rows[0];
     expect(rls).toEqual({ relrowsecurity: true, relforcerowsecurity: true });
+    // voice_usage_claim takes p_now: only the server may call it, or a browser could pass a time and dodge the caps.
     const exec = (
-      await db.query<{ can: boolean }>(`select has_function_privilege('authenticated', 'public.voice_usage_claim(text, text, text, numeric, integer, integer, numeric, numeric, numeric, timestamptz)', 'execute') as can`)
-    ).rows[0];
-    expect(exec.can).toBe(false);
+      await db.query<{ role: string; can: boolean }>(
+        `select r as role, has_function_privilege(r, 'public.voice_usage_claim(text, text, text, numeric, integer, integer, numeric, numeric, numeric, timestamptz)', 'execute') as can from unnest(array['anon', 'authenticated', 'service_role']) as r`,
+      )
+    ).rows;
+    expect(Object.fromEntries(exec.map((row) => [row.role, row.can]))).toEqual({ anon: false, authenticated: false, service_role: true });
     await expect(db.exec("set role authenticated; insert into public.voice_usage (user_id, surface, reported_seconds) values ('user-bea', 'chat', 1);")).rejects.toThrow();
     await db.exec("reset role");
   });
