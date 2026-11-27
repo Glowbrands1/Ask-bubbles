@@ -731,7 +731,7 @@ export function ChatScreen() {
      * `overflow-y-auto` on the message list never engages and the composer is
      * pushed off-screen by a long answer.
      */
-    <div className="flex h-[calc(100dvh-4rem)] min-h-0 flex-col lg:h-dvh">
+    <div className="flex h-[calc(100dvh-4rem)] min-h-0 flex-col lg:h-dvh max-sm:h-[calc(100dvh-var(--spacing)*16)]">
       {/*
         ==================================================================
         CHAT HISTORY IS CLOSED UNTIL SOMEBODY ASKS FOR IT
@@ -822,8 +822,10 @@ export function ChatScreen() {
       */}
       <header
         className={cn(
-          "wave-edge relative z-[2] flex shrink-0 flex-wrap items-center justify-between gap-3 bg-band px-4 text-band-foreground sm:px-6",
-          isEmpty ? "py-5" : "py-3",
+          // Phone: tighter padding and gaps so the band stays short and the
+          // conversation keeps the screen.
+          "wave-edge relative z-[2] flex shrink-0 flex-wrap items-center justify-between gap-x-2 gap-y-1.5 bg-band px-3 text-band-foreground sm:gap-3 sm:px-6",
+          isEmpty ? "py-3 sm:py-5" : "py-2 sm:py-3",
         )}
       >
         <div
@@ -845,7 +847,7 @@ export function ChatScreen() {
                 assistant's name under a soft Tokyo Green marker. Charcoal
                 throughout — Tokyo Green is never text on White.
               */}
-              <h1 className="display-lettering text-[27px] text-band-foreground sm:text-[34px]">
+              <h1 className="display-lettering text-[21px] text-band-foreground sm:text-[34px]">
                 How can {brand.assistantName} help today?
               </h1>
               {/*
@@ -854,7 +856,7 @@ export function ChatScreen() {
                 — "Store Manager — Example Location 101" — so concatenating it
                 with the location rendered the location twice.
               */}
-              <p className="mt-1.5 text-[13px] font-medium text-band-muted-foreground">
+              <p className="mt-1 text-[12px] font-medium text-band-muted-foreground sm:mt-1.5 sm:text-[13px]">
                 {managerDisplayName.includes(primaryLocationName)
                   ? managerDisplayName
                   : `${primaryLocationName} · ${managerDisplayName}`}
@@ -876,7 +878,7 @@ export function ChatScreen() {
             </span>
           ) : null}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* The connection line, moved out of the composer stack. */}
           <span className="hidden items-center gap-2 rounded-full bg-band-chip-surface px-3 py-1 text-[12px] font-semibold whitespace-nowrap text-band-chip-foreground sm:flex">
             <span

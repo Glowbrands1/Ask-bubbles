@@ -1,3 +1,4 @@
+import { canAccessAdminConsole } from "@/lib/permissions";
 import type { Permission, Role } from "@/types";
 
 /**
@@ -21,6 +22,8 @@ import type { Permission, Role } from "@/types";
  *   - showMe (optional): the page it is about, for a "Show me" link;
  *   - permission (optional): the permission that page's own gate takes. A role without it never sees the entry, on the
  *     page or from the AI, so nobody is told about a screen they cannot open. Leave it out for what everyone has.
+ *   - adminConsole (optional): true when that page is an admin console page (`requireAdminConsolePage`): only the roles
+ *     that open the admin console see the entry, whatever permissions another role holds.
  *   Plain manager language: no flag or code names.
  *
  * This is Ask Bubbles' list, from Ask Bubbles' own changes. The sibling app keeps its own.
@@ -35,6 +38,7 @@ export interface WhatsNewEntry {
   readonly howToUse: string;
   readonly showMe?: { readonly href: string; readonly label: string };
   readonly permission?: Permission;
+  readonly adminConsole?: true;
 }
 
 export interface WhatsNewRelease {
@@ -44,6 +48,22 @@ export interface WhatsNewRelease {
 }
 
 export const WHATS_NEW: readonly WhatsNewRelease[] = [
+  {
+    date: "2026-11-27",
+    summary: "Administrators can ask Bubbles which documents the Knowledge Base holds.",
+    entries: [
+      {
+        tag: "Improved",
+        title: "Ask Bubbles about the Knowledge Base's documents",
+        before: "Bubbles could quote what a document says, but could not tell you which documents the Knowledge Base holds or whether one had failed.",
+        now: "Administrators can ask which documents there are, when one was last updated, and which failed and why. Everyone else still gets answers from the documents themselves.",
+        howToUse: "Ask Bubbles \"which documents do we have?\" or \"did any document fail to sync?\".",
+        showMe: { href: "/knowledge", label: "Knowledge Base" },
+        permission: "view_knowledge",
+        adminConsole: true,
+      },
+    ],
+  },
   {
     date: "2026-11-26",
     summary: "A What's New page, reminders for follow-ups and new lessons, and HR search across every form.",
@@ -64,6 +84,7 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
         howToUse: "Open Admin, then AI-readable pages.",
         showMe: { href: "/admin/ai-readable-pages", label: "AI-readable pages" },
         permission: "view_ai_usage",
+        adminConsole: true,
       },
       {
         tag: "Improved",
@@ -185,6 +206,6 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
 export function whatsNewFor(role: Role | null, can: (role: Role, permission: Permission) => boolean, releases: readonly WhatsNewRelease[] = WHATS_NEW): WhatsNewRelease[] {
   return [...releases]
     .sort((a, b) => b.date.localeCompare(a.date))
-    .map((release) => ({ ...release, entries: release.entries.filter((entry) => !entry.permission || role === null || can(role, entry.permission)) }))
+    .map((release) => ({ ...release, entries: release.entries.filter((entry) => role === null || ((!entry.permission || can(role, entry.permission)) && (!entry.adminConsole || canAccessAdminConsole(role)))) }))
     .filter((release) => release.entries.length > 0);
 }
