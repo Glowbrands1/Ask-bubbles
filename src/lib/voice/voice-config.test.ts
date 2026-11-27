@@ -69,4 +69,14 @@ describe("voiceInputEnabledFor", () => {
     expect(voiceInputEnabledFor({ email: "bea@example.test" })).toBe(true);
     expect(voiceInputEnabledFor({ email: " ada@example.test " })).toBe(true);
   });
+
+  /* The owner, 27 Nov 2026: "can you roll out the mic to all pls, all users + all apps". */
+  it('"*" on VOICE_INPUT_USERS: everyone signed in, still only with the flag, the key and an email', () => {
+    process.env.VOICE_INPUT_USERS = " * ";
+    expect(voiceInputEnabledFor({ email: "anyone@example.test" })).toBe(true);
+    expect(voiceInputEnabledFor({ email: "" })).toBe(false);
+    expect(voiceInputEnabledFor({ email: undefined })).toBe(false);
+    process.env.VOICE_INPUT_ENABLED = "false";
+    expect(voiceInputEnabledFor({ email: "anyone@example.test" })).toBe(false);
+  });
 });
