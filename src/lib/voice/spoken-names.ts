@@ -8,7 +8,7 @@ import { closeWordDistance, editDistance } from "@/lib/forms/close-spelling";
  *
  * The owner, 27 Nov 2026: "i said Curt, it spelled it as Kurt", and "make sure sunny bubble and leadership hub know the
  * spelling of all employee ... so when it hears it, it can reference to the right person", "also salon names too and store".
- * (The tests use invented people of the same shape: a directory "Cyrus" heard as "Sirus", "Cade" heard as "Kade".) Ported from Ask Sunny: the same mechanism, read
+ * (The tests use invented people of the same shape: a directory "Cyrus" heard as "Sirus", "Cade" heard as "Kade".) Ported from the sibling app: the same mechanism, read
  * against this app's own directory and stores.
  *
  * Two halves, both on the server, both built from the people and stores this manager may already see:

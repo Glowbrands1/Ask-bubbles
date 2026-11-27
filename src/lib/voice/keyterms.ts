@@ -8,7 +8,7 @@ import { spokenNameKeyterms, spokenVocabulary, type SpokenPerson, type SpokenPla
  * (AssemblyAI's limits), duplicates removed, terms over six words dropped, nothing that looks like an email or an id.
  *
  * CHANGED ON PURPOSE (the owner, 27 Nov 2026: "i said Curt, it spelled it as Kurt"; "make sure sunny bubble and
- * leadership hub know the spelling of all employee"; "also salon names too and store"; ported from Ask Sunny). A staff
+ * leadership hub know the spelling of all employee"; "also salon names too and store"; ported from the sibling app). A staff
  * name used to be a hint only once this conversation had named it, so the FIRST time a manager said a name nothing told
  * the provider its spelling. Now, after the conversation's own names, the stores and the people this manager may
  * already see (the same scoped roster the forms' name check reads) are hints too, their own stores first within the

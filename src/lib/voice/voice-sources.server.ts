@@ -29,7 +29,7 @@ export function ownStoreName(scope: AccessScope | null | undefined): string | nu
 /**
  * The stores this scope may see (the same `authorizedLocationIds` a form is filed against), each by the names a manager
  * says it by: its registered name, that name without the state, the reviewed company nicknames for it, and the Woven
- * names a person mapped to it. For voice input's spelling hints and correction only (ported from Ask Sunny).
+ * names a person mapped to it. For voice input's spelling hints and correction only (ported from the sibling app).
  */
 export async function scopedStorePlaces(scope: AccessScope | null | undefined): Promise<SpokenPlace[]> {
   if (!scope) return [];

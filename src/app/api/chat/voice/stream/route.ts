@@ -23,7 +23,7 @@ import { claimVoiceUsage, finishVoiceUsage, voiceTraceRow, type RpcClient, type 
 
 /**
  * ============================================================================
- * POST /api/chat/voice/stream — LIVE DICTATION (VOICE_INPUT_ENABLED; ported from Ask Sunny)
+ * POST /api/chat/voice/stream — LIVE DICTATION (VOICE_INPUT_ENABLED; ported from the sibling app)
  * ============================================================================
  *
  * The owner, 27 Nov 2026: "it transcribes as you talk then when done, press check mark and auto send". JSON, two

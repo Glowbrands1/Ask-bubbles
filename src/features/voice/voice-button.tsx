@@ -28,7 +28,7 @@ import { useVoiceRecorder, voiceRecordingSupported, WARNING_SECONDS, type VoiceS
  * on a failure. The first tap shows the notice once; the choice is kept in this browser per user id.
  *
  * LIVE DICTATION (the owner, 27 Nov 2026: "it transcribes as you talk then when done, press check mark and auto send";
- * ported from Ask Sunny). A box that gives `onSend` and places `<VoiceLivePanel>` over its input row gets the words as
+ * ported from the sibling app). A box that gives `onSend` and places `<VoiceLivePanel>` over its input row gets the words as
  * they are said, with ✓ to send (the names spelled as the directory spells them, on the server) and ✕ to drop. Where
  * the browser cannot stream, or the server will not start a stream, the same tap records instead, as before, and the
  * words go into the box to be checked. Boxes without `onSend` record, as before.
