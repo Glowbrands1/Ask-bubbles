@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { AppShell } from "@/components/shell/app-shell";
 import { businessToday } from "@/lib/business-date";
 import { pageShowsAppSwitcher, pageShowsLeadershipHubTab } from "@/lib/auth/app-switcher";
-import { pageIdentity } from "@/lib/auth/page";
+import { pageCan, pageIdentity } from "@/lib/auth/page";
 import { l10TabsForLayout } from "@/features/l10/data.server";
 import { pageFormsAccess } from "@/lib/forms/page-scope";
 import { readFollowUpQueue } from "@/lib/forms/follow-up-queue";
@@ -13,6 +13,7 @@ import { hrQueueSummary } from "@/lib/forms/hr-approval";
 import { siblingHrWaiting } from "@/lib/partner/sibling-hr-waiting";
 import { voiceInputEnabledFor } from "@/lib/voice/voice-config";
 import { VoiceAccessProvider, type VoiceAccess } from "@/features/voice/voice-access";
+import { CalendarPopup } from "@/features/calendar/calendar-popup";
 
 /**
  * VOICE_INPUT_ENABLED: whether this person sees the mic in the AI chat boxes, decided here on the server from the
@@ -103,8 +104,22 @@ async function waitingForHr(identity: Awaited<ReturnType<typeof pageIdentity>>):
   }
 }
 
+/**
+ * THE FLOATING CALENDAR (port from the sibling app; the owner, 27 Nov 2026): for the people the Calendar page itself lets
+ * in (view_overview), the pop-up's key for this person (their user id, to remember where they left it). Null: no pop-up.
+ */
+async function calendarPopupFor(): Promise<{ userKey: string } | null> {
+  try {
+    const identity = await pageIdentity();
+    if (!identity?.verified || !identity.subject || !(await pageCan("view_overview"))) return null;
+    return { userKey: identity.subject };
+  } catch {
+    return null;
+  }
+}
+
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  const [overdueFollowUps, showAppSwitcher, showLeadershipHub, meetingTabs, bell, voiceAccess] = await Promise.all([
+  const [overdueFollowUps, showAppSwitcher, showLeadershipHub, meetingTabs, bell, voiceAccess, calendarPopup] = await Promise.all([
     overdueCount(),
     pageShowsAppSwitcher(),
     pageShowsLeadershipHubTab(),
@@ -112,6 +127,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     l10TabsForLayout(),
     bellForLayout(),
     voiceAccessForLayout(),
+    calendarPopupFor(),
   ]);
   return (
     <VoiceAccessProvider value={voiceAccess}>
@@ -123,6 +139,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       bell={bell}
     >
       {children}
+      {/* Mounted here so it stays open, where it was, while the person moves between pages. */}
+      {calendarPopup ? <CalendarPopup userKey={calendarPopup.userKey} /> : null}
     </AppShell>
     </VoiceAccessProvider>
   );

@@ -242,6 +242,10 @@ const ALLOWED_UI = [
   // under a follow-up date in the Forms Register's row and on the form. Shown only on a form with an open follow-up; it
   // reads and writes through its own route, whose checks decide. No chat behaviour changes.
   "src/features/forms/follow-up-owner-picker.tsx",
+  // THE FLOATING CALENDAR (port from the sibling app; the owner, 27 Nov 2026: "can we make the calendar pop up and be
+  // resizable so anytime we go in other tabs it stays there"): a launcher button and a window over the app, mounted in the
+  // layout, showing the Calendar page's own view. No chat or form behaviour changes.
+  "src/features/calendar/calendar-popup.tsx",
   // The named account sees every address without clicking (Pau, 26 Nov 2026: "for my access only"; WOVEN_ADDRESS_LIST_EMAILS):
   // the Woven page passes the yes/no down to the directory. Admin page only.
   "src/app/(app)/admin/integrations/woven/[view]/page.tsx",
