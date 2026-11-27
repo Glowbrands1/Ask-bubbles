@@ -238,6 +238,10 @@ const ALLOWED_UI = [
   "src/features/calendar/calendar-view.tsx",
   "src/features/calendar/new-event.tsx",
   "src/features/calendar/reminder-card.tsx",
+  // WHO OWNS A FORM'S FOLLOW-UP (the owner, 27 Nov 2026, approved "ok to all"; port from Ask Sunny): the owner control
+  // under a follow-up date in the Forms Register's row and on the form. Shown only on a form with an open follow-up; it
+  // reads and writes through its own route, whose checks decide. No chat behaviour changes.
+  "src/features/forms/follow-up-owner-picker.tsx",
   // The named account sees every address without clicking (Pau, 26 Nov 2026: "for my access only"; WOVEN_ADDRESS_LIST_EMAILS):
   // the Woven page passes the yes/no down to the directory. Admin page only.
   "src/app/(app)/admin/integrations/woven/[view]/page.tsx",

@@ -1,3 +1,4 @@
+import { accountNames } from "@/lib/forms/follow-up-owner";
 import type { Metadata } from "next";
 
 import { PermissionGate } from "@/components/permission-gate";
@@ -194,6 +195,7 @@ export default async function FormMonitoringPage({
          * that in form monitoring with a note "approved""). Nobody else is told it went through HR (`mayReadHrDecision`).
          */
         hrApproved: instance.hrApprovalState === "approved" && mayReadHrDecision(access.actor, instance),
+        followUpOwner: instance.followUpOwner ?? null,
         updatedAt: instance.updatedAt,
       });
       forms = instances.map(toMonitored);
@@ -208,6 +210,12 @@ export default async function FormMonitoringPage({
       attention = queue.attention;
       outstanding = queue.forms.map(toMonitored);
       outstandingExcluded = queue.excluded;
+
+      // WHO OWNS EACH FOLLOW-UP (the owner, 27 Nov 2026; port from the sibling app): the name of the person the creator handed it to.
+      const owners = await accountNames([...forms, ...outstanding].map((form) => form.followUpOwner));
+      const named = (form: MonitoredForm): MonitoredForm => (form.followUpOwner ? { ...form, followUpOwnerName: owners.get(form.followUpOwner) ?? "Another manager" } : form);
+      forms = forms.map(named);
+      outstanding = outstanding.map(named);
 
       /*
        * Counted on the server, so the sweep button can state a

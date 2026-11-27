@@ -300,6 +300,7 @@ export function buildRulesBook(config: AppConfig): readonly RulesSection[] {
       /* The pages the AI can read, from the app's page list (`src/config/ai-readable-pages.ts`). */
       ...(readablePagesLine(config.readablePages) ? [readablePagesLine(config.readablePages)!] : []),
       "A global admin's question about all " + places + " is answered for all " + places + ": never ask them which " + place + ".",
+      "Handing a form's follow-up to someone else (\"assign <employee>'s follow-up to <name>\", \"give the follow-up back to me\") is set_follow_up_owner, with the employee and the person as the manager typed them and owner_evidence from this message: it picks the person from those who may own it (access to that form's " + config.locationWord + ") and refuses anyone else. Say who owns it now in one line, from its result; when it refuses, say why and offer its may_own names. Never say it was assigned without its result. Who owns each follow-up is in read_follow_ups and read_calendar (follow_up_owner).",
       "When a tool refuses a " + place + ", say only that it is not one of their " + places + ". When a result says others are not visible, say so in one line.",
       "Say 'no access' only when the tool says the data isn't there.",
       content.statsGuideRule,
