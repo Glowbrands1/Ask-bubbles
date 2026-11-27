@@ -19,6 +19,10 @@ import { LONG_MESSAGE_LIMIT, messageLengthStatus } from "@/lib/chat/message-limi
 import { chatLongMessageClientEnabled } from "@/lib/config/chat-quality-flags";
 import { CHAT_ATTACH_ACCEPT, MAX_FILES_PER_MESSAGE, attachmentProblem } from "@/lib/attachments/file-parts";
 import type { AnswerMode } from "@/types";
+import { useVoiceDraft, VoiceButton, VoiceControl, VoiceNotice } from "@/features/voice/voice-button";
+
+/** VOICE_INPUT_ENABLED: what a dictated question adds to its send (nothing when it was typed). */
+export type VoiceSendFields = { inputMode?: "voice"; voiceTraceId?: string; voiceEdited?: boolean };
 
 const MODES: AnswerMode[] = ["quick", "standard", "detailed"];
 
@@ -107,10 +111,12 @@ export function Composer({
   files = [],
   onFilesChange,
   fileError,
+  conversationId,
 }: {
   value: string;
   onChange: (value: string) => void;
-  onSubmit: () => void;
+  /** VOICE_INPUT_ENABLED: `voice` says the text came from the mic (empty when it was typed). */
+  onSubmit: (voice?: VoiceSendFields) => void;
   /** Files waiting to be sent with the next question. Without `onFilesChange` there is no attach button. */
   files?: File[];
   onFilesChange?: (files: File[]) => void;
@@ -128,10 +134,22 @@ export function Composer({
    */
   busy: boolean;
   autoFocus?: boolean;
+  /** VOICE_INPUT_ENABLED: this conversation, so the voice route can read its names as spelling hints (its own only). */
+  conversationId?: string | null;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // Phone: one short line of placeholder, so the empty field is one row tall rather than three.
   const isPhone = useIsPhone();
+  /*
+   * VOICE_INPUT_ENABLED (the owner, 27 Nov 2026): a mic between the field and Send, only for people the server lets use
+   * voice (`VoiceControl` renders nothing otherwise). The transcript is appended to the text through `onChange` and
+   * the field takes focus; the manager checks it and presses Send as usual.
+   */
+  const voice = useVoiceDraft();
+  const onVoiceText = (text: string, traceId: string) => {
+    onChange(voice.land(value, text, traceId));
+    textareaRef.current?.focus();
+  };
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileNote, setFileNote] = useState("");
   const attaching = Boolean(onFilesChange);
@@ -176,7 +194,7 @@ export function Composer({
   const submit = () => {
     if (!hasSomething || busy || overLimit) return;
     setFileNote("");
-    onSubmit();
+    onSubmit(voice.take(value));
   };
 
   /* The input surface, identical in both variants apart from its scale. */
@@ -193,7 +211,10 @@ export function Composer({
         disabled={busy}
         autoFocus={autoFocus}
         aria-describedby={length?.notice ? "chat-input-length" : undefined}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => {
+          voice.forgetIfEmpty(event.target.value);
+          onChange(event.target.value);
+        }}
         onPaste={(event) => {
           if (!attaching || !event.clipboardData?.files?.length) return;
           event.preventDefault();
@@ -262,6 +283,7 @@ export function Composer({
       at the foot of the screen; while you type it takes a White halo that
       shows against the canvas.
     */
+    <VoiceControl surface="chat" conversationId={conversationId} disabled={busy} onText={onVoiceText}>
     <div
       className="shrink-0 px-4 pt-2 pb-2 max-sm:px-3 sm:px-6 sm:pt-3.5 sm:pb-3"
       onDragOver={(event) => {
@@ -299,6 +321,7 @@ export function Composer({
         <BubbleMark className="hidden size-[26px] shrink-0 sm:block" />
         <div className="flex min-w-0 flex-1 items-center">{field}</div>
         {attachButton}
+        <VoiceButton timerClassName="text-foreground" />
         {sendButton}
       </div>
 
@@ -319,6 +342,9 @@ export function Composer({
         </p>
       ) : null}
 
+      {/* VOICE_INPUT_ENABLED: voice's notices sit with the length notice, under the field. Nothing when voice is off. */}
+      <VoiceNotice className="mx-auto mt-2 max-w-3xl text-foreground" />
+
       {/*
         THE `.under` ROW: the mode control and one line of disclaimer, side by
         side. Two things that were three stacked blocks.
@@ -338,6 +364,7 @@ export function Composer({
         </p>
       </div>
     </div>
+    </VoiceControl>
   );
 }
 

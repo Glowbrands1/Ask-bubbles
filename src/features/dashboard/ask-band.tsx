@@ -13,6 +13,7 @@ import { formatLongDate, greetingForHour } from "@/lib/utils/date";
 import { businessHour, businessToday } from "@/lib/business-date";
 import { formatNumber } from "@/lib/utils/format";
 import { useInlineAsk } from "@/features/chat/use-inline-ask";
+import { useVoiceDraft, VoiceButton, VoiceControl, VoiceNotice } from "@/features/voice/voice-button";
 import { AnswerSheet } from "./answer-sheet";
 import { ConversationRating } from "@/features/chat/conversation-rating";
 import type { AnswerMode, ChatMessage } from "@/types";
@@ -144,11 +145,14 @@ export function AskBand({
     recordFeedback,
   } = useInlineAsk({ onActiveChange, surface: "overview" });
 
+  /* VOICE_INPUT_ENABLED: what the mic put in the box, so Send can say so (`useVoiceDraft`). */
+  const voice = useVoiceDraft();
+
   const submit = useCallback(
-    (text: string) => {
+    (text: string, fields: Parameters<typeof send>[1] = {}) => {
       setValue("");
       setFocused(false);
-      void send(text);
+      void send(text, fields);
     },
     [send],
   );
@@ -273,10 +277,18 @@ export function AskBand({
         <AskCard
           inputRef={inputRef}
           value={value}
-          onChange={setValue}
+          onChange={(next) => {
+            voice.forgetIfEmpty(next);
+            setValue(next);
+          }}
+          conversationId={conversationId}
+          onVoiceText={(text, traceId) => {
+            setValue((current) => voice.land(current, text, traceId));
+            inputRef.current?.focus();
+          }}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          onSubmit={() => submit(value)}
+          onSubmit={() => submit(value, voice.take(value))}
           /*
            * X CLEARS THE SMALLEST THING FIRST: a half-typed question if there
            * is one, otherwise the whole inline exchange. Reversing that would
@@ -414,10 +426,15 @@ function AskCard({
   prompts,
   onPrompt,
   resettable,
+  conversationId,
+  onVoiceText,
 }: {
   inputRef: React.RefObject<HTMLTextAreaElement | null>;
   value: string;
   onChange: (next: string) => void;
+  /** VOICE_INPUT_ENABLED: this thread's id (spelling hints from its own history) and where a transcript lands. */
+  conversationId?: string | null;
+  onVoiceText?: (text: string, traceId: string) => void;
   onFocus: () => void;
   onBlur: () => void;
   onSubmit: () => void;
@@ -446,6 +463,7 @@ function AskCard({
   const showPlaceholderBlock = !typing && !resettable && value.length === 0;
 
   return (
+    <VoiceControl surface="overview" conversationId={conversationId} disabled={busy} onText={(text, traceId) => onVoiceText?.(text, traceId)}>
     <div className="max-w-[820px]">
       {/*
         THE INVITATION sits on the band above the bar, at cold start only — a
@@ -512,6 +530,9 @@ function AskCard({
           </button>
         ) : null}
 
+        {/* VOICE_INPUT_ENABLED: the mic, beside the ask button. Nothing when voice is off. */}
+        <VoiceButton className="size-11" timerClassName="text-foreground" />
+
         <button
           type="button"
           onClick={onSubmit}
@@ -522,6 +543,9 @@ function AskCard({
           <ArrowUp className="size-[17px]" strokeWidth={2.4} aria-hidden />
         </button>
       </div>
+
+      {/* VOICE_INPUT_ENABLED: voice's notices, directly under the bar. */}
+      <VoiceNotice className="mt-2 text-band-foreground" />
 
       {/* Suggestions sit under the bar, on the band, and stay reachable while
           typing. */}
@@ -546,5 +570,6 @@ function AskCard({
         </div>
       ) : null}
     </div>
+    </VoiceControl>
   );
 }

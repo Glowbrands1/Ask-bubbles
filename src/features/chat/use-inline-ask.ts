@@ -136,7 +136,11 @@ export function useInlineAsk({ reportContext, onActiveChange, surface }: InlineA
   const ratingTarget = useMemo(() => conversationRatingTarget(thread), [thread]);
 
   const send = useCallback(
-    async (rawText: string) => {
+    async (
+      rawText: string,
+      /* VOICE_INPUT_ENABLED: the text came from the mic (recorded on the trace only). */
+      voice: { inputMode?: "voice"; voiceTraceId?: string; voiceEdited?: boolean } = {},
+    ) => {
       const text = rawText.trim();
       if (!text || busy) return;
 
@@ -228,6 +232,7 @@ export function useInlineAsk({ reportContext, onActiveChange, surface }: InlineA
           reportContext: reportContext ?? null,
           /* Reporting only — see `AskRequest.surface`. */
           surface,
+          ...voice,
           /*
            * NO `todayIso`. The route fills the date from its own clock — the
            * browser used to send the frozen anchor and the route preferred it,

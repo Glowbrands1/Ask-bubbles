@@ -36,7 +36,7 @@ import {
 } from "@/lib/reporting/report-context";
 import { reportById } from "@/lib/reporting/registry";
 import { toChatTurnError } from "./chat-error";
-import { Composer } from "./composer";
+import { Composer, type VoiceSendFields } from "./composer";
 import { writeChatAddress } from "./chat-address";
 import { ContextPanel } from "./context-panel";
 import { fileOnlyQuestion, historyWithAttachmentNotes, namesOf, toChatAttachments } from "./attachments";
@@ -214,7 +214,7 @@ export function ChatScreen() {
        * recorded by the function that also decides whether the turn goes out at
        * all, so a refused send cannot leave one behind.
        */
-      options: { fromPicker?: boolean; files?: readonly File[] } = {},
+      options: { fromPicker?: boolean; files?: readonly File[]; voice?: VoiceSendFields } = {},
     ): Promise<boolean> => {
       const files = options.files ?? [];
       // A question that is only files is sent in words, so the thread and the model both have the manager's turn.
@@ -344,6 +344,8 @@ export function ChatScreen() {
            * row and nothing else. See `AskRequest.surface`.
            */
           surface: "main_chat",
+          /* VOICE_INPUT_ENABLED: the text came from the mic; recorded on the trace only. */
+          ...(options.voice ?? {}),
           // No corpus. The server derives it from the active brand; sending one
           // could only ever be ignored or trusted, and one of those is a bug.
           /*
@@ -729,7 +731,7 @@ export function ChatScreen() {
      * `overflow-y-auto` on the message list never engages and the composer is
      * pushed off-screen by a long answer.
      */
-    <div className="flex h-[calc(100dvh-4rem)] min-h-0 flex-col max-sm:h-[calc(100dvh-var(--spacing)*16)] lg:h-dvh">
+    <div className="flex h-[calc(100dvh-4rem)] min-h-0 flex-col lg:h-dvh max-sm:h-[calc(100dvh-var(--spacing)*16)]">
       {/*
         ==================================================================
         CHAT HISTORY IS CLOSED UNTIL SOMEBODY ASKS FOR IT
@@ -1137,13 +1139,14 @@ export function ChatScreen() {
         <Composer
           value={input}
           onChange={setInput}
-          onSubmit={() => void send(input, { files: pendingFiles })}
+          onSubmit={(voice) => void send(input, { files: pendingFiles, voice })}
           mode={mode}
           onModeChange={setMode}
           busy={busy}
           files={pendingFiles}
           onFilesChange={setPendingFiles}
           fileError={fileError}
+          conversationId={activeId}
         />
       </div>
 
