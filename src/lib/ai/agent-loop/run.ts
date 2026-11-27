@@ -38,6 +38,8 @@ import { replyWithShortName } from "@/lib/forms/short-name";
 import { agentLoopRules, agentLoopSystem } from "./prompt";
 import { generatedId, identifiedTurns, messageIdTag, withoutMessageIdTags } from "./evidence";
 import { agentLoopStepLimit } from "./switch";
+import { asksCoachingHowTo, coachingAnswerShape, coachingHowToNote, completeShape, partsOf } from "@/lib/ai/coaching-how-to";
+
 import { adviceNotForm, onlyAsksWho } from "./advice-not-form";
 import { createFormButtonNoCardNote, isCreateFormButtonTurn } from "./create-form-button";
 import { formAskedOutsideLibrary, saysNoSuchForm, withLibraryForms } from "./form-not-in-library";
@@ -811,6 +813,8 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
   const noop = input.openFormId ? await import("@/lib/forms/form-noop-reply") : null;
   const openBefore = noop && input.openFormId ? await noop.formBeforeTurn(input.openFormId, input.request) : null;
   const steps: AgentLoopStep[] = [];
+  /* The turn's tool steps under a name no inner `steps` shadows (the coaching check reads whether search_knowledge ran). */
+  const turnSteps = steps;
   const replyNames = new Set<string>();
   const offRosterNames = new Set<string>();
   /* QA's live re-test B8: the inactive line of each former employee's card this turn. */
@@ -1575,6 +1579,21 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
         if (stoppedAt === "reply" && !effects.proposal && onlyAsksWho(text) && adviceNotForm(input.question, input.history)) {
           const again = await handBack("[app check] The manager asked for advice, not a form, and your reply only asks who a form is for. Answer the question itself now: practical steps, a short checklist, a sample script or role-play where it helps, citing the manual where a policy applies. Never ask who a form is for; you may offer the form in one closing line.");
           if (again && !onlyAsksWho(again)) text = again;
+        }
+        /*
+         * Port of the sibling app (26 Nov 2026): a coaching / hard-conversation how-to answer is a prep package: a numbered
+         * outline, a quoted script, a role-play and a measurable action plan among its parts (`coaching-how-to.ts`, the rules
+         * book's coachingHowToRule). A reply on such a turn with no card that lacks one goes back once; the answer it returns
+         * is kept only when it is no worse.
+         */
+        if (stoppedAt === "reply" && !effects.proposal && !effects.formOpened && !effects.formUpdate && adviceNotForm(input.question, input.history) && asksCoachingHowTo(input.question)) {
+          const shape = coachingAnswerShape(text);
+          /* Port of the sibling app (26 Nov 2026): the company's own coaching guidance first; an answer written without a knowledge search goes back once too. */
+          const searched = turnSteps.some((step) => step.tool === "search_knowledge");
+          if (!completeShape(shape) || !searched) {
+            const again = await handBack(coachingHowToNote(shape, searched));
+            if (again && !onlyAsksWho(again) && partsOf(coachingAnswerShape(again)) >= partsOf(shape)) text = again;
+          }
         }
         /*
          * Port of the sibling app (its QA, 24 Nov 2026, live): "Draft a vacation request form" was answered "There's no … in the
