@@ -273,7 +273,7 @@ async function postVoice(request: Request): Promise<Response> {
     case "ok":
       /*
        * Names spelled as the directory spells them (the owner, 27 Nov 2026: "i said Curt, it spelled it as Kurt"; ported
-       * from Ask Sunny): a heard word that sounds like exactly one scoped person's or store's spelling is written that
+       * from the sibling app): a heard word that sounds like exactly one scoped person's or store's spelling is written that
        * way. The list stays here; the text still goes into the box for the person to read and edit before sending.
        */
       return NextResponse.json({ text: hints.vocabulary ? correctSpokenNames(text, hints.vocabulary) : text, traceId });
