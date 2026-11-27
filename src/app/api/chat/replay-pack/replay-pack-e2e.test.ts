@@ -117,6 +117,8 @@ const state = vi.hoisted(() => ({
   chatModelCalls: 0,
   /** The FORMS ON FILE block the answering model was last given (`lastFormRecords`). */
   lastFormRecords: "",
+  /** The attached files the answering model was last given (`lastAttachments`). */
+  lastAttachments: [] as unknown[],
   /** The REPORT DATA and the system prompt the answering model was last given (`lastReportData`, `lastSystem`). */
   lastReportData: "",
   lastSystem: "",
@@ -327,9 +329,10 @@ vi.mock("@/lib/ai/call-claude", () => ({
       usage: { inputTokens: 10, outputTokens: 5, cacheReadTokens: 0, cacheWriteTokens: 0 },
     };
   },
-  callClaude: async (input?: { system?: string; reportData?: string | null; formRecords?: string | null; formEditTool?: { data: string; onToolUse: (call: unknown) => void } | null }) => {
+  callClaude: async (input?: { system?: string; reportData?: string | null; formRecords?: string | null; attachments?: readonly unknown[]; formEditTool?: { data: string; onToolUse: (call: unknown) => void } | null }) => {
     state.chatModelCalls += 1;
     state.lastFormRecords = String(input?.formRecords ?? "");
+    state.lastAttachments = [...(input?.attachments ?? [])];
     state.lastReportData = String(input?.reportData ?? "");
     state.lastSystem = String(input?.system ?? "");
     if (input?.formEditTool) {
@@ -852,6 +855,7 @@ beforeEach(async () => {
   store.form_instances = new JoiningRows() as never;
   state.slotReading = "none";
   state.lastFormRecords = "";
+  state.lastAttachments = [];
   state.lastReportData = "";
   state.lastSystem = "";
   fullManual.document = null;
@@ -1086,6 +1090,7 @@ function context(): ReplayContext {
     calls: () => ({ chat: state.chatModelCalls, draft: state.draftCalls, revision: state.revisionCalls, tool: state.toolCalls, patch: patchScript.calls }),
     forms: () => store.form_instances as never,
     lastFormRecords: () => state.lastFormRecords,
+    lastAttachments: () => state.lastAttachments,
     lastReportData: () => state.lastReportData,
     lastSystem: () => state.lastSystem,
     draftPrompts: () => [...draftAsked],

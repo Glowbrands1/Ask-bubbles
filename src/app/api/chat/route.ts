@@ -34,6 +34,7 @@ import { activeKnowledgeCorpus } from "@/lib/knowledge/corpus";
 import { CONTINUATION_KEY_MAX } from "@/lib/forms/proposal-continuation";
 import { answersWhichFormOnFile, mayAskToReopen } from "@/lib/forms/reopen-cue";
 import { parseChatReportContext } from "@/lib/reporting/report-context";
+import { parseChatAttachments } from "@/lib/chat/attachments.server";
 import { businessToday } from "@/lib/business-date";
 import {
   bareFormNameAsksWhatEnabled,
@@ -262,8 +263,9 @@ async function postChat(request: Request, progress?: ProgressChannel) {
      * rewrite below. The loop's reply is returned as the model wrote it. Off (or not a listed user), this branch is never
      * taken, and the loop's module (and the AI SDK it loads) is never loaded.
      *
-     * AGENT_LOOP_SKIPPED: a turn carrying something the loop does not take yet (attachments, report context, a pending
-     * copy, an answer mode) goes to today's path, and the trace says why (`agent-loop/switch.ts`).
+     * AGENT_LOOP_SKIPPED: a turn carrying something the loop does not take yet (report context, a pending copy, an
+     * answer mode with its flag off) goes to today's path, and the trace says why (`agent-loop/switch.ts`). Attached
+     * files are no longer one (Pau, 26 Nov 2026): the loop reads them (`attachments` below).
      */
     if (agentLoopFor(context.identity.email)) {
       const loopSkip = agentLoopSkipReason(parseAskRequest(body));
@@ -287,6 +289,8 @@ async function postChat(request: Request, progress?: ProgressChannel) {
           openFormId: parsedForLoop.activeFormInstanceId ?? null,
           /* ANSWER_MODE_ON_LOOP: a Quick or Detailed turn reaches the loop only with the flag on (`agentLoopSkipReason`). */
           answerMode: parsedForLoop.mode,
+          /* The files attached to this question: the model reads them with it (`lib/chat/attachments.server.ts`). */
+          ...(parsedForLoop.attachments ? { attachments: parsedForLoop.attachments } : {}),
           onTools: (tools) => {
             loopTools = tools;
           },
@@ -1549,6 +1553,8 @@ function parseAskRequest(body: Partial<AskRequest>): AskRequest {
      * null rather than travelling further as a string.
      */
     surface: isActivitySurface(body.surface) ? body.surface : null,
+    // The composer's attached files, checked (types, count, size, inline data only): `lib/chat/attachments.server.ts`.
+    attachments: parseChatAttachments(body.attachments),
     attachedDocumentIds: Array.isArray(body.attachedDocumentIds)
       ? body.attachedDocumentIds
           .filter((id): id is string => typeof id === "string")
