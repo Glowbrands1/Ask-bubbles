@@ -11,6 +11,23 @@ import { bellFor } from "@/lib/notifications/bell-for";
 import type { BellData } from "@/lib/notifications/types";
 import { hrQueueSummary } from "@/lib/forms/hr-approval";
 import { siblingHrWaiting } from "@/lib/partner/sibling-hr-waiting";
+import { voiceInputEnabledFor } from "@/lib/voice/voice-config";
+import { VoiceAccessProvider, type VoiceAccess } from "@/features/voice/voice-access";
+
+/**
+ * VOICE_INPUT_ENABLED: whether this person sees the mic in the AI chat boxes, decided here on the server from the
+ * verified sign-in (`voiceInputEnabledFor`: the flag, not demo mode, the key set, the email on VOICE_INPUT_USERS). The
+ * browser gets a yes/no and the user id (to remember the first-use choice); never the list. The route checks again.
+ */
+async function voiceAccessForLayout(): Promise<VoiceAccess> {
+  try {
+    const identity = await pageIdentity();
+    if (!identity?.verified || !voiceInputEnabledFor({ email: identity.email })) return { enabled: false, userKey: null };
+    return { enabled: true, userKey: identity.subject };
+  } catch {
+    return { enabled: false, userKey: null };
+  }
+}
 
 /**
  * COUNTS, NOT HUES — the rail's overdue badge.
@@ -87,15 +104,17 @@ async function waitingForHr(identity: Awaited<ReturnType<typeof pageIdentity>>):
 }
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  const [overdueFollowUps, showAppSwitcher, showLeadershipHub, meetingTabs, bell] = await Promise.all([
+  const [overdueFollowUps, showAppSwitcher, showLeadershipHub, meetingTabs, bell, voiceAccess] = await Promise.all([
     overdueCount(),
     pageShowsAppSwitcher(),
     pageShowsLeadershipHubTab(),
     // The DM L10 tab: only for people the Leadership Hub lists as attendees (see features/l10).
     l10TabsForLayout(),
     bellForLayout(),
+    voiceAccessForLayout(),
   ]);
   return (
+    <VoiceAccessProvider value={voiceAccess}>
     <AppShell
       overdueFollowUps={overdueFollowUps}
       showAppSwitcher={showAppSwitcher}
@@ -105,5 +124,6 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     >
       {children}
     </AppShell>
+    </VoiceAccessProvider>
   );
 }
