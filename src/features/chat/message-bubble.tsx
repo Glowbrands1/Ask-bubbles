@@ -1,5 +1,6 @@
 "use client";
 
+import { ReminderProposalCard } from "@/features/calendar/reminder-card";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, FilePlus2, FileText, Loader2, RotateCcw, Settings2, UserRound } from "lucide-react";
@@ -201,6 +202,8 @@ export function MessageBubble({
             sources; each card creates and drafts only its own form, and
             records only its own reference (`instanceRefFor`).
           */}
+          {message.reminderProposal ? <ReminderProposalCard proposal={message.reminderProposal} refId={`r-${message.id}`} /> : null}
+
           {proposalsOf(message).map((proposal, index) => (
             <React.Fragment key={proposal.proposalId}>
               <FormProposalCard
