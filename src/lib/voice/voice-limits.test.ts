@@ -292,10 +292,13 @@ describe("the voice caps (voice_usage_claim)", () => {
     expect(grants).toEqual([]);
     const rls = (await db.query<{ relrowsecurity: boolean; relforcerowsecurity: boolean }>(`select relrowsecurity, relforcerowsecurity from pg_class where relname = 'voice_usage'`)).rows[0];
     expect(rls).toEqual({ relrowsecurity: true, relforcerowsecurity: true });
+    // voice_usage_claim takes p_now: only the server may call it, or a browser could pass a time and dodge the caps.
     const exec = (
-      await db.query<{ can: boolean }>(`select has_function_privilege('authenticated', 'public.voice_usage_claim(text, text, text, numeric, integer, integer, numeric, numeric, numeric, timestamptz)', 'execute') as can`)
-    ).rows[0];
-    expect(exec.can).toBe(false);
+      await db.query<{ role: string; can: boolean }>(
+        `select r as role, has_function_privilege(r, 'public.voice_usage_claim(text, text, text, numeric, integer, integer, numeric, numeric, numeric, timestamptz)', 'execute') as can from unnest(array['anon', 'authenticated', 'service_role']) as r`,
+      )
+    ).rows;
+    expect(Object.fromEntries(exec.map((row) => [row.role, row.can]))).toEqual({ anon: false, authenticated: false, service_role: true });
     await expect(db.exec("set role authenticated; insert into public.voice_usage (user_id, surface, reported_seconds) values ('user-bea', 'chat', 1);")).rejects.toThrow();
     await db.exec("reset role");
   });
