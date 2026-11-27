@@ -175,6 +175,23 @@ describe("Calendar: every recurring L10 (the owner, 27 Nov 2026)", () => {
   });
 });
 
+/** The owner, 27 Nov 2026: "can you also add holidays in the calendar in all apps pls US holiday". */
+describe("Calendar: US holidays", () => {
+  const XMAS: CalendarEvent = { id: "bubbles:holiday:2026-12-25:christmas-day", source: "ask-bubbles", kind: "holiday", title: "Christmas Day", date: "2026-12-25", href: "/calendar" };
+  const EVE: CalendarEvent = { id: "bubbles:holiday:2026-12-24:christmas-eve", source: "ask-bubbles", kind: "holiday", title: "Christmas Eve (observance)", date: "2026-12-24", href: "/calendar" };
+  it("shows them all day with their own Holidays chip; an entry is its name only, opening nothing", async () => {
+    render(<CalendarView month="2026-12" today="2026-12-25" view={{ from: "2026-11-29", to: "2027-01-09", events: [XMAS, EVE], notes: [] }} meetings={[]} save={vi.fn()} remove={vi.fn()} />);
+    const chip = screen.getByRole("button", { name: /Holidays/ });
+    expect(chip.getAttribute("aria-pressed")).toBe("true");
+    const day = screen.getByRole("region", { name: dayLabel("2026-12-25") });
+    expect(day.textContent).toMatch(/All day/);
+    expect(day.textContent).toMatch(/Christmas Day/);
+    expect(within(day).queryByRole("link")).toBeNull();
+    await userEvent.click(chip);
+    expect(screen.getByRole("region", { name: dayLabel("2026-12-25") }).textContent).not.toMatch(/Christmas Day/);
+  });
+});
+
 /**
  * Port from the sibling app (the owner, 27 Nov 2026, on a day panel showing a DM L10's "Time not set"): "ability to edit times pls and make it
  * recurring or just for that specific time and get people notified for time changes if they are attendee for ALL apps".
@@ -262,5 +279,41 @@ describe("Calendar: a form entry without the employee's name", () => {
     expect(within(day).queryByRole("link", { name: /Resignation/ })).toBeNull();
     await userEvent.click(within(day).getByRole("button", { name: "With HR: Resignation/Exit Form · Example Store" }));
     expect(within(day).getByRole("note").textContent).toBe("Only admins, HR and the person who created this form can see who it is for.");
+  });
+});
+
+/**
+ * Port from the sibling app. The owner, 27 Nov 2026, on the SD L10s with no day set: "they should be able to edit and set time when they click on
+ * that, either for a specific day or for all recurring". Saved through the Leadership Hub (l10_one_off_any_date_test.sql).
+ */
+describe('a meeting with no day: "either for a specific day or for all recurring" (the owner, 27 Nov 2026)', () => {
+  const NO_DAY = { key: "bcs-gm", name: "Example GM L10", team: null, weekday: null, startTime: null, minutes: 60, leader: "Lee Demo", attendees: ["Lee Demo"] };
+  const open = async () => {
+    await userEvent.click(within(screen.getByRole("region", { name: "No day set" })).getByRole("button", { name: "Example GM L10: details" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add day and time" }));
+    return screen.getByRole("form", { name: "Set Example GM L10 day and time" });
+  };
+  it('"Only one date": pick the date and time; it saves that date only', async () => {
+    const saveSchedule = vi.fn();
+    const saveOccurrence = vi.fn(async () => ({ ok: true as const }));
+    render(<CalendarView month="2026-11" today="2026-11-30" view={view([])} meetings={[NO_DAY]} canEditSchedules saveSchedule={saveSchedule} saveOccurrence={saveOccurrence} save={vi.fn()} remove={vi.fn()} />);
+    const form = await open();
+    expect(within(form).getByRole("radio", { name: "Every week" })).toHaveProperty("checked", true);
+    await userEvent.click(within(form).getByRole("radio", { name: "Only one date" }));
+    await userEvent.type(within(form).getByLabelText("Date"), "2026-12-03");
+    await userEvent.type(form.querySelector('input[type="time"]') as HTMLInputElement, "14:00");
+    expect(within(form).queryByRole("checkbox")).toBeNull();
+    await userEvent.click(within(form).getByRole("button", { name: "Save" }));
+    expect(saveOccurrence).toHaveBeenCalledWith({ key: "bcs-gm", date: "2026-12-03", time: "14:00", minutes: 60, cancelled: false });
+    expect(saveSchedule).not.toHaveBeenCalled();
+  });
+  it('"Every week": pick the weekday and time', async () => {
+    const saveSchedule = vi.fn(async () => ({ ok: true as const }));
+    render(<CalendarView month="2026-11" today="2026-11-30" view={view([])} meetings={[NO_DAY]} canEditSchedules saveSchedule={saveSchedule} saveOccurrence={vi.fn()} save={vi.fn()} remove={vi.fn()} />);
+    const form = await open();
+    await userEvent.selectOptions(within(form).getByRole("combobox"), "Thursday");
+    await userEvent.type(form.querySelector('input[type="time"]') as HTMLInputElement, "15:00");
+    await userEvent.click(within(form).getByRole("button", { name: "Save" }));
+    expect(saveSchedule).toHaveBeenCalledWith({ key: "bcs-gm", weekday: 4, time: "15:00", minutes: 60 });
   });
 });

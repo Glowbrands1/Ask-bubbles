@@ -2,7 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 
 import { buildChatHints, buildMeetingHints, CHAT_VOICE_PROMPT, L10_VOICE_PROMPT, limitKeyterms, MAX_KEYTERM_CHARS, MAX_KEYTERMS, type ChatHintSources } from "./keyterms";
 
-/** Invented people only. */
+/**
+ * Invented people only.
+ *
+ * CHANGED ON PURPOSE (the owner, 27 Nov 2026: "i said Curt, it spelled it as Kurt"; "make sure sunny bubble and
+ * leadership hub know the spelling of all employee"; "also salon names too and store"). These used to pin that a staff
+ * name was a hint only once the conversation had named it, so the first time a name was said nothing told the provider
+ * its spelling. The scoped roster and the scope's stores are now hints too, after the conversation's own names. Still
+ * pinned as before: nobody outside the scoped roster, no browser-sent term, someone else's conversation gives nothing,
+ * a failing reader drops only its own part.
+ */
 const ROSTER = [
   { firstName: "Ada", lastName: "Quillfeather", preferredFirstName: null },
   { firstName: "Bartholomew", lastName: "Vance", preferredFirstName: "Bart" },
@@ -23,15 +32,29 @@ function sources(overrides: Partial<ChatHintSources> = {}): ChatHintSources {
     scopedRoster: vi.fn(async () => ROSTER),
     publishedFormNames: vi.fn(async () => ["Coaching Form", "Corrective Action Form"]),
     storeName: () => "Riverbend Commons",
+    scopedPlaces: async () => [{ id: "loc-0001", names: ["Riverbend Commons", "Riverbend"] }],
     ...overrides,
   };
 }
 
 describe("chat, overview and report hints", () => {
-  it("(a) names this conversation uses, only if on the roster; (b) form names; (c) the store", async () => {
+  it("(a) names this conversation uses, only if on the roster; (b) the stores; (c) form names; (d) the scoped roster", async () => {
     const hints = await buildChatHints(OWN_ID, sources());
-    expect(hints.keyterms).toEqual(["Ada Quillfeather", "Bart Vance", "Bartholomew Vance", "Coaching Form", "Corrective Action Form", "Riverbend Commons"]);
-    expect(hints.keyterms).not.toContain("Cyrene Oakhollow"); // on the roster, never named here: the roster is not sent
+    expect(hints.keyterms).toEqual([
+      "Ada Quillfeather",
+      "Bart Vance",
+      "Bartholomew Vance",
+      "Riverbend Commons",
+      "Riverbend",
+      "Coaching Form",
+      "Corrective Action Form",
+      "Cyrene Oakhollow",
+      "Ada",
+      "Bart",
+      "Bartholomew",
+      "Cyrene",
+    ]);
+    expect(hints.vocabulary?.exact.has("oakhollow")).toBe(true);
     expect(hints.prompt).toBe(CHAT_VOICE_PROMPT);
     expect(hints.usedConversation).toBe(true);
     expect(hints.conversationContext).toEqual(["I need to coach ada about being late, and bart too", "Here is a Coaching Form draft for Ada Quillfeather."]);
@@ -46,12 +69,10 @@ describe("chat, overview and report hints", () => {
   });
 
   it("a conversationId that is not the person's own is ignored: no names, no context", async () => {
-    const roster = vi.fn(async () => ROSTER);
-    const hints = await buildChatHints("conv_someone_else", sources({ scopedRoster: roster }));
-    expect(hints.keyterms).toEqual(["Coaching Form", "Corrective Action Form", "Riverbend Commons"]);
+    const hints = await buildChatHints("conv_someone_else", sources());
+    expect(hints.keyterms.slice(0, 4)).toEqual(["Riverbend Commons", "Riverbend", "Coaching Form", "Corrective Action Form"]);
     expect(hints.conversationContext).toBeNull();
     expect(hints.usedConversation).toBe(false);
-    expect(roster).not.toHaveBeenCalled();
   });
 
   it("no conversationId: (a) is skipped", async () => {
@@ -64,13 +85,18 @@ describe("chat, overview and report hints", () => {
   it("every term comes from the readers: the browser has no way to add one", async () => {
     // The builder takes a correlation key and nothing else from the request.
     expect(buildChatHints.length).toBe(2);
-    const hints = await buildChatHints(OWN_ID, sources({ publishedFormNames: async () => [], storeName: () => null }));
-    for (const term of hints.keyterms) expect(["Ada Quillfeather", "Bart Vance", "Bartholomew Vance"]).toContain(term);
+    const hints = await buildChatHints(OWN_ID, sources({ publishedFormNames: async () => [], storeName: () => null, scopedPlaces: async () => [] }));
+    const fromRoster = ROSTER.flatMap((person) => [
+      `${person.firstName} ${person.lastName}`,
+      ...(person.preferredFirstName ? [`${person.preferredFirstName} ${person.lastName}`, person.preferredFirstName] : []),
+      person.firstName,
+    ]);
+    for (const term of hints.keyterms) expect(fromRoster).toContain(term);
   });
 
   it("a failing reader drops its part, never the clip", async () => {
     const hints = await buildChatHints(OWN_ID, sources({ scopedRoster: async () => Promise.reject(new Error("down")), publishedFormNames: async () => Promise.reject(new Error("down")) }));
-    expect(hints.keyterms).toEqual(["Riverbend Commons"]);
+    expect(hints.keyterms).toEqual(["Riverbend Commons", "Riverbend"]);
   });
 });
 

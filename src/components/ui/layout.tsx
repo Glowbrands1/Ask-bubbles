@@ -11,7 +11,7 @@ export function PageShell({
   return (
     <div
       className={cn(
-        "mx-auto w-full max-w-[1400px] px-5 py-7 sm:px-7 lg:px-9 lg:py-9",
+        "mx-auto w-full max-w-[1400px] px-4 py-5 sm:px-7 sm:py-7 lg:px-9 lg:py-9",
         className,
       )}
       {...props}
@@ -58,7 +58,7 @@ export function PageHeader({
           {eyebrow ? (
             <p className="eyebrow mb-2 text-band-muted-foreground">{eyebrow}</p>
           ) : null}
-          <h1 className="display-lettering text-[28px] text-band-foreground sm:text-[36px]">
+          <h1 className="display-lettering text-[23px] text-band-foreground sm:text-[36px]">
             {title}
           </h1>
           {description ? (
@@ -78,7 +78,7 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "flex flex-col gap-4 pb-6 sm:flex-row sm:items-end sm:justify-between",
+        "flex flex-col gap-3 pb-4 sm:flex-row sm:gap-4 sm:pb-6 sm:items-end sm:justify-between",
         className,
       )}
     >
@@ -93,7 +93,7 @@ export function PageHeader({
           the old tight-tracked semibold sans, which made the Overview look like
           a different product from every page you navigate to next.
         */}
-        <h1 className="display text-[26px] text-foreground sm:text-[32px]">{title}</h1>
+        <h1 className="display text-[22px] text-foreground sm:text-[32px]">{title}</h1>
         {description ? (
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
             {description}

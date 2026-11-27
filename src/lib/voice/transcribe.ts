@@ -10,7 +10,8 @@ import { PROVIDER_TIMEOUT_MS, RETRY_MAX_WAIT_MS, RETRY_MIN_REMAINING_MS, ROUTE_M
  * recent conversation when there is one (`conversation_context`) and English `language_codes`. Headers: the server key
  * as `Authorization`, and `X-AAI-Model: universal-3-6-pro`. Not the Dictation API, and no SDK.
  *
- * THE TEXT IS RETURNED AS THE PROVIDER WROTE IT. Nothing here (or anywhere after) cleans, rewords or corrects it.
+ * THE TEXT IS RETURNED AS THE PROVIDER WROTE IT. Nothing here cleans, rewords or corrects it; the route only respells a
+ * misheard name to the one scoped directory or store spelling it sounds like (`spoken-names.ts`).
  *
  * Timeout 28 s per call (`AbortSignal.timeout`). One retry, for 429, 500, 503 and 504 only, and only when at least
  * 8 s of the route's time remain and the wait the provider asks for is at most 2 s. 400, 401, 413 and 415 are never

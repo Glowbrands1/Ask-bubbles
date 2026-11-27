@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { VOICE_MESSAGES } from "@/lib/voice/voice-messages";
 import { MAX_SECONDS, MIN_SECONDS } from "@/lib/voice/voice-limits";
 
+import { SILENT_PEAK, measurePeak, microphoneName, openMicrophone, silentMicrophoneMessage } from "./mic-choice";
+
 /**
  * RECORD ONE CLIP, SEND IT, GET ITS TEXT BACK (VOICE_INPUT_ENABLED). Shared by the four AI chat boxes.
  *
@@ -52,6 +54,10 @@ export interface VoiceRecorderOptions {
   readonly meetingKey?: string;
   readonly conversationId?: string | null;
   readonly onText: (text: string, traceId: string) => void;
+  /** The microphone chosen in this browser; the default when none (or when it is not plugged in). */
+  readonly deviceId?: string | null;
+  /** The microphone opened: the list of microphones can be read again, now with their names. */
+  readonly onMicrophoneOpened?: () => void;
 }
 
 interface WakeLockSentinelLike {
@@ -60,7 +66,7 @@ interface WakeLockSentinelLike {
 
 class PermissionTimeout extends Error {}
 
-export function useVoiceRecorder({ surface, meetingKey, conversationId, onText }: VoiceRecorderOptions) {
+export function useVoiceRecorder({ surface, meetingKey, conversationId, onText, deviceId = null, onMicrophoneOpened }: VoiceRecorderOptions) {
   const [phase, setPhase] = useState<VoicePhase>("idle");
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -74,14 +80,19 @@ export function useVoiceRecorder({ surface, meetingKey, conversationId, onText }
   const clip = useRef<{ blob: Blob; seconds: number } | null>(null);
   /** What to do once the recorder has flushed: send, offer, or drop. */
   const afterStop = useRef<"send" | "offer" | "drop">("drop");
-  const latest = useRef({ surface, meetingKey, conversationId, onText });
+  /** The microphone's peak level while recording, and its name, for the "no sound" message. */
+  const stopPeak = useRef<(() => number | null) | null>(null);
+  const heard = useRef<{ peak: number | null; name: string }>({ peak: null, name: "" });
+  const latest = useRef({ surface, meetingKey, conversationId, onText, deviceId, onMicrophoneOpened });
   useEffect(() => {
-    latest.current = { surface, meetingKey, conversationId, onText };
-  }, [surface, meetingKey, conversationId, onText]);
+    latest.current = { surface, meetingKey, conversationId, onText, deviceId, onMicrophoneOpened };
+  }, [surface, meetingKey, conversationId, onText, deviceId, onMicrophoneOpened]);
 
   const release = useCallback(() => {
     if (ticker.current) clearInterval(ticker.current);
     ticker.current = null;
+    if (stopPeak.current) heard.current = { ...heard.current, peak: stopPeak.current() };
+    stopPeak.current = null;
     stream.current?.getTracks().forEach((track) => {
       track.onended = null;
       track.onmute = null;
@@ -111,9 +122,15 @@ export function useVoiceRecorder({ surface, meetingKey, conversationId, onText }
         signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS),
       });
       const body = (await response.json().catch(() => null)) as { text?: unknown; traceId?: unknown; error?: unknown } | null;
+      /*
+       * "I did not hear anything" only when the microphone did send sound; when its level stayed at zero the
+       * microphone itself is the problem, so it is named (the owner, 27 Nov 2026: "i have usb mic not built in").
+       */
+      const silent = heard.current.peak !== null && heard.current.peak <= SILENT_PEAK;
+      const nothing = (message: string) => (silent && message === VOICE_MESSAGES.nothingHeard ? silentMicrophoneMessage(heard.current.name) : message);
       if (response.ok && typeof body?.text === "string" && typeof body.traceId === "string") {
         if (!body.text.trim()) {
-          setError(VOICE_MESSAGES.nothingHeard);
+          setError(nothing(VOICE_MESSAGES.nothingHeard));
           setPhase("idle");
           return;
         }
@@ -121,7 +138,7 @@ export function useVoiceRecorder({ surface, meetingKey, conversationId, onText }
         setPhase("done");
         return;
       }
-      setError(typeof body?.error === "string" && body.error.trim() ? body.error : VOICE_MESSAGES.unavailable);
+      setError(nothing(typeof body?.error === "string" && body.error.trim() ? body.error : VOICE_MESSAGES.unavailable));
       setPhase("idle");
     } catch (failure) {
       const name = failure instanceof Error ? failure.name : "";
@@ -187,7 +204,7 @@ export function useVoiceRecorder({ surface, meetingKey, conversationId, onText }
         timer = setTimeout(() => reject(new PermissionTimeout()), PERMISSION_TIMEOUT_MS);
       });
       try {
-        media = await Promise.race([navigator.mediaDevices.getUserMedia({ audio: true }), timeout]);
+        media = await Promise.race([openMicrophone(latest.current.deviceId), timeout]);
       } finally {
         clearTimeout(timer);
       }
@@ -197,6 +214,9 @@ export function useVoiceRecorder({ surface, meetingKey, conversationId, onText }
       return;
     }
     stream.current = media;
+    heard.current = { peak: null, name: microphoneName(media) };
+    stopPeak.current = measurePeak(media);
+    latest.current.onMicrophoneOpened?.();
     const mimeType = pickVoiceMime();
     let next: MediaRecorder;
     try {

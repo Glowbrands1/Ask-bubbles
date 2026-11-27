@@ -268,7 +268,7 @@ export function AskBand({
           )}
           </div>
           {/* The approved rounded hand-lettered greeting (option 2). */}
-          <h1 className="display-lettering text-[31px] text-band-foreground sm:text-[48px]">
+          <h1 className="display-lettering text-[24px] text-band-foreground sm:text-[48px]">
             {greeting}, {greetingName}
           </h1>
         </div>
@@ -550,7 +550,7 @@ function AskCard({
       {/* Suggestions sit under the bar, on the band, and stay reachable while
           typing. */}
       {prompts.length > 0 ? (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-2.5 flex flex-wrap gap-1.5 sm:mt-3 sm:gap-2">
           {prompts.map((prompt) => (
             <button
               key={prompt}
@@ -562,7 +562,7 @@ function AskCard({
                 event.preventDefault();
                 onPrompt(prompt);
               }}
-              className="rounded-full bg-band-chip-surface px-3.5 py-1.5 text-left text-[13px] font-medium text-band-chip-foreground transition-colors hover:bg-surface disabled:opacity-50"
+              className="rounded-[14px] bg-band-chip-surface px-2.5 py-1 text-left text-[12px] leading-snug font-medium sm:rounded-full sm:px-3.5 sm:py-1.5 sm:text-[13px] text-band-chip-foreground transition-colors hover:bg-surface disabled:opacity-50"
             >
               {prompt}
             </button>
