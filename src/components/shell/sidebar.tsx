@@ -13,6 +13,8 @@ import { GlobalSearch } from "./global-search";
 import { AppSwitcher } from "./app-switcher";
 import { NAV_SECTIONS, isActivePath } from "./navigation";
 import { useWhatsNewVisible } from "@/features/whats-new/whats-new-access";
+import { useWhatsNewUnseen } from "@/features/whats-new/whats-new-seen";
+import { whatsNewFor } from "@/config/whats-new";
 import { UserMenu } from "./user-menu";
 import { NotificationBell } from "@/features/notifications/notification-bell";
 import type { BellData } from "@/lib/notifications/types";
@@ -52,7 +54,7 @@ export function SidebarNav({
   bell?: BellData | null;
 }) {
   const pathname = usePathname();
-  const { can, isAdmin, role } = useSession();
+  const { can, isAdmin, role, user } = useSession();
   /* The brand mark goes where this role starts, which is not Home for every role. */
   const homeHref = defaultLandingForRole(role);
 
@@ -63,6 +65,9 @@ export function SidebarNav({
    * not the boundary — the page guards and the API are.
    */
   const whatsNewVisible = useWhatsNewVisible();
+  // The newest What's New entry this person may see; the entry wiggles with a "New" dot until they open the page.
+  const whatsNewLatest = whatsNewVisible ? (whatsNewFor(role, (_role, permission) => can(permission))[0]?.date ?? null) : null;
+  const whatsNewUnseen = useWhatsNewUnseen(user?.id ?? "", whatsNewLatest, pathname === "/whats-new");
   const sections = NAV_SECTIONS.map((section) => ({
     ...section,
     items: section.items.filter((item) => {
@@ -153,6 +158,7 @@ export function SidebarNav({
                     aria-current={active ? "page" : undefined}
                     className={cn(
                       "group relative flex items-center gap-3 rounded-[var(--radius-sm)] text-[14px] transition-colors",
+                      item.whatsNew && whatsNewUnseen && "whats-new-shake",
                       isCollapsed ? "justify-center px-0 py-2.5" : "px-3 py-[9px]",
                       /*
                        * THE CURRENT PAGE IS THE TOKYO GREEN PILL with Charcoal
@@ -200,6 +206,16 @@ export function SidebarNav({
                       >
                         {overdueFollowUps}
                         <span className="sr-only"> overdue follow-ups</span>
+                      </span>
+                    ) : null}
+                    {item.whatsNew && whatsNewUnseen ? (
+                      <span
+                        className={cn(
+                          "whats-new-dot shrink-0 rounded-full bg-followup-attention text-[9px] font-black tracking-wide text-followup-attention-foreground uppercase",
+                          isCollapsed ? "absolute top-1.5 right-1.5 size-2" : "ml-auto px-1.5 py-0.5 leading-none",
+                        )}
+                      >
+                        {isCollapsed ? <span className="sr-only">New updates</span> : <>New<span className="sr-only"> updates</span></>}
                       </span>
                     ) : null}
                     {!isCollapsed && section.admin ? (
