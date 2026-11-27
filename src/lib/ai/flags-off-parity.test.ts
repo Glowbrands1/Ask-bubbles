@@ -238,6 +238,10 @@ const ALLOWED_UI = [
   "src/features/calendar/calendar-view.tsx",
   "src/features/calendar/new-event.tsx",
   "src/features/calendar/reminder-card.tsx",
+  // THE FLOATING CALENDAR (port from the sibling app; the owner, 27 Nov 2026: "can we make the calendar pop up and be
+  // resizable so anytime we go in other tabs it stays there"): a launcher button and a window over the app, mounted in the
+  // layout, showing the Calendar page's own view. No chat or form behaviour changes.
+  "src/features/calendar/calendar-popup.tsx",
   // The named account sees every address without clicking (Pau, 26 Nov 2026: "for my access only"; WOVEN_ADDRESS_LIST_EMAILS):
   // the Woven page passes the yes/no down to the directory. Admin page only.
   "src/app/(app)/admin/integrations/woven/[view]/page.tsx",
