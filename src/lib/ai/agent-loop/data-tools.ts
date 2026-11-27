@@ -7,7 +7,7 @@ import { DOCUMENT_SOURCE_LABEL, DOCUMENT_STATUS_LABEL, KNOWLEDGE_CATEGORY_LABEL 
 import { pagesToolLine, type PageReaderTool } from "@/config/ai-readable-pages";
 import { FORM_RECORDS_PERMISSION } from "@/lib/forms/chat-form-records";
 import { relativeBusinessDay } from "@/lib/forms/follow-up";
-import { WHATS_NEW, whatsNewFor, type WhatsNewRelease } from "@/config/whats-new";
+import { WHATS_NEW, whatsNewEnabled, whatsNewFor, type WhatsNewRelease } from "@/config/whats-new";
 import type { TrainingCatalog } from "@/lib/ai-training/types";
 import type { AccessScope, DocumentStatus, KnowledgeDocument, Permission, Role } from "@/types";
 import type { CalendarView } from "@/lib/calendar/types";
@@ -749,6 +749,10 @@ export async function readWhatsNew(context: DataToolContext, input: { since?: un
   const role = context.actor.role;
   if (!hasPermission(matrix, role, READER_PERMISSION.read_whats_new)) {
     return { source: WHATS_NEW_SOURCE, refused: "This account's role does not open the What's New page. Nothing was read; say so plainly, in one line." };
+  }
+  // Pau, 27 Nov 2026: hidden for everyone until it is rolled out (`whatsNewEnabled`); the page is a 404 meanwhile.
+  if (!whatsNewEnabled()) {
+    return { source: WHATS_NEW_SOURCE, refused: "There is no list of updates to share yet. Nothing was read; say so plainly, in one line, and do not mention a What's New page or name any feature as new." };
   }
   const since = text(input.since);
   const from = since && /^\d{4}-\d{2}-\d{2}$/.test(since) ? since : null;

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
@@ -21,6 +21,10 @@ type Out = { releases?: { date: string; summary: string; updates: { title: strin
 const titles = (out: Out) => (out.releases ?? []).flatMap((release) => release.updates.map((update) => update.title));
 
 describe("read_whats_new", () => {
+  // Rolled out for these cases; hidden for everyone by default (Pau, 27 Nov 2026), see the case after them.
+  beforeEach(() => vi.stubEnv("NEXT_PUBLIC_WHATS_NEW_ENABLED", "true"));
+  afterEach(() => vi.unstubAllEnvs());
+
   it("a store manager gets the entries their role may open, newest release first, with tag, how to use it and Show me", async () => {
     const out = (await readWhatsNew(ctx("location_manager", STORE, "what's new?"), {}, RELEASES)) as Out;
     expect(titles(out)).toEqual(["Everyone thing", "Older thing"]);
@@ -39,6 +43,13 @@ describe("read_whats_new", () => {
     const out = (await readWhatsNew(ctx("employee", STORE, "what's new?"), {}, RELEASES)) as Out;
     expect(out.refused).toBeTruthy();
     expect(out.releases).toBeUndefined();
+  });
+
+  it("Pau, 27 Nov 2026 (\"hide this for everyone, for now pls, i will roll it out later\"): off, even an administrator reads nothing and is told not to point at the page", async () => {
+    vi.stubEnv("NEXT_PUBLIC_WHATS_NEW_ENABLED", undefined);
+    const out = (await readWhatsNew(ctx("admin", GLOBAL, "what's new?"), {}, RELEASES)) as Out;
+    expect(out.releases).toBeUndefined();
+    expect(out.refused).toContain("do not mention a What's New page");
   });
 
   it("is one of the loop's handlers", () => {
