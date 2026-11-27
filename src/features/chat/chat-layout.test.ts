@@ -157,6 +157,17 @@ describe("the composer's own footprint", () => {
     expect(COMPOSER_CODE).toMatch(/const attachButton = attaching \?/);
   });
 
+  it("draws the mic only through the shared, gated voice control (VOICE_INPUT_ENABLED)", () => {
+    /*
+     * 27 Nov 2026: a working mic is allowed when voice is on for the person. It is never drawn here directly (no `Mic`
+     * icon above, no always-visible button): only `VoiceButton` inside `VoiceControl`, which renders nothing unless the
+     * server allowed voice and the browser can record (`features/voice/voice-button.tsx`).
+     */
+    expect(COMPOSER_CODE).toContain("<VoiceControl");
+    expect(COMPOSER_CODE).toContain("<VoiceButton");
+    expect(COMPOSER_CODE.indexOf("<VoiceControl")).toBeLessThan(COMPOSER_CODE.indexOf("<VoiceButton"));
+  });
+
   it("renders no permanently mounted helper paragraph", () => {
     expect(COMPOSER_CODE).not.toContain("ANSWER_MODE_HELPER[mode]");
   });
@@ -181,6 +192,10 @@ describe("no chat surface renders a dead control or a source block", () => {
   });
 
   /* Changed on purpose (Pau, 26 Nov 2026): "Paperclip" and "Attach a file" left this list: the attach control works now. */
+  /*
+   * "Mic" and "Voice input" stay banned in the chat feature's own files: the only mic is the shared, gated one in
+   * `features/voice` (VOICE_INPUT_ENABLED, 27 Nov 2026), which renders nothing when voice is off.
+   */
   it.each(["ImagePlus", "Mic", "Coming later", "Voice input"])(
     "renders no %s anywhere in chat",
     (token) => {

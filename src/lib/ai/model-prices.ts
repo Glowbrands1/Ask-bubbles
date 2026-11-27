@@ -1,3 +1,5 @@
+import { USD_PER_HOUR as VOICE_USD_PER_HOUR } from "@/lib/voice/voice-limits";
+
 /**
  * List prices per million tokens, the one place the spend guard reads them
  * (Pau, 27 Oct 2026: live model spend stays inside a monthly cap). Input is
@@ -35,6 +37,12 @@ export function priceFor(model: string | null | undefined): ModelPrice {
 
 export interface TokenUsage {
   readonly model: string | null;
+  /**
+   * VOICE_INPUT_ENABLED: a speech-to-text entry (`slots.spend` source "voice"). Priced by the hour of audio at
+   * `usdPerHour`, never as a model, whatever `model` says. Absent on every token entry, which is priced as before.
+   */
+  readonly audioSeconds?: number;
+  readonly usdPerHour?: number;
   readonly inputTokens: number | null;
   readonly outputTokens: number | null;
   readonly cacheReadTokens: number | null;
@@ -43,6 +51,11 @@ export interface TokenUsage {
 
 /** US dollars for one model call's usage. */
 export function usageCostUsd(usage: TokenUsage): number {
+  if (typeof usage.audioSeconds === "number") {
+    const seconds = Number.isFinite(usage.audioSeconds) && usage.audioSeconds > 0 ? usage.audioSeconds : 0;
+    const hourly = typeof usage.usdPerHour === "number" && Number.isFinite(usage.usdPerHour) && usage.usdPerHour > 0 ? usage.usdPerHour : VOICE_USD_PER_HOUR;
+    return (seconds / 3600) * hourly;
+  }
   const price = priceFor(usage.model);
   return (
     ((usage.inputTokens ?? 0) * price.input +

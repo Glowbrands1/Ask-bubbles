@@ -11,6 +11,7 @@ import remarkGfm from "remark-gfm";
 import { meetingPeopleAction } from "@/features/l10/actions";
 import { cx } from "@/features/l10/ui/ui";
 import type { Person } from "./chat-mentions";
+import { VoiceButton, VoiceControl, VoiceNotice } from "@/features/voice/voice-button";
 import { ChatMentionText, ChatPeople, useChatPeople, useMentionPicker } from "./MentionPicker";
 import { artifactTitle, collectCitations, isArtifactWorthy, toolLabel } from "./citations";
 import { ArtifactContext, useArtifacts, type ArtifactDoc } from "./artifact-context";
@@ -397,6 +398,20 @@ function Chat({ meetingKey, scope, deep, onDeepChange }: { meetingKey: string; s
           </div>
         )}
       </div>
+      {/*
+        VOICE_INPUT_ENABLED (the owner, 27 Nov 2026): the shared mic, between the paperclip and Deep think, only for
+        people the server lets use voice. The transcript is appended to the draft with setDraft (so the @-mention list
+        does not open), the field takes focus, and Send is unchanged: nothing new goes to /api/l10/assistant.
+      */}
+      <VoiceControl
+        surface="l10"
+        meetingKey={meetingKey}
+        disabled={running}
+        onText={(text) => {
+          setDraft((current) => (current.trim() ? `${current.replace(/\s+$/, "")} ${text}` : text));
+          inputRef.current?.focus();
+        }}
+      >
       <div className="flex flex-col gap-1.5 px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4 sm:pb-3">
         <form
           onSubmit={onSubmit}
@@ -478,6 +493,7 @@ function Chat({ meetingKey, scope, deep, onDeepChange }: { meetingKey: string; s
             >
               <PaperclipIcon />
             </button>
+            <VoiceButton className={cx("size-11 rounded-xl text-muted hover:bg-white/70 hover:text-ink", focusRing)} timerClassName="text-ink" />
             <button
               type="button"
               role="switch"
@@ -502,8 +518,10 @@ function Chat({ meetingKey, scope, deep, onDeepChange }: { meetingKey: string; s
             )}
           </div>
         </form>
+        <VoiceNotice className="px-2 text-ink" />
         <p className="m-0 px-1 text-center text-[11px] text-muted">Can&apos;t change data. Reads this meeting from the Leadership Hub, and your Ask Bubbles Google reviews and forms on file. Check important answers.</p>
       </div>
+      </VoiceControl>
     </div>
     </ChatPeople>
   );
