@@ -388,6 +388,7 @@ export function ChatScreen() {
            * defaults. A proposal carries no field values at all.
            */
           formProposal: response.formProposal,
+          reminderProposal: response.reminderProposal,
           /* Every card, when one message asked for several forms. */
           ...(response.formProposals && response.formProposals.length > 1
             ? { formProposals: response.formProposals }

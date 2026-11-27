@@ -231,6 +231,13 @@ const ALLOWED_UI = [
   // saved): a Home address column whose button asks Woven for one person's address on click. Admin page only.
   "src/features/admin/woven/directory-table.tsx",
   "src/features/admin/woven/address-button.tsx",
+  // THE CALENDAR (Pau, 26 Nov 2026, both apps: one calendar with the Leadership Hub, "+ New event" and the chat's
+  // reminder card): a new page and its own components, reached only from the new Calendar entry. No existing screen
+  // changes; the chat bubble mounts the reminder card only when an answer carries one.
+  "src/app/(app)/calendar/page.tsx",
+  "src/features/calendar/calendar-view.tsx",
+  "src/features/calendar/new-event.tsx",
+  "src/features/calendar/reminder-card.tsx",
   // The named account sees every address without clicking (Pau, 26 Nov 2026: "for my access only"; WOVEN_ADDRESS_LIST_EMAILS):
   // the Woven page passes the yes/no down to the directory. Admin page only.
   "src/app/(app)/admin/integrations/woven/[view]/page.tsx",

@@ -9,6 +9,7 @@ import { relativeBusinessDay } from "@/lib/forms/follow-up";
 import { WHATS_NEW, whatsNewFor, type WhatsNewRelease } from "@/config/whats-new";
 import type { TrainingCatalog } from "@/lib/ai-training/types";
 import type { AccessScope, Permission, Role } from "@/types";
+import type { CalendarView } from "@/lib/calendar/types";
 
 import { formatBusinessTime } from "@/lib/business-date";
 
@@ -68,6 +69,11 @@ export interface DataToolDeps {
    * predate it read the real queue.
    */
   readonly loadFollowUpQueue?: (input: { subject: string; verified: boolean; role: Role; scope: AccessScope | null; today: string }) => Promise<FollowUpQueueRead | null>;
+  /**
+   * The Calendar page's own read (`loadCalendarFor`): this person's follow-ups, HR approvals, Google Reviews checks,
+   * reminders and L10 meetings from the Leadership Hub. Null when the asker is not a verified account.
+   */
+  readonly loadCalendar?: (input: { subject: string; email: string; displayName: string; verified: boolean; role: Role; scope: AccessScope | null; from: string; to: string }) => Promise<CalendarView | null>;
 }
 
 /** What read_follow_ups reads: the follow-up queue's counts and forms (`follow-up-queue.ts`). */
@@ -124,6 +130,12 @@ export const DEFAULT_DATA_TOOL_DEPS: DataToolDeps = {
   loadTrainingCatalog: async () => (await import("@/lib/ai-training/repository")).loadCatalog(false),
   loadHrApprovals: async ({ subject, verified, now }) =>
     (await import("@/lib/forms/hr-approval")).readHrApprovalsFor(subject, verified, now),
+  loadCalendar: async ({ subject, email, displayName, verified, role, scope, from, to }) => {
+    if (!verified || !subject || !scope) return null;
+    const { loadCalendarFor } = await import("@/lib/calendar/load.server");
+    const r = await loadCalendarFor({ subject, email, displayName, role, scope, verified: true }, { from, to }, { origin: "", includeHub: true });
+    return r.ok ? r.view : null;
+  },
   loadFollowUpQueue: async ({ subject, verified, role, scope, today }) => {
     if (!verified || !subject || !scope) return null;
     const [{ pageFormsAccess }, { readFollowUpQueue }, { followUpState }] = await Promise.all([
@@ -306,6 +318,116 @@ export async function readHrApprovals(context: DataToolContext, deps: DataToolDe
   };
 }
 
+/* ---------------------------------------------------------------- read_calendar / propose_reminder --- */
+
+export const CALENDAR_SOURCE = "Calendar";
+const CALENDAR_LISTED = 60;
+
+/**
+ * read_calendar({from?, to?}) (port from the sibling app; Pau, 26 Nov 2026; CLAUDE.md §5): the Calendar page's own read for this manager, so
+ * "what's on my calendar this week?" and "when is my next L10?" are answered from it: their form follow-ups and HR
+ * approvals (the forms pages' own scope and the one overdue rule), the weekly Google Reviews check per salon, their
+ * reminders and their team's, and their L10 meetings from the Leadership Hub. Gated as the page is (`view_overview`).
+ * Defaults to today and the next 13 days. Never time off.
+ */
+export async function readCalendar(context: DataToolContext, input: Record<string, unknown>, deps: DataToolDeps = DEFAULT_DATA_TOOL_DEPS): Promise<ToolResult> {
+  if (!hasPermission(activePermissionMatrix(), context.actor.role, READER_PERMISSION.read_calendar)) {
+    return { source: CALENDAR_SOURCE, refused: "This account's role has no Calendar. Nothing was read; say so plainly, in one line." };
+  }
+  const { addDays, validRange } = await import("@/lib/calendar/range");
+  const from = typeof input.from === "string" && input.from ? input.from : context.today;
+  const to = typeof input.to === "string" && input.to ? input.to : addDays(from, 13);
+  if (!validRange(from, to)) return { source: CALENDAR_SOURCE, reason_code: "range", error: "Use real dates (YYYY-MM-DD), at most 62 days apart, and call read_calendar again." };
+  let view: CalendarView | null;
+  try {
+    view = await (deps.loadCalendar ?? DEFAULT_DATA_TOOL_DEPS.loadCalendar!)({
+      subject: context.actor.subject ?? "",
+      email: context.actor.email ?? "",
+      displayName: "",
+      verified: context.actor.verified === true,
+      role: context.actor.role,
+      scope: context.actor.scope,
+      from,
+      to,
+    });
+  } catch {
+    return { source: CALENDAR_SOURCE, reason_code: "read_failed", error: "The calendar could not be read just now. Say so; never say the calendar is empty." };
+  }
+  if (!view) return { source: CALENDAR_SOURCE, reason_code: "scope", error: "This account is not signed in with a verified identity, so its calendar cannot be read. Say so." };
+  const listed = view.events.slice(0, CALENDAR_LISTED);
+  const place = appConfig().locationWord;
+  return {
+    source: CALENDAR_SOURCE,
+    today: context.today,
+    range: { from, to },
+    events: listed.map((e) => ({
+      date: e.date,
+      weekday: new Date(`${e.date}T12:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC", weekday: "long" }),
+      time_ct: e.startTime ?? null,
+      ...(e.minutes ? { minutes: e.minutes } : {}),
+      what: e.kind,
+      title: e.title,
+      ...(e.status ? { status: e.status } : {}),
+      ...(e.location ? { [place]: e.location } : {}),
+      ...(e.kind === "reminder" ? { who_can_see: e.visibility ?? "only_me", made_by: e.by ?? "you" } : {}),
+      app: e.source,
+    })),
+    ...(view.events.length > listed.length ? { listed: listed.length, of: view.events.length } : {}),
+    ...(view.notes.length ? { not_loaded: view.notes } : {}),
+    note:
+      "This is the manager's Calendar page for these dates (Central time). what: meeting = an L10 from the Leadership Hub (time_ct null means the Hub has no start time set yet: say so, never guess one); form-follow-up and hr-approval use the same overdue rule as the Overview and the forms pages; google-reviews = the weekly check of a " + place + "'s Google Reviews; reminder = a personal or team reminder. " +
+      (view.notes.length ? "not_loaded lists sources that did not answer: say which, and never say there is nothing from them. " : "") +
+      "Time off is never on the calendar. To ADD a reminder use propose_reminder.",
+  };
+}
+
+/** What propose_reminder hands the chat: a card the manager checks and confirms; nothing is saved by the AI. */
+export interface ReminderProposal {
+  readonly title: string;
+  readonly date: string;
+  readonly time: string | null;
+  readonly visibility: "only_me" | "my_team";
+}
+
+/** Time off never goes on the calendar (the owner, 26 Nov 2026), not even as a personal reminder. */
+export const TIME_OFF = /\b(time[\s-]?off|pto|vacation|day off|days off|leave of absence|sick (?:day|leave)|out of (?:the )?office|ooo)\b/i;
+const SELF = /^(me|myself|my calendar|mine|i)$/i;
+
+export async function proposeReminder(context: DataToolContext, input: Record<string, unknown>, effects?: { reminderProposal?: ReminderProposal | null }): Promise<ToolResult> {
+  if (!hasPermission(activePermissionMatrix(), context.actor.role, READER_PERMISSION.read_calendar)) {
+    return { source: CALENDAR_SOURCE, refused: "This account's role has no Calendar, so no reminder can be added. Say so plainly, in one line." };
+  }
+  const { isIsoDate } = await import("@/lib/calendar/range");
+  const title = typeof input.title === "string" ? input.title.trim().slice(0, 200) : "";
+  const date = typeof input.date === "string" ? input.date : "";
+  const time = typeof input.time === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(input.time) ? input.time : null;
+  const visibility = input.visibility === "my_team" ? "my_team" : "only_me";
+  if (typeof input.for_person === "string" && input.for_person.trim() && !SELF.test(input.for_person.trim())) {
+    return {
+      source: CALENDAR_SOURCE,
+      reason_code: "not_for_others",
+      refused: "A reminder goes only on the signed-in manager's own calendar; nobody can add to another person's. Nothing was added. Say so in one line, and offer to add it to their own calendar with My team visibility so the leaders above and below them see it.",
+    };
+  }
+  if (TIME_OFF.test(title)) {
+    return {
+      source: CALENDAR_SOURCE,
+      reason_code: "time_off",
+      refused: "Time off is never put on the calendar. Nothing was added. Say so in one line; time off is requested the usual way, outside this calendar.",
+    };
+  }
+  if (!title) return { source: CALENDAR_SOURCE, reason_code: "no_title", error: "A reminder needs a title. Ask what the reminder should say." };
+  if (!isIsoDate(date)) return { source: CALENDAR_SOURCE, reason_code: "no_date", error: "That is not a real date. Ask which day they mean." };
+  const card: ReminderProposal = { title, date, time, visibility };
+  if (effects) effects.reminderProposal = card;
+  return {
+    source: CALENDAR_SOURCE,
+    card: { ...card, saved: false },
+    note:
+      "A reminder card is now on the manager's screen. It is NOT on their calendar until they press Add to calendar. Say the card is ready and repeat its title, day and date, time (CT, or all day) and who can see it (only_me: only them; my_team: the leaders above and below them). Never say it was added.",
+  };
+}
+
 /* ---------------------------------------------------------------- read_follow_ups --- */
 
 /** The source label: the screens that show these counts. */
@@ -378,6 +500,7 @@ export const READER_PERMISSION = {
   read_follow_ups: "view_overview",
   read_whats_new: "view_overview",
   read_ai_training: "view_ai_training",
+  read_calendar: "view_overview",
 } as const satisfies Record<PageReaderTool, Permission>;
 
 /** Words that say nothing about a lesson's topic ("a lesson on prompts" is about prompts). */
@@ -581,6 +704,35 @@ export function dataToolSpecs(config: AppConfig) {
       },
     },
     {
+      name: "read_calendar",
+      description:
+        "The manager's Calendar: their form follow-ups and HR approvals by due date, the weekly Google Reviews check for each of their " + places + ", their reminders and their team's, and their L10 meetings (day and Central time) from the Leadership Hub. from/to are YYYY-MM-DD (default today and the next 13 days, at most 62 days). Use it for \"what's on my calendar this week?\", \"when is my next L10?\", \"what do I have on Friday?\". Time off is never on it." + pagesToolLine(config.readablePages, "read_calendar"),
+      input_schema: {
+        type: "object",
+        properties: {
+          from: { type: "string", description: "First day, YYYY-MM-DD. For \"this week\", this week's Monday." },
+          to: { type: "string", description: "Last day, YYYY-MM-DD. For \"this week\", this week's Sunday." },
+        },
+        required: [],
+      },
+    },
+    {
+      name: "propose_reminder",
+      description:
+        "Put a reminder card on the manager's screen for their Calendar (\"add a reminder to my calendar for January 20 titled Order lamps\", \"remind me Friday at 2 to call the landlord\"). Saves NOTHING: the manager checks the card and presses Add to calendar. visibility: only_me (default) or my_team (only when they say their team should see it). Resolve the date against today; omit time when none was given. Only for the manager's own calendar, never another person's, and never time off (both are refused).",
+      input_schema: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "What the reminder says, in the manager's words." },
+          date: { type: "string", description: "YYYY-MM-DD." },
+          time: { type: "string", description: "HH:MM, 24-hour, Central. Omit for all day." },
+          visibility: { type: "string", enum: ["only_me", "my_team"], description: "only_me (default) or my_team." },
+          for_person: { type: "string", description: "Only when the manager asked to put it on SOMEONE ELSE's calendar: that person's name as typed (it is refused: a reminder goes only on the manager's own calendar)." },
+        },
+        required: ["title", "date"],
+      },
+    },
+    {
       name: "read_ai_assignments",
       description:
         "The AI assignment tracker (AI Training > Assignments), for the people it was set up for only: two AI assignments a month per person (the 1st to 15th, the 16th to month end); who is done, still due or has more time this half, and each person's done and missing halves. Anyone else is refused.",
@@ -598,7 +750,7 @@ export function __setDataToolDepsForTests(deps: Partial<DataToolDeps> | null): v
 /** The data tools' handlers, keyed as the loop dispatches them (`run.ts`). */
 export function dataToolHandlers(
   context: DataToolContext,
-  _effects?: Pick<ToolEffects, "sources">,
+  effects?: Pick<ToolEffects, "sources" | "reminderProposal">,
   deps: DataToolDeps = depsForTests ? { ...DEFAULT_DATA_TOOL_DEPS, ...depsForTests } : DEFAULT_DATA_TOOL_DEPS,
 ): Record<string, (args: Record<string, unknown>) => Promise<ToolResult>> {
   return {
@@ -607,6 +759,8 @@ export function dataToolHandlers(
     read_ai_assignments: () => readAiAssignments(context, deps),
     read_hr_approvals: () => readHrApprovals(context, deps),
     read_follow_ups: () => readFollowUps(context, deps),
+    read_calendar: (args) => readCalendar(context, args, deps),
+    propose_reminder: (args) => proposeReminder(context, args, effects),
     read_whats_new: (args) => readWhatsNew(context, args),
     read_ai_training: (args) => readAiTraining(context, args, deps),
   };
