@@ -11,8 +11,8 @@ import {
 /**
  * THE VOICE CAPS, COUNTED IN THE DATABASE (VOICE_INPUT_ENABLED).
  *
- * `claimVoiceUsage` calls `voice_usage_claim` (migration 20261127002000): one step that counts this person's, this
- * store's and the company's pending plus succeeded clips since Manila midnight (and the person's in the last 60 s) and,
+ * `claimVoiceUsage` calls `voice_usage_claim` (migrations 20261127002000, day zone 20261127004000): one step that counts this person's, this
+ * store's and the company's pending plus succeeded clips since Central midnight (and the person's in the last 60 s) and,
  * when every cap has room, writes a pending row and returns its id. It runs BEFORE the vendor call. A pending row
  * counts as the browser's clip length (clamped) until `finishVoiceUsage` marks it, and is never released.
  *
