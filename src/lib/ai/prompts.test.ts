@@ -683,7 +683,8 @@ describe("PROMPT_CACHE_ENABLED off", () => {
     const again = buildSystemPrompt(input);
     expect(again).toBe(prompt);
     // The fixture gained the retrieved-sources rule on purpose (conv_mvnljjl32xlit48:
-    // "the sources you just shared"); see `sources-not-shared.ts`.
+    // "the sources you just shared"); see `sources-not-shared.ts`. It gained the coaching how-to rule on purpose too
+    // (the owner, 26 Nov 2026: coaching how-to answers are a prep package); see `coaching-how-to.ts`.
     expect(prompt).toBe(readFileSync(new URL("./prompts.base.fixture.txt", import.meta.url), "utf8"));
     expect(prompt).not.toContain("---DYNAMIC---");
     expect(prompt).not.toContain("Should Not Appear");

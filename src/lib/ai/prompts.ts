@@ -15,6 +15,7 @@ import { salesExceptionSuffix, withSalesException } from "./ca-sales-prompt-line
 import { MANAGER_NAME_RULE } from "./manager-name-guard";
 import { CROSS_CHAT_REPLY_RULE } from "@/lib/chat/cross-chat-guard";
 import { CHAT_STYLE_RULES } from "./chat-style-rules";
+import { withCoachingHowTo } from "./coaching-how-to";
 import { PRIOR_COACHING_OPTIONAL_RULES } from "./prior-coaching-optional";
 import { RETRIEVED_NOT_SHARED_NOTE, RETRIEVED_NOT_SHARED_RULE } from "./sources-not-shared";
 import type { AskContext, OpenFormSummary } from "./types";
@@ -542,7 +543,7 @@ ${noMatch ? `${noMatch}\n\n` : ""}TONE
 
 ${ASSISTANT_TONE} ${MODE_INSTRUCTION[mode]}
 
-${ASSISTANT_VOICE_RULES}`, input.frameworkGeneralSections === true);
+${ASSISTANT_VOICE_RULES}`, input.frameworkGeneralSections === true, locationNoun);
   }
 
   // Flag on: one static prefix. User, store, date, answer mode, the open
@@ -607,6 +608,7 @@ ${ASSISTANT_VOICE_RULES}`;
   return withFrameworkGeneralSections(
     `${staticPrompt}\n\n${DYNAMIC_PROMPT_MARKER}\n${dynamicPrompt}`,
     input.frameworkGeneralSections === true,
+    locationNoun,
   );
 }
 
@@ -758,9 +760,11 @@ const UNCOVERED_RULE =
 export const FRAMEWORK_GENERAL_SECTIONS_RULE =
   "- WHEN THE COACHING FRAMEWORK IS AMONG THE SOURCES, A PEOPLE ISSUE IT DOES NOT NAME IS STILL COVERED BY ITS GENERAL SECTIONS: root cause identification, the difference between performance issues and behavior issues, and the coaching conversation structure. Answer from those sections and cite them by their markers. Say only that no section names this exact issue; do not say the knowledge base does not have it.";
 
-function withFrameworkGeneralSections(prompt: string, on: boolean): string {
-  if (!on || !prompt.includes(UNCOVERED_RULE)) return prompt;
-  return prompt.split(UNCOVERED_RULE).join(`${UNCOVERED_RULE}\n${FRAMEWORK_GENERAL_SECTIONS_RULE}`);
+function withFrameworkGeneralSections(prompt: string, on: boolean, place: string): string {
+  /* Port of the sibling app, 26 Nov 2026: coaching how-to answers carry an outline, a quoted script and a checklist, as in the agent loop's rules book. */
+  const coached = withCoachingHowTo(prompt, place);
+  if (!on || !coached.includes(UNCOVERED_RULE)) return coached;
+  return coached.split(UNCOVERED_RULE).join(`${UNCOVERED_RULE}\n${FRAMEWORK_GENERAL_SECTIONS_RULE}`);
 }
 
 /** The coaching framework, read from a source's title. */
