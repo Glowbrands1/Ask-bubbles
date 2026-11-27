@@ -298,10 +298,11 @@ export function VoiceNotice({ className, id }: { className?: string; id?: string
       ) : null}
       {phase === "done" || liveChecked ? <p role="status">{VOICE_CHECK}</p> : null}
       {/*
-       * WHICH MICROPHONE: only when this browser has more than one. Their names show once the browser has been allowed a
-       * microphone; before that, "Microphone 1", "Microphone 2". The choice is kept in this browser.
+       * WHICH MICROPHONE: always there while voice is on (the owner: "i still cant pick a microfphone to use"). Opening
+       * it reads the list again and, when the browser still hides the names, asks for the microphone once. The choice is
+       * kept in this browser. The options are dark on light: a browser that draws its own dropdown shows them readably.
        */}
-      {microphones.microphones.length > 1 ? (
+      {microphones.supported ? (
         <label className="flex flex-wrap items-center gap-1.5 opacity-80">
           Microphone
           <select
@@ -310,11 +311,15 @@ export function VoiceNotice({ className, id }: { className?: string; id?: string
             value={microphones.chosen ?? ""}
             disabled={phase === "recording" || phase === "uploading" || phase === "requesting" || live.state.kind !== "idle"}
             onChange={(event) => microphones.choose(event.target.value || null)}
+            onFocus={() => void microphones.open()}
+            onPointerDown={() => void microphones.open()}
             className="max-w-[16rem] truncate rounded-md border border-border bg-surface px-1.5 py-0.5 text-[12px] font-semibold text-foreground"
           >
-            <option value="">Default microphone</option>
+            <option value="" className="bg-white text-black">
+              Default microphone
+            </option>
             {microphones.microphones.map((microphone) => (
-              <option key={microphone.id} value={microphone.id}>
+              <option key={microphone.id} value={microphone.id} className="bg-white text-black">
                 {microphone.label}
               </option>
             ))}

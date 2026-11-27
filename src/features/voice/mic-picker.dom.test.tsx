@@ -117,11 +117,13 @@ describe('"i think i need to choose which mic because i have usb mic not built i
     expect(picker()!.value).toBe("usb-1");
   });
 
-  it("one microphone: no choice is shown", async () => {
+  // CHANGED ON PURPOSE (the owner, 27 Nov 2026: "i still cant pick a microfphone to use"): the choice used to hide
+  // with one microphone listed, which is also what a browser shows before it has been allowed one. It always shows now.
+  it("one microphone: the choice still shows, with it in the list", async () => {
     devices = [USB];
     render(<Box />);
     await flush();
-    expect(picker()).toBeNull();
+    expect([...picker()!.options].map((option) => option.textContent)).toEqual(["Default microphone", "USB Microphone"]);
   });
 
   it("the saved microphone is unplugged: the default is used, never forced", async () => {
@@ -152,7 +154,7 @@ describe('"i think i need to choose which mic because i have usb mic not built i
     devices = [BUILT_IN];
     render(<Box />);
     await flush();
-    expect(picker()).toBeNull();
+    expect([...picker()!.options].map((option) => option.textContent)).not.toContain("USB Microphone");
     devices = [BUILT_IN, USB];
     await act(async () => {
       for (const listener of deviceListeners) listener();
@@ -180,5 +182,48 @@ describe('"I did not hear anything. Check your microphone and try again." only w
     await recordOnce();
     expect(screen.getByRole("alert").textContent).toBe("No sound came from your microphone (USB Microphone). Choose another microphone and try again.");
     expect(picker()).not.toBeNull();
+  });
+});
+
+describe('"i still cant pick a microfphone to use" (the owner, 27 Nov 2026)', () => {
+  const HIDDEN = { deviceId: "", kind: "audioinput", label: "", groupId: "" };
+
+  it("before the browser has been allowed a microphone: the choice shows; opening it asks once, then lists them by name", async () => {
+    devices = [HIDDEN];
+    render(<Box />);
+    await flush();
+    const choice = picker()!;
+    expect([...choice.options].map((option) => option.textContent)).toEqual(["Default microphone"]);
+    fake.getUserMedia.mockImplementationOnce(async () => {
+      devices = [BUILT_IN, USB];
+      return { getTracks: () => [fake.track], getAudioTracks: () => [fake.track] } as unknown as MediaStream;
+    });
+    fireEvent.focus(choice);
+    await flush();
+    await flush();
+    expect(fake.getUserMedia).toHaveBeenCalledTimes(1);
+    expect(fake.getUserMedia).toHaveBeenCalledWith({ audio: true });
+    expect([...picker()!.options].map((option) => option.textContent)).toEqual(["Default microphone", "Built-in Microphone", "USB Microphone"]);
+    fireEvent.focus(picker()!);
+    await flush();
+    expect(fake.getUserMedia).toHaveBeenCalledTimes(1);
+  });
+
+  it("the names already show: opening it reads the list again and never asks for the microphone", async () => {
+    devices = [BUILT_IN];
+    render(<Box />);
+    await flush();
+    devices = [BUILT_IN, USB];
+    fireEvent.pointerDown(picker()!);
+    await flush();
+    expect([...picker()!.options].map((option) => option.textContent)).toContain("USB Microphone");
+    expect(fake.getUserMedia).not.toHaveBeenCalled();
+  });
+
+  it("the options are dark on light, readable in a browser that draws its own dropdown", async () => {
+    render(<Box />);
+    await flush();
+    for (const option of picker()!.options) expect(option.className).toMatch(/bg-white/);
+    for (const option of picker()!.options) expect(option.className).toMatch(/text-black/);
   });
 });
