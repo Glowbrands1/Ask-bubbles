@@ -100,7 +100,7 @@ export function actorMaySeeInstance(
   if (hiddenAsPrivate(actor, instance, options)) return false;
   // HR APPROVAL: a form HR has not approved exists only for its creator and HR — administrators and preview included.
   /*
-   * HR AND ADMINISTRATORS OPEN EVERY FORM WITH HR, whatever its store (task H, 27 Nov 2026; port from Ask Sunny). The
+   * HR AND ADMINISTRATORS OPEN EVERY FORM WITH HR, whatever its store (task H, 27 Nov 2026; ported from the sibling app). The
    * queue, the bell and the calendar list every form waiting for HR with no store limit (`listHrQueue`), but opening one
    * went through the reader's store scope: an approver whose account covers no store, or not that one, got a 404 from
    * the very link the bell and the calendar gave them. The owner, the same day, asked whether admins may open these
