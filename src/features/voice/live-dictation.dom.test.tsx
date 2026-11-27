@@ -53,7 +53,7 @@ class FakeAudioContext {
     return { connect: vi.fn() };
   }
   createAnalyser() {
-    return { fftSize: 512, connect: vi.fn(), disconnect: vi.fn(), getByteTimeDomainData: (array: Uint8Array) => array.fill(128) };
+    return { fftSize: 512, connect: vi.fn(), disconnect: vi.fn(), getFloatTimeDomainData: (array: Float32Array) => array.fill(0.004) };
   }
   close = vi.fn(async () => undefined);
 }
@@ -107,7 +107,13 @@ beforeEach(() => {
   vi.stubGlobal("WebSocket", FakeSocket);
   vi.stubGlobal("AudioContext", FakeAudioContext);
   vi.stubGlobal("AudioWorkletNode", FakeWorkletNode);
-  vi.stubGlobal("requestAnimationFrame", () => 1);
+  // A few animation frames run, so the level (a quiet voice) is measured; then they stop.
+  let frames = 0;
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+    frames += 1;
+    if (frames <= 4) setTimeout(() => callback(frames * 100), 0);
+    return frames;
+  });
   vi.stubGlobal("cancelAnimationFrame", () => undefined);
   FakeSocket.last = null;
 });

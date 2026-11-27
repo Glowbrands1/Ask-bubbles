@@ -8,6 +8,7 @@ import { VOICE_CHECK, VOICE_HINT, VOICE_NOTICE } from "@/lib/voice/voice-message
 
 import { useVoiceAccess } from "./voice-access";
 import { LiveDictationPanel } from "./live-dictation-panel";
+import { useMicrophones } from "./mic-choice";
 import { liveDictationSupported, useLiveDictation } from "./use-live-dictation";
 import { useVoiceRecorder, voiceRecordingSupported, WARNING_SECONDS, type VoiceSurface } from "./use-voice-recorder";
 
@@ -52,6 +53,7 @@ type Live = ReturnType<typeof useLiveDictation>;
 interface VoiceState {
   readonly recorder: Recorder;
   readonly live: Live;
+  readonly microphones: ReturnType<typeof useMicrophones>;
   /** A live-dictation refusal or failure, said where every voice error is. */
   readonly liveError: string | null;
   /** The live words went into the box (the limit, a hidden tab): "Check the words". */
@@ -97,7 +99,11 @@ export function VoiceControl(props: VoiceControlProps) {
 }
 
 function ActiveVoiceControl({ surface, meetingKey, conversationId, disabled = false, onText, onSend, children, userKey }: VoiceControlProps & { userKey: string | null }) {
-  const recorder = useVoiceRecorder({ surface, meetingKey, conversationId, onText });
+  // The owner, 27 Nov 2026: "i think i need to choose which mic because i have usb mic not built in".
+  const microphones = useMicrophones();
+  const { refresh: refreshMicrophones } = microphones;
+  const onMicrophoneOpened = useCallback(() => void refreshMicrophones(), [refreshMicrophones]);
+  const recorder = useVoiceRecorder({ surface, meetingKey, conversationId, onText, deviceId: microphones.chosen, onMicrophoneOpened });
   const [askingConsent, setAskingConsent] = useState(false);
   const [liveError, setLiveError] = useState<string | null>(null);
   const [liveChecked, setLiveChecked] = useState(false);
@@ -106,6 +112,8 @@ function ActiveVoiceControl({ surface, meetingKey, conversationId, disabled = fa
     surface,
     meetingKey,
     conversationId,
+    deviceId: microphones.chosen,
+    onMicrophoneOpened,
     onSend: (text, meta) => onSend?.(text, meta.traceId),
     onText: (text, meta) => {
       setLiveChecked(true);
@@ -160,8 +168,8 @@ function ActiveVoiceControl({ surface, meetingKey, conversationId, disabled = fa
   }, [userKey]);
 
   const value = useMemo<VoiceState>(
-    () => ({ recorder, live, liveError, liveChecked, disabled, askingConsent, tap, accept, decline }),
-    [recorder, live, liveError, liveChecked, disabled, askingConsent, tap, accept, decline],
+    () => ({ recorder, live, microphones, liveError, liveChecked, disabled, askingConsent, tap, accept, decline }),
+    [recorder, live, microphones, liveError, liveChecked, disabled, askingConsent, tap, accept, decline],
   );
   return <VoiceContext.Provider value={value}>{children}</VoiceContext.Provider>;
 }
@@ -240,7 +248,7 @@ export function VoiceNotice({ className, id }: { className?: string; id?: string
     if (state?.askingConsent) acceptRef.current?.focus();
   }, [state?.askingConsent]);
   if (!state) return null;
-  const { recorder, askingConsent, accept, decline, liveError, liveChecked } = state;
+  const { recorder, live, microphones, askingConsent, accept, decline, liveError, liveChecked } = state;
   const { phase, seconds } = recorder;
   const error = recorder.error ?? liveError;
   const buttonClass = "min-h-9 rounded-full border border-current px-3 text-[12px] font-semibold";
@@ -289,6 +297,30 @@ export function VoiceNotice({ className, id }: { className?: string; id?: string
         </div>
       ) : null}
       {phase === "done" || liveChecked ? <p role="status">{VOICE_CHECK}</p> : null}
+      {/*
+       * WHICH MICROPHONE: only when this browser has more than one. Their names show once the browser has been allowed a
+       * microphone; before that, "Microphone 1", "Microphone 2". The choice is kept in this browser.
+       */}
+      {microphones.microphones.length > 1 ? (
+        <label className="flex flex-wrap items-center gap-1.5 opacity-80">
+          Microphone
+          <select
+            aria-label="Microphone"
+            data-testid="voice-microphone"
+            value={microphones.chosen ?? ""}
+            disabled={phase === "recording" || phase === "uploading" || phase === "requesting" || live.state.kind !== "idle"}
+            onChange={(event) => microphones.choose(event.target.value || null)}
+            className="max-w-[16rem] truncate rounded-md border border-border bg-surface px-1.5 py-0.5 text-[12px] font-semibold text-foreground"
+          >
+            <option value="">Default microphone</option>
+            {microphones.microphones.map((microphone) => (
+              <option key={microphone.id} value={microphone.id}>
+                {microphone.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       <p className="opacity-80">{VOICE_HINT}</p>
     </div>
   );
