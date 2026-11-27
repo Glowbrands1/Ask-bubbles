@@ -10,6 +10,7 @@ import { WHATS_NEW, whatsNewFor, type WhatsNewRelease } from "@/config/whats-new
 import type { TrainingCatalog } from "@/lib/ai-training/types";
 import type { AccessScope, Permission, Role } from "@/types";
 import type { CalendarView } from "@/lib/calendar/types";
+import { WEEKDAY_NAMES, pickMeetings, type MeetingDetailsResult } from "@/lib/calendar/meeting-details";
 
 import { formatBusinessTime } from "@/lib/business-date";
 
@@ -74,6 +75,11 @@ export interface DataToolDeps {
    * reminders and L10 meetings from the Leadership Hub. Null when the asker is not a verified account.
    */
   readonly loadCalendar?: (input: { subject: string; email: string; displayName: string; verified: boolean; role: Role; scope: AccessScope | null; from: string; to: string }) => Promise<CalendarView | null>;
+  /**
+   * Each L10 this person may open here, with its day, Central time, length, leader and attendees, from the Leadership
+   * Hub (`meetingDetailsFromHub`, the partner API's "meeting-schedules" op). Off when the Hub is not connected.
+   */
+  readonly loadMeetingDetails?: (input: { email: string; verified: boolean }) => Promise<MeetingDetailsResult>;
 }
 
 /** What read_follow_ups reads: the follow-up queue's counts and forms (`follow-up-queue.ts`). */
@@ -135,6 +141,11 @@ export const DEFAULT_DATA_TOOL_DEPS: DataToolDeps = {
     const { loadCalendarFor } = await import("@/lib/calendar/load.server");
     const r = await loadCalendarFor({ subject, email, displayName, role, scope, verified: true }, { from, to }, { origin: "", includeHub: true });
     return r.ok ? r.view : null;
+  },
+  loadMeetingDetails: async ({ email, verified }) => {
+    if (!verified || !email) return { state: "off" };
+    const { meetingDetailsFromHub } = await import("@/lib/calendar/hub");
+    return meetingDetailsFromHub(email);
   },
   loadFollowUpQueue: async ({ subject, verified, role, scope, today }) => {
     if (!verified || !subject || !scope) return null;
@@ -378,6 +389,47 @@ export async function readCalendar(context: DataToolContext, input: Record<strin
       "This is the manager's Calendar page for these dates (Central time). what: meeting = an L10 from the Leadership Hub (time_ct null means the Hub has no start time set yet: say so, never guess one); form-follow-up and hr-approval use the same overdue rule as the Overview and the forms pages; google-reviews = the weekly check of a " + place + "'s Google Reviews; reminder = a personal or team reminder. " +
       (view.notes.length ? "not_loaded lists sources that did not answer: say which, and never say there is nothing from them. " : "") +
       "Time off is never on the calendar. To ADD a reminder use propose_reminder.",
+  };
+}
+
+/**
+ * read_meeting_details({meeting?}) (Pau, 26 Nov 2026; CLAUDE.md §5): the Calendar's meeting panel for this manager,
+ * from the Leadership Hub: each L10 they may open here with its day, Central start time, length, who leads it and who
+ * attends. "who's in the BCS DM L10?", "what time is the BCS GM L10?". Gated like the Calendar. A time or day that is
+ * not set is said to be not set, never guessed; it is set in the Leadership Hub.
+ */
+export const MEETINGS_SOURCE = "L10 meetings";
+
+export async function readMeetingDetails(context: DataToolContext, input: Record<string, unknown>, deps: DataToolDeps = DEFAULT_DATA_TOOL_DEPS): Promise<ToolResult> {
+  if (!hasPermission(activePermissionMatrix(), context.actor.role, READER_PERMISSION.read_calendar)) {
+    return { source: MEETINGS_SOURCE, refused: "This account's role has no Calendar, so no L10 details can be read. Say so plainly, in one line." };
+  }
+  const named = typeof input.meeting === "string" ? input.meeting.trim().slice(0, 80) : "";
+  let read: MeetingDetailsResult;
+  try {
+    read = await (deps.loadMeetingDetails ?? DEFAULT_DATA_TOOL_DEPS.loadMeetingDetails!)({ email: context.actor.email ?? "", verified: context.actor.verified === true });
+  } catch {
+    read = { state: "failed" };
+  }
+  if (read.state === "off") return { source: MEETINGS_SOURCE, reason_code: "scope", error: "The Leadership Hub is not connected for this account, so its L10 details cannot be read. Say so; never guess a time or who attends." };
+  if (read.state === "failed") return { source: MEETINGS_SOURCE, reason_code: "read_failed", error: "The L10 details could not be read from the Leadership Hub just now. Say so; never guess a time or who attends." };
+  if (read.meetings.length === 0) return { source: MEETINGS_SOURCE, reason_code: "no_meetings", error: "This manager has no L10 here that the Leadership Hub lists for them. Say so plainly." };
+  const picked = pickMeetings(read.meetings, named);
+  if (picked.length === 0) {
+    return { source: MEETINGS_SOURCE, reason_code: "no_match", error: `No L10 this manager can open here matches "${named}". Say so, and name the ones they can open.`, meetings_here: read.meetings.map((m) => m.name) };
+  }
+  return {
+    source: MEETINGS_SOURCE,
+    time_zone: "Central (CT)",
+    meetings: picked.map((m) => ({
+      name: m.name,
+      day: m.weekday === null ? null : WEEKDAY_NAMES[m.weekday],
+      time_ct: m.startTime,
+      minutes: m.minutes,
+      leader: m.leader ?? null,
+      attendees: m.attendees,
+    })),
+    note: "From the Leadership Hub, live. day null = no day set; time_ct null = no start time set yet: say so, never guess one. The day and time are set in the Leadership Hub (its Calendar). For the dates of upcoming meetings use read_calendar.",
   };
 }
 
@@ -668,6 +720,18 @@ export function dataToolSpecs(config: AppConfig) {
       input_schema: { type: "object", properties: {}, required: [] },
     },
     {
+      name: "read_meeting_details",
+      description:
+        "The manager's L10 meetings from the Leadership Hub: each one's day of the week, Central start time, length, who leads it and who attends (names). Use it for \"who's in the BCS DM L10?\", \"what time is the BCS GM L10?\", \"how long is my L10?\", \"which L10s have no day set?\". Pass meeting to read one; leave it out for all. A day or time that is not set is set in the Leadership Hub; say so, never guess. For the dates of upcoming meetings use read_calendar.",
+      input_schema: {
+        type: "object",
+        properties: {
+          meeting: { type: "string", description: "The meeting as the manager named it (\"BCS DM\", \"my GM L10\"), if any." },
+        },
+        required: [],
+      },
+    },
+    {
       name: "read_whats_new",
       description:
         "What's new in " + config.appName + ": the What's New page's list of recent updates and new features, releases newest first (date and summary), each update with its tag (New or Improved), what it was like before, what changed now, how to use it and its Show me page, as this manager's page shows it. Use it for \"what's new?\", \"what's new in " + config.appName + "?\", \"any new features?\", \"what changed this week?\" (pass since). Never answer what's new from memory." + pagesToolLine(config.readablePages, "read_whats_new"),
@@ -761,6 +825,7 @@ export function dataToolHandlers(
     read_follow_ups: () => readFollowUps(context, deps),
     read_calendar: (args) => readCalendar(context, args, deps),
     propose_reminder: (args) => proposeReminder(context, args, effects),
+    read_meeting_details: (args) => readMeetingDetails(context, args, deps),
     read_whats_new: (args) => readWhatsNew(context, args),
     read_ai_training: (args) => readAiTraining(context, args, deps),
   };
