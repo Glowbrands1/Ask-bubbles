@@ -676,6 +676,10 @@ export async function hrQueueSummary(actor: FormsActor, now: Date = new Date()):
 export interface MyHrFormRow {
   id: string;
   line: string;
+  /** The same line without the employee's name, for someone who may not see it (the calendar). */
+  bareLine?: string;
+  /** Who created the form (an account id). */
+  createdBy?: string | null;
   state: HrApprovalState;
   /** `manager_replied` once this manager answered HR's send-back: waiting for HR again. */
   stage: HrStage;
@@ -714,6 +718,8 @@ export async function listMyFormsWithHr(actor: FormsActor): Promise<MyHrFormRow[
     return {
       id: row.id,
       line: formLine({ templateName: row.template_name ?? "", employeeName: row.employee_name, locationName: row.location_name }),
+      bareLine: [row.template_name ?? "Form", row.location_name].filter(Boolean).join(" · "),
+      createdBy: row.created_by,
       state: row.hr_approval_state,
       stage,
       label: HR_STAGE_LABEL[stage],
