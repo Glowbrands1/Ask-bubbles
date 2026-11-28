@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui/layout";
 import { Notice } from "@/components/ui/feedback";
 import { CalendarView } from "@/features/calendar/calendar-view";
 import { requirePagePermission } from "@/lib/auth/page";
+import { noteAppUsage } from "@/lib/analytics/app-usage";
 import { meetingDetailsFromHub } from "@/lib/calendar/hub";
 import { loadCalendarFor } from "@/lib/calendar/load.server";
 import { leadershipHubUrl } from "@/config/company/app-links";
@@ -20,6 +21,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function CalendarPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const identity = await requirePagePermission("view_overview");
+  noteAppUsage(identity, "calendar");
   const sp = await searchParams;
   const today = centralToday();
   const month = isMonth(sp.month) ? sp.month : monthOf(today);

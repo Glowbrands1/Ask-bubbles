@@ -19,6 +19,7 @@ import {
   type MonitoredForm,
 } from "@/features/forms/monitoring-table";
 import { requirePagePermission } from "@/lib/auth/page";
+import { noteAppUsage } from "@/lib/analytics/app-usage";
 import {
   instanceListFilterFor,
   visibleInstances,
@@ -61,6 +62,7 @@ export default async function FormMonitoringPage({
   searchParams: Promise<{ view?: string; followup?: string; app?: string; employee?: string; status?: string }>;
 }) {
   const identity = await requirePagePermission("view_form_monitoring");
+  noteAppUsage(identity, "form_monitoring");
 
   const { view: requestedView, followup: requestedFollowUp, app: requestedApp, employee: requestedEmployee, status: requestedStatus } = await searchParams;
   /*

@@ -11,6 +11,7 @@ import {
   type AnalyticsFilters,
   type ResolvedWindow,
 } from "./filters";
+import { fullNameFor } from "./person-name";
 
 /**
  * READING THE ADOPTION NUMBERS.
@@ -62,6 +63,11 @@ export interface LeaderRow {
   forms: number;
   documents: number;
   chatEvents: number;
+  /**
+   * This person's activity in each area of the app (feature key → count), for "Usage by person". Areas with none
+   * are absent.
+   */
+  byFeature: Record<string, number>;
   topCategory: string | null;
   lastActive: string | null;
 }
@@ -158,6 +164,7 @@ export async function loadAnalytics(
     byFeature,
     leaders,
     locations,
+    peopleFeatures,
     roster,
   ] = await Promise.all([
     supabase.rpc("analytics_totals", args),
@@ -171,9 +178,10 @@ export async function loadAnalytics(
     supabase.rpc("analytics_breakdown", { ...args, p_dimension: "feature" }),
     supabase.rpc("analytics_leaders", args),
     supabase.rpc("analytics_locations", args),
+    supabase.rpc("analytics_people_features", args),
     supabase
       .from("leader_directory")
-      .select("user_id, display_name, role")
+      .select("user_id, display_name, role, email")
       .order("display_name"),
   ]);
 
@@ -186,9 +194,31 @@ export async function loadAnalytics(
     byFeature.error ??
     leaders.error ??
     locations.error ??
+    peopleFeatures.error ??
     roster.error;
   if (failure) {
     throw new Error(`Analytics could not be loaded: ${failure.message}`);
+  }
+
+  const rosterRows = (roster.data ?? []) as {
+    user_id: string;
+    display_name: string;
+    role: Role;
+    email: string | null;
+  }[];
+  /*
+   * Full names (Pau, 28 Nov 2026: "list all users per name"): an account set up with a first
+   * name only gets its surname from a first.last email that agrees with it. The emails stay on the server.
+   */
+  const nameOf = new Map(
+    rosterRows.map((row) => [row.user_id, fullNameFor(String(row.display_name ?? ""), row.email)]),
+  );
+  const featuresOf = new Map<string, Record<string, number>>();
+  for (const row of (peopleFeatures.data ?? []) as Record<string, unknown>[]) {
+    const id = String(row.user_id);
+    const counts = featuresOf.get(id) ?? {};
+    counts[String(row.feature)] = toNumber(row.events);
+    featuresOf.set(id, counts);
   }
 
   return {
@@ -208,7 +238,7 @@ export async function loadAnalytics(
       const location = locationById(locationId);
       return {
         userId: String(row.user_id),
-        displayName: String(row.display_name ?? ""),
+        displayName: nameOf.get(String(row.user_id)) ?? String(row.display_name ?? ""),
         role: row.role as Role,
         status: String(row.status ?? ""),
         locationId,
@@ -218,6 +248,7 @@ export async function loadAnalytics(
         forms: toNumber(row.forms),
         documents: toNumber(row.documents),
         chatEvents: toNumber(row.chat_events),
+        byFeature: featuresOf.get(String(row.user_id)) ?? {},
         topCategory: (row.top_category as string | null) ?? null,
         lastActive: (row.last_active as string | null) ?? null,
       };
@@ -237,13 +268,11 @@ export async function loadAnalytics(
       districtId: location.districtId,
       district: location.districtName,
     })),
-    roster: (roster.data ?? []).map(
-      (row: { user_id: string; display_name: string; role: Role }) => ({
-        id: row.user_id,
-        name: row.display_name,
-        role: row.role,
-      }),
-    ),
+    roster: rosterRows.map((row) => ({
+      id: row.user_id,
+      name: nameOf.get(row.user_id) ?? row.display_name,
+      role: row.role,
+    })),
   };
 }
 
