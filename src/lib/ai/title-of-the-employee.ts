@@ -1,4 +1,4 @@
-import { exitLetterAddresseeEnabled, exitStatedOnlyEnabled, titleOfTheEmployeeEnabled } from "@/lib/config/chat-quality-flags";
+import { exitLetterAddresseeEnabled, exitStatedOnlyEnabled, fullPositionTitleEnabled, titleOfTheEmployeeEnabled } from "@/lib/config/chat-quality-flags";
 import { displayName, normalizeTypedName, type RosterEmployee } from "@/lib/forms/employee-match";
 import { EXIT_TEMPLATE_KEY } from "@/lib/forms/exit-library";
 import { titleNamesAnotherPerson } from "@/lib/forms/title-of-another-person";
@@ -53,6 +53,17 @@ export async function withTitleOfTheEmployee(
   if (lineOwned) {
     const line = new RegExp(String.raw`^(\s*(?:-\s*)?\*\*Job title:\*\*\s*)${escape(role)}\s*$`, "im");
     content = own ? content.replace(line, (_all, lead: string) => `${lead}${own}`) : content.replace(line, "").replace(/\n{3,}/g, "\n\n");
+  }
+  /*
+   * FULL_POSITION_TITLE_ENABLED (QA, 10 Nov 2026): with no title left on the card, the read-back says so. The removed
+   * line leaves no blank line in the list, the Job Title is on the "Left blank" list, and no sentence says the form
+   * carries the title the manager gave.
+   */
+  if (!own && fullPositionTitleEnabled() && card.templateKey === EXIT_TEMPLATE_KEY) {
+    content = content
+      .replace(/^(- \*\*Name:\*\* [^\n]*)\n\n(?=- \*\*)/m, "$1\n")
+      .replace(new RegExp(String.raw` ?The title on the form is the one you gave \(${escape(role)}\), not one from Woven\.`, "g"), "")
+      .replace(/^(\*\*Left blank for you to review:\*\* )(?!Job Title\b)/m, "$1Job Title, ");
   }
   return {
     ...response,
