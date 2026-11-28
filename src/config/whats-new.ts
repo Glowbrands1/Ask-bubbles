@@ -121,7 +121,6 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
       {
         tag: "New",
         title: "Hand a follow-up to someone else",
-        lead: "Can't do the follow-up yourself? Hand it to your DM, or to another manager who covers your store.",
         beta: true,
         now: "Give a form's follow-up to someone else who covers that store, such as your DM. It goes on their calendar with reminders, and you still get the reminders too.",
         howToUse: "On the Forms Register or on the form, press Change next to Owner under the follow-up date, pick the person and press Save owner, or ask Bubbles \"assign this follow-up to someone else\".",
