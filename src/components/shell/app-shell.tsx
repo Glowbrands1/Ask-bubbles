@@ -12,6 +12,7 @@ import { LoginScreen } from "@/features/auth/login-screen";
 import { useSession } from "@/lib/session/session-context";
 import { cn } from "@/lib/utils/cn";
 import { usePreference, writePreference } from "@/lib/utils/client-store";
+import { MeetingTabsProvider } from "@/lib/navigation/page-links-context";
 import { SidebarNav } from "./sidebar";
 import { NotificationBell } from "@/features/notifications/notification-bell";
 import type { BellData } from "@/lib/notifications/types";
@@ -227,7 +228,8 @@ export function AppShell({
 
         {/* `overflow-x-clip` lets a band page header run full width without a sideways scroll. */}
         <main id="main" className="min-w-0 flex-1 overflow-x-clip">
-          {children}
+          {/* The answers' links to the L10 go to the person's own meeting tab (`page-links.ts`). */}
+          <MeetingTabsProvider tabs={meetingTabs}>{children}</MeetingTabsProvider>
         </main>
       </div>
     </div>
