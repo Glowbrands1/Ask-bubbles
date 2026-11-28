@@ -36,8 +36,14 @@ export const RECOVERY_FORWARD_PATH = SET_PASSWORD_PATH;
  * Returns the URL to move to, or `null` to leave the page alone.
  *
  * - A fragment with an access token AND `type=recovery` is a recovery link,
- *   wherever it landed. (Invitation links carry `type=invite` and are left to
- *   their own flow.)
+ *   wherever it landed.
+ * - A fragment with both tokens AND `type=invite` is an invitation that the
+ *   Site URL fallback dropped on the wrong page: it goes to `/auth/accept`,
+ *   which sets the INVITED person's session (replacing any other account
+ *   signed in on that browser) and asks for their password. Pau, 28 Nov 2026:
+ *   "it auto sends me to curt's log in when i invited myself" — the invite
+ *   landed on `/#access_token=…&type=invite`, nothing forwarded it, and the
+ *   session already in the browser (Curt's) was shown instead.
  * - A fragment carrying Supabase's refusal (`error_code=otp_expired`,
  *   `access_denied`…) is forwarded only from the home page or sign-in screen,
  *   where it would otherwise be ignored. Those are the places the Site URL
@@ -56,6 +62,15 @@ export function recoveryForwardTarget(pathname: string, hash: string): string | 
     fragment.get("type") === "recovery"
   ) {
     return "/reset-password" + hash;
+  }
+
+  if (
+    pathname !== "/auth/accept" &&
+    fragment.get("access_token") &&
+    fragment.get("refresh_token") &&
+    fragment.get("type") === "invite"
+  ) {
+    return "/auth/accept" + hash;
   }
 
   if (
