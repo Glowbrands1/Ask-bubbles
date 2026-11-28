@@ -104,6 +104,20 @@ the API's schema but **not yet observed live** for this company.
    to save, then `WOVEN_SYNC_SCHEDULE_ENABLED=true` for the daily cron.
 5. Review the location and position mappings on the Woven screen.
 6. Optionally `WOVEN_ACCESS_MODE=shadow` to record the access plan each run.
+7. To disable leavers automatically (owner, 28 Nov 2026): apply
+   `supabase/migrations/20261128001000_woven_disable_terminated.sql`, then
+   `WOVEN_ACCESS_MODE=apply` and `WOVEN_ACCESS_APPLY_ACTIONS=DISABLE_TERMINATED`
+   (optionally `WOVEN_ACCESS_APPLY_EMPLOYEE_IDS` for a first batch). After each
+   successful scheduled sync, an account whose Woven employee is Terminated in
+   that read is disabled, banned and signed out everywhere: a linked account
+   whose status Woven manages, or an unlinked account whose email exactly
+   matches that one employee's Woven email (location-level, a provisioned role,
+   confirmed position; the link is then stored). Never an administrator, a
+   protected override or an account marked not Woven-managed. The plan's guards
+   stop the whole run when the directory is stale or broken, or more than
+   max(3, 5%) accounts would be disabled. Every decision is in
+   `employee_access_runs` / `employee_access_actions`, as codes. Nothing else is
+   applied: no account is created or invited and no role or location changes.
 
 ### New hires invited one at a time (built 28 Oct 2026; OFF)
 

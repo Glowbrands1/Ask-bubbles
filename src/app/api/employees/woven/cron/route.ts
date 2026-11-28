@@ -8,6 +8,8 @@ import {
   WOVEN_SYNC_SCHEDULE_ENABLED_ENV,
 } from "@/lib/employees/woven/config";
 import { CRON_REQUESTER, outcomeHttpStatus, runWovenEmployeeSync } from "@/lib/employees/woven/sync";
+import { runAccessLifecycle } from "@/lib/employees/woven/access/apply-run";
+import { readWovenAccessConfig } from "@/lib/employees/woven/access/config";
 import { recordAccessShadowRun } from "@/lib/employees/woven/access/shadow";
 
 /**
@@ -42,9 +44,20 @@ import { recordAccessShadowRun } from "@/lib/employees/woven/access/shadow";
  *      store is touched.
  *   5. The run lock — at most one sync at a time, enforced by Postgres.
  *
- * WHAT A RUN DOES NOT DO, even when all five are open: change `app_users`, a
- * role, a scope, a location assignment or a login; delete anybody; or write to
- * Woven. See `src/lib/employees/woven/sync.ts`.
+ * WHAT THE DIRECTORY SYNC DOES NOT DO, even when all five are open: change
+ * `app_users`, a role, a scope, a location assignment or a login; delete
+ * anybody; or write to Woven. See `src/lib/employees/woven/sync.ts`.
+ *
+ * AFTER A SUCCESSFUL SYNC — and only then — WOVEN_ACCESS_MODE decides one more
+ * step:
+ *   off     nothing (the default);
+ *   shadow  the access plan is recorded, nothing applied;
+ *   apply   the apply step runs (owner, 28 Nov 2026): with
+ *           WOVEN_ACCESS_APPLY_ACTIONS=DISABLE_TERMINATED, an account Woven
+ *           marks Terminated is disabled and its auth access revoked (ban +
+ *           sessions), behind the plan's guards. Never an account created,
+ *           an invitation, a role or location change, or a delete. See
+ *           `src/lib/employees/woven/access/apply.ts`.
  *
  * THE RESPONSE carries codes and counts only — never a name or an email.
  */
@@ -100,12 +113,20 @@ export async function GET(request: Request) {
   const outcome = await runWovenEmployeeSync({ requestedBy: CRON_REQUESTER, config });
 
   /*
-   * SHADOW MODE (WOVEN_ACCESS_MODE=shadow) ONLY: after a successful directory
-   * sync, record what the access sync WOULD do. It applies nothing — see
-   * `access/shadow.ts`. Off (the default), this returns at once and the
-   * response is exactly the sync's outcome.
+   * Only after a SUCCESSFUL directory sync. Shadow records what the access sync
+   * WOULD do (`access/shadow.ts`); apply disables Terminated accounts
+   * (`access/apply.ts`). Off (the default), and the response is exactly the
+   * sync's outcome. Codes and counts only: neither outcome carries a name or
+   * an email.
    */
-  const shadow = outcome.status === "succeeded" ? await recordAccessShadowRun(CRON_REQUESTER) : ({ status: "off" } as const);
-  const body = shadow.status === "off" ? outcome : { ...outcome, accessShadow: shadow };
+  const succeeded = outcome.status === "succeeded";
+  const mode = readWovenAccessConfig().mode;
+  const shadow = succeeded && mode === "shadow" ? await recordAccessShadowRun(CRON_REQUESTER) : ({ status: "off" } as const);
+  const lifecycle = succeeded && mode === "apply" ? await runAccessLifecycle(CRON_REQUESTER) : ({ status: "off" } as const);
+  const body = {
+    ...outcome,
+    ...(shadow.status === "off" ? {} : { accessShadow: shadow }),
+    ...(lifecycle.status === "off" ? {} : { accessLifecycle: lifecycle }),
+  };
   return NextResponse.json(body, { status: outcomeHttpStatus(outcome) });
 }

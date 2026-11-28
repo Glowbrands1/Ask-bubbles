@@ -10,9 +10,12 @@ import type { Role } from "@/types";
  *
  * NOT YET CONFIRMED BY BUFF CITY SOAP. These values are the conservative
  * defaults carried over from the reference platform's access planner. They
- * only shape the ACCESS PREVIEW: WOVEN_ACCESS_MODE has no apply mode, so no
- * account is created, disabled, re-scoped or re-roled from Woven by this
- * build, whatever these say. Confirm them before any apply stage is built.
+ * shape the ACCESS PREVIEW. The one thing applied from Woven is a
+ * DISABLE (WOVEN_ACCESS_MODE=apply, WOVEN_ACCESS_APPLY_ACTIONS=
+ * DISABLE_TERMINATED, owner 28 Nov 2026): WOVEN_AUTO_PROVISION_ROLES is also
+ * the set whose location-level accounts may be disabled on Woven's Terminated
+ * when found by exact email (mirrored in 20261128001000). No account is
+ * created, re-scoped or re-roled from Woven by this build.
  *
  * THE TENANT IS NOT AN ENVIRONMENT VARIABLE. Both Woven integrations read
  * exactly one Woven company, `WOVEN_TENANT` below, and prove it on every run.

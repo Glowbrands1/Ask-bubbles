@@ -441,7 +441,10 @@ describe("9. the apply step: DISABLE_TERMINATED, and nothing else", () => {
     ]);
   });
 
-  it("every other mutation is recorded as skipped", () => {
+  it("every other mutation is recorded as skipped; the cron applies only after a successful sync", () => {
     expect(apply).toMatch(/if \(!isApplyCapability\(primary\)\) \{[\s\S]*?"not_applied_in_ask_bubbles"/);
+    const cron = strip(readFileSync(join(repo, "src/app/api/employees/woven/cron/route.ts"), "utf8"));
+    expect(cron).toMatch(/const succeeded = outcome\.status === "succeeded";/);
+    expect(cron).toMatch(/succeeded && mode === "apply" \? await runAccessLifecycle\(CRON_REQUESTER\)/);
   });
 });
