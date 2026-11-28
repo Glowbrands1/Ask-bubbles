@@ -833,6 +833,26 @@ export async function applyStatedFacts(
   return keys;
 }
 
+/**
+ * What the person changed on the card: the submitted values that differ from the values the card loaded. A value they
+ * left as loaded is not theirs to write, so whatever is stored now (HR's edit, a chat edit) stands.
+ */
+export function touchedSinceLoad(submitted: Partial<DraftValues>, base: Partial<DraftValues>): Partial<DraftValues> {
+  const baseValues = base.values ?? {};
+  const baseChecked = base.checked ?? {};
+  const values = Object.fromEntries(
+    Object.entries(submitted.values ?? {}).filter(([key, value]) => (baseValues[key] ?? "") !== value),
+  );
+  const checked = Object.fromEntries(
+    Object.entries(submitted.checked ?? {}).filter(([key, ticks]) => {
+      // A selection is a set: the same ticks in another order are not an edit.
+      const before = new Set(baseChecked[key] ?? []);
+      return before.size !== new Set(ticks).size || ticks.some((option) => !before.has(option));
+    }),
+  );
+  return { values, checked };
+}
+
 /** A person's edit. Hand-filled lines and signatures are refused. */
 export async function saveInstanceValues(
   instanceId: string,
@@ -853,6 +873,13 @@ export async function saveInstanceValues(
      * it after checking the actor is an approver and neither the creator nor a sender.
      */
     readonly hrHistoryOnly?: boolean;
+    /**
+     * The values as the card LOADED them (audit, 28 Nov 2026). The card's Save sends every value on the form; without
+     * this, a field someone else changed after the card opened (HR's edit, a chat edit, a second tab) read as "changed"
+     * and was written back to the old value as the manager's. With it, only what the person changed from what they
+     * loaded is written; everything else stays as it is stored now. Absent: every submitted value counts, as before.
+     */
+    readonly base?: Partial<DraftValues>;
   } = {},
 ): Promise<{
   rejected: { key: string; reason: string }[];
@@ -873,7 +900,7 @@ export async function saveInstanceValues(
   }
 
   const document = parseFormDocument(loaded.version.document);
-  const result = enforcePersonEdit(document, loaded.instance.variantKey, submitted);
+  const result = enforcePersonEdit(document, loaded.instance.variantKey, options.base ? touchedSinceLoad(submitted, options.base) : submitted);
   /*
    * A NOTICE DATE TYPED WHILE "SUBMITTED & FULFILLED NOTICE" IS UNTICKED IS REFUSED, and said so (Pau, 25 Nov 2026).
    * The box as it will stand after this save: what was sent, else what is stored.
