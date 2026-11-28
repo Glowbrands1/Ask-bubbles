@@ -29,6 +29,13 @@ const REVIEWED = new Set([
    * the employee by first name with the loop's own pronoun pass. The draft route reaches it only for `cardFromLoop`.
    */
   "lib/forms/first-name-write-up.ts → @/lib/ai/agent-loop/reply-pronouns",
+  /*
+   * Added on purpose (port of the sibling app, the owner, 28 Nov 2026: coaching and corrective-action advice about a
+   * named employee starts from their forms on file): `asksHistoryFirstAdvice`, read by both chat paths, reads the
+   * manager's words with the loop's own advice reading and its message-id tag stripper. Pure text helpers only.
+   */
+  "lib/ai/coaching-how-to.ts → @/lib/ai/agent-loop/advice-not-form",
+  "lib/ai/coaching-how-to.ts → @/lib/ai/agent-loop/evidence",
 ]);
 /* Test code: test files, and the replay pack (its stand-in model and cases read the loop, as in the sibling app). */
 const isTest = (path: string) => /\.test\.tsx?$/.test(path) || path.startsWith("app/api/chat/replay-pack/");

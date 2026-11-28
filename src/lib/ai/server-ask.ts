@@ -13,6 +13,8 @@ import { CLAUDE_MAX_TOKENS, RETRIEVAL } from "@/lib/config/models";
 import { MissingConfigurationError, liveReadiness } from "@/lib/config/server-env";
 import { activePermissionMatrix, hasPermission } from "@/lib/permissions";
 import { asksOnlyAboutFormsOnFile, isFormListQuestion, isFormRangeQuestion, isFormRecordsQuestion, loadFormRecords } from "@/lib/forms/chat-form-records";
+import { asksHistoryFirstAdvice } from "@/lib/ai/coaching-how-to";
+import { extractEmployeeNames } from "@/lib/forms/proposal";
 import { namesAPerson } from "@/lib/forms/names-a-person";
 import { priorFormsReadingForChat } from "@/lib/forms/prior-forms";
 import { answersFormClarification } from "@/lib/forms/form-clarification";
@@ -872,6 +874,11 @@ async function answerQuestionCore(
   const readsFormRecords =
     listsForms ||
     pastFormsFirst ||
+    /*
+     * Port of the sibling app (the owner, 28 Nov 2026): coaching or corrective-action advice that names an employee
+     * starts from their forms on file (`coaching-how-to.ts`, HISTORY_FIRST_LINE), so it reads them as a question does.
+     */
+    (asksHistoryFirstAdvice(request.question, request.history) && extractEmployeeNames(request.question).length > 0) ||
     ((isFormRecordsQuestion(request.question) ||
       (formsOnFileDateRangeEnabled() && isFormRangeQuestion(request.question, request.context.todayIso))) &&
       (!crossChatGuard || asksAboutRecords(request.question) || refersBack(request.question, request.history)));

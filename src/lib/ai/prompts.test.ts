@@ -685,6 +685,8 @@ describe("PROMPT_CACHE_ENABLED off", () => {
     // The fixture gained the retrieved-sources rule on purpose (conv_mvnljjl32xlit48:
     // "the sources you just shared"); see `sources-not-shared.ts`. It gained the coaching how-to rule on purpose too
     // (the owner, 26 Nov 2026: coaching how-to answers are a prep package); see `coaching-how-to.ts`.
+    // It gained the history-first line on purpose (the owner, 28 Nov 2026: coaching and corrective-action advice about a
+    // named employee starts from their forms on file); see `coaching-how-to.ts`, HISTORY_FIRST_LINE.
     expect(prompt).toBe(readFileSync(new URL("./prompts.base.fixture.txt", import.meta.url), "utf8"));
     expect(prompt).not.toContain("---DYNAMIC---");
     expect(prompt).not.toContain("Should Not Appear");
