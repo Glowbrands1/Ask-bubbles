@@ -323,7 +323,7 @@ describe.skipIf(!ENABLED)("stage 1 on real Postgres (local stack)", { timeout: 6
 
   /*
    * Changed on purpose (owner, 28 Nov 2026: "make this automatic for both sunny
-   * and bubble"): 20261128001000_woven_disable_terminated.sql adds the apply
+   * and bubble"): 20261128003000_woven_disable_terminated.sql adds the apply
    * mode, for DISABLE_TERMINATED only. Stage 1's own migration still has none,
    * and a shadow run is still final the moment it is written.
    */

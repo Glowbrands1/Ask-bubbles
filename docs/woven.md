@@ -105,7 +105,7 @@ the API's schema but **not yet observed live** for this company.
 5. Review the location and position mappings on the Woven screen.
 6. Optionally `WOVEN_ACCESS_MODE=shadow` to record the access plan each run.
 7. To disable leavers automatically (owner, 28 Nov 2026): apply
-   `supabase/migrations/20261128001000_woven_disable_terminated.sql`, then
+   `supabase/migrations/20261128003000_woven_disable_terminated.sql`, then
    `WOVEN_ACCESS_MODE=apply` and `WOVEN_ACCESS_APPLY_ACTIONS=DISABLE_TERMINATED`
    (optionally `WOVEN_ACCESS_APPLY_EMPLOYEE_IDS` for a first batch). After each
    successful scheduled sync, an account whose Woven employee is Terminated in

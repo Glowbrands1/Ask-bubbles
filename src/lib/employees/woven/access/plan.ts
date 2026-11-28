@@ -364,7 +364,7 @@ function planEmployee(employee: PlannerEmployee, ctx: Context): PlannedRow {
  * location-level account in a role Woven may provision, whose confirmed Woven
  * position is one of those roles. The sibling app's email-discovery rule
  * (`discoveredLinkManagesStatus`), with this company's roles. Mirrored by
- * `employee_access_disable_terminated` (20261128001000), which re-checks it.
+ * `employee_access_disable_terminated` (20261128003000), which re-checks it.
  */
 export function emailMatchManagesStatus(account: Pick<PlannerAccount, "role" | "scopeLevel">, wovenRole: Role | null): boolean {
   const provisioned = (r: Role | null) => r !== null && AUTO_PROVISION_ROLES.includes(r);

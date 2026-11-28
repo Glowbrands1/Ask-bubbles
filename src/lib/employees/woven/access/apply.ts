@@ -54,7 +54,7 @@ export interface ApplyDeps {
   loadPlan(now: Date): Promise<AccessPlan>;
   rpc(fn: string, args: Record<string, unknown>): PromiseLike<RpcResult>;
   revokeAuthAccess(userId: string): Promise<{ ok: boolean; failed: string[] }>;
-  /** The administrators' bell items for the sign-ins turned off in this run (`disable-notices.ts`). Absent: none. */
+  /** The administrators' bell items for the sign-ins turned off in this run (`src/lib/admin/disable-notices.ts`). Absent: none. */
   notifyDisabled?(people: { name: string }[]): Promise<void>;
 }
 
@@ -165,7 +165,7 @@ export async function applyAccessLifecycle(request: ApplyRequest, deps: ApplyDep
     /* 2. the plan, after the lock */
     const plan = await deps.loadPlan(now);
     const enabled = new Set<string>(config.applyActions);
-    /* Owner, 28 Nov 2026: the administrators hear about every sign-in turned off (`disable-notices.ts`). */
+    /* Owner, 28 Nov 2026: the administrators hear about every sign-in turned off (`src/lib/admin/disable-notices.ts`). */
     const disabledPeople: { name: string }[] = [];
     const inBatch = (row: PlannedRow) => config.employeeAllowlist === null || (row.externalEmployeeId !== null && config.employeeAllowlist.includes(row.externalEmployeeId));
     const rows = [...plan.rows].sort((a, b) => a.key.localeCompare(b.key));

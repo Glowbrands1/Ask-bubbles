@@ -14,7 +14,7 @@ import type { PlannerAccount, PlannerEmployee, PlannerInput } from "./types";
  * Owner, 28 Nov 2026: "make this automatic for both sunny and bubble". Every
  * effect goes through `ApplyDeps`, so these tests see exactly what the engine
  * asks the database and the auth revocation to do — and what it never asks.
- * The database half is `20261128001000_woven_disable_terminated.sql`.
+ * The database half is `20261128003000_woven_disable_terminated.sql`.
  */
 
 const NOW = new Date("2026-11-28T12:00:00Z");

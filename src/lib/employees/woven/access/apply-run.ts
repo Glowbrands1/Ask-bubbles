@@ -6,11 +6,11 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { applyAccessLifecycle, type ApplyDeps, type ApplyOutcome } from "./apply";
 import { readWovenAccessConfig } from "./config";
 import { loadAccessPlan } from "./load";
-import { notifyAdminsOfDisabled } from "./disable-notices";
+import { notifyAdminsOfDisabled } from "@/lib/admin/disable-notices";
 
 /**
  * The apply step with the real services: the plan from the database, the
- * migration's functions over PostgREST (20261128001000) and the hardened
+ * migration's functions over PostgREST (20261128003000) and the hardened
  * revocation (Auth Admin ban + session revocation). Only in
  * `WOVEN_ACCESS_MODE=apply`; returns `{ status: "off" }` otherwise without
  * touching anything. Never throws.

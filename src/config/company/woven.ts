@@ -14,7 +14,7 @@ import type { Role } from "@/types";
  * DISABLE (WOVEN_ACCESS_MODE=apply, WOVEN_ACCESS_APPLY_ACTIONS=
  * DISABLE_TERMINATED, owner 28 Nov 2026): WOVEN_AUTO_PROVISION_ROLES is also
  * the set whose location-level accounts may be disabled on Woven's Terminated
- * when found by exact email (mirrored in 20261128001000). No account is
+ * when found by exact email (mirrored in 20261128003000). No account is
  * created, re-scoped or re-roled from Woven by this build.
  *
  * THE TENANT IS NOT AN ENVIRONMENT VARIABLE. Both Woven integrations read

@@ -7,7 +7,7 @@ import { ADMIN_CONSOLE_ROLES } from "@/lib/permissions";
 
 /**
  * ============================================================================
- * 20261128001000_woven_disable_terminated.sql — what the apply step's
+ * 20261128003000_woven_disable_terminated.sql — what the apply step's
  * database half may and may not do (read from the SQL, no database needed)
  * ============================================================================
  *
@@ -17,7 +17,7 @@ import { ADMIN_CONSOLE_ROLES } from "@/lib/permissions";
  * drifting.
  */
 
-const SQL = readFileSync("supabase/migrations/20261128001000_woven_disable_terminated.sql", "utf8");
+const SQL = readFileSync("supabase/migrations/20261128003000_woven_disable_terminated.sql", "utf8");
 const code = SQL.replace(/--.*$/gm, "");
 const fnBody = (name: string) => {
   const from = code.indexOf(`create or replace function public.${name}(`);

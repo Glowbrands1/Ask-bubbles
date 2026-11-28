@@ -9,7 +9,7 @@ Owner, 28 Nov 2026: "make this automatic for both sunny and bubble".
 `WOVEN_ACCESS_APPLY_EMPLOYEE_IDS` batch), the run lock and record, the guards,
 the database re-checks and the two-layer revocation (profile disabled, then
 `revokeAuthAccess`: ban + sessions). Here: migration
-`20261128001000_woven_disable_terminated.sql`.
+`20261128003000_woven_disable_terminated.sql`.
 
 ## Left Sunny-only on purpose
 
