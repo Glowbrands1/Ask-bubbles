@@ -127,6 +127,7 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
         howToUse: "On the Forms Register or on the form, press Change next to Owner under the follow-up date, pick the person and press Save owner, or ask Bubbles \"assign this follow-up to someone else\".",
         showMe: { href: "/forms/monitoring", label: "Forms Register" },
         permission: "view_form_monitoring",
+        image: { src: "/whats-new/2026-11-27/follow-up-owner.webp", alt: "A form's follow-up with its date and the owner picker open, a colleague chosen and Save owner ready to press." },
       },
       {
         tag: "New",
@@ -163,6 +164,7 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
         now: "On the Resignation/Exit form, the employee's Permanent Address now fills in automatically from their Woven employee record. If Bubbles can't find one clear address for them, the line stays blank for you to fill in by hand.",
         howToUse: "Ask Bubbles to start a Resignation/Exit form for the employee, then check the Permanent Address line before you finalize.",
         roles: [...ADMIN_CONSOLE_ROLES, ...HOME_ADDRESS_MANAGER_ROLES],
+        note: "If an employee has no address in Woven, none shows on the Resignation/Exit form either.",
       },
     ],
   },
@@ -352,6 +354,7 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
       {
         tag: "New",
         title: "A record of every deleted form",
+        audience: "Admin only",
         before: "Once a form was deleted, nothing showed who deleted it or when.",
         now: "Every deleted form leaves a permanent record of who deleted it, when and how. Administrators can ask Bubbles.",
         howToUse: "Ask Bubbles \"who deleted this employee's form?\".",

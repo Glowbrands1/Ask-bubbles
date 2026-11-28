@@ -56,6 +56,9 @@ alter table public.employee_account_links drop constraint if exists employee_acc
 alter table public.employee_account_links add constraint employee_account_links_link_method_check
   check (link_method in (
     'override_backfill', 'unmatched_backfill', 'admin_confirmed_email', 'admin_manual', 'provisioned',
+    -- Kept from 20261128125622 woven_link_email_discovery (claude/pensive-feynman-1zebbv, live since 28 Nov 2026
+    -- 12:56 UTC): this file runs after it, and must not drop its method.
+    'email_discovery',
     'termination_email_match'   -- one exact, unambiguous email match, linked when Woven said Terminated
   ));
 
