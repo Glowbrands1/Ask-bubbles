@@ -120,6 +120,7 @@ import { priorCoachingManagerText } from "./prior-coaching-denial";
 import { rewriteRetrievalQuery } from "./query-rewrite-claude";
 import { followUpOwnQuery } from "./query-rewrite";
 import { matchHybridKnowledge } from "@/lib/knowledge/hybrid-match";
+import { readRowsForBrand } from "@/lib/knowledge/brand-rows";
 import { matchRecallKnowledge } from "@/lib/knowledge/recall-match";
 import { withCardPolicyQuoted, withMappedPolicy } from "./violation-policy";
 import type { RemapManual } from "./remap-incident";
@@ -990,12 +991,15 @@ async function answerQuestionCore(
 
   let rows: MatchedChunkRow[];
   try {
-    const search = (query: string) =>
-      retrievalRecallEnabled()
-        ? matchRecallKnowledge({ query, scopeId: request.scopeId, limit })
-        : hybridSearchEnabled()
-          ? matchHybridKnowledge({ query, scopeId: request.scopeId, limit })
-          : knowledge.match({ query, scopeId: request.scopeId, limit });
+    /* K1 port: the shared manual's rows reach the answer as this company reads them, on every retriever (`brand-rows.ts`). */
+    const search = async (query: string) =>
+      readRowsForBrand(
+        await (retrievalRecallEnabled()
+          ? matchRecallKnowledge({ query, scopeId: request.scopeId, limit })
+          : hybridSearchEnabled()
+            ? matchHybridKnowledge({ query, scopeId: request.scopeId, limit })
+            : knowledge.match({ query, scopeId: request.scopeId, limit })),
+      );
     markStage("retrieval");
     rows = await searchWithPlan(plan, search, limit);
     /*

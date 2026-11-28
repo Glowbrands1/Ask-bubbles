@@ -6,6 +6,7 @@ import { CLAUDE_HAIKU_MODEL, EMBEDDING_DIMENSIONS, RETRIEVAL } from "@/lib/confi
 import { getEmbeddingProvider } from "@/lib/embeddings";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
+import { readRowsForBrand } from "./brand-rows";
 import type { MatchedChunkRow } from "./mappers";
 import { selectRecallCandidates, type RecallCandidate } from "./recall-rank";
 
@@ -63,7 +64,8 @@ async function fuzzyRows(query: string, scopeId: string, limit: number): Promise
       min_similarity: 0.3,
     });
     if (error) return [];
-    return (data ?? []) as FuzzyRpcRow[];
+    /* K1 port: the heading scan's rows read as this company reads the shared manual, like every retriever's. */
+    return await readRowsForBrand((data ?? []) as FuzzyRpcRow[]);
   } catch {
     return [];
   }
@@ -123,7 +125,8 @@ export async function matchRecallKnowledge(input: {
 
   const fuzzy = await fuzzyRows(query, input.scopeId, limit);
   const similarityById = new Map(fuzzy.map((row) => [row.chunk_id, Number(row.section_similarity)]));
-  const hybrid = ((data ?? []) as HybridRpcRow[]).map((row) => toRecall(row, similarityById.get(row.chunk_id) ?? null));
+  /* K1 port: the hybrid rows too. */
+  const hybrid = (await readRowsForBrand((data ?? []) as HybridRpcRow[])).map((row) => toRecall(row, similarityById.get(row.chunk_id) ?? null));
   const seen = new Set(hybrid.map((candidate) => candidate.row.chunk_id));
   for (const row of fuzzy) {
     if (seen.has(row.chunk_id)) continue;

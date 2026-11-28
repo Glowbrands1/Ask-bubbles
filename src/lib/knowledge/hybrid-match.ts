@@ -6,6 +6,7 @@ import { EMBEDDING_DIMENSIONS, RETRIEVAL } from "@/lib/config/models";
 import { getEmbeddingProvider } from "@/lib/embeddings";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
+import { readRowsForBrand } from "./brand-rows";
 import type { MatchedChunkRow } from "./mappers";
 import { caPolicyMatchCount, rerankCaPolicyChunks } from "./ca-policy-retrieval";
 import { selectHybridMatches, type HybridCandidate } from "./hybrid-rank";
@@ -71,7 +72,8 @@ export async function matchHybridKnowledge(input: {
 
   if (error) throw new Error(`Knowledge retrieval failed: ${error.message}`);
 
-  const rows = (data ?? []) as HybridRpcRow[];
+  /* K1 port: the shared manual's rows as this company reads them, as the vector match reads them (`brand-rows.ts`). */
+  const rows = await readRowsForBrand((data ?? []) as HybridRpcRow[]);
   const boost = caPolicyRetrievalEnabled();
   const pool = selectHybridMatches(rows.map((row) => toCandidate(row)), trimmed, {
     vectorFloor: RETRIEVAL.minSimilarity,
