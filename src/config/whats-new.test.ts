@@ -125,8 +125,10 @@ describe("What's New", () => {
       expect(entry.lead.trim().length, entry.title).toBeGreaterThan(10);
       expect(entry.lead, entry.title).not.toMatch(CODE_WORDS);
     }
+    // Changed on purpose (Pau, 28 Nov 2026: "lets just remove this in the whats new"): the hand-off entry no longer has
+    // a lead line saying who can take a follow-up; it keeps its Beta badge.
     const handOff = ENTRIES.find((entry) => entry.title === "Hand a follow-up to someone else")!;
-    expect(handOff.lead).toMatch(/^Can't do the follow-up yourself\?/);
+    expect(handOff.lead).toBeUndefined();
     expect(handOff.beta).toBe(true);
   });
 
