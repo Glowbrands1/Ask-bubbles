@@ -235,6 +235,14 @@ const ALLOWED_UI = [
   // reminder card): a new page and its own components, reached only from the new Calendar entry. No existing screen
   // changes; the chat bubble mounts the reminder card only when an answer carries one.
   "src/app/(app)/calendar/page.tsx",
+  // ANALYTICS BY AREA AND BY PERSON (Pau, 28 Nov 2026, both apps: "add usage for the L10 all meetings and the form
+  // monitoring as well pls, and list all users per name ... not just by title", "also add ai training", "add google
+  // reviews too and calendar"): the admin Analytics page gains "Usage by person" and the area split, and the Google
+  // Reviews page records a day of use after it is sent (as L10, Forms Register, AI Training and Calendar do, already
+  // listed). Nothing rendered changes on the Reviews page; no chat or form behaviour changes, no flag involved.
+  "src/app/(app)/reviews/page.tsx",
+  "src/features/admin/analytics/analytics-screen.tsx",
+  "src/features/admin/analytics/tables.tsx",
   "src/features/calendar/calendar-view.tsx",
   "src/features/calendar/new-event.tsx",
   "src/features/calendar/reminder-card.tsx",

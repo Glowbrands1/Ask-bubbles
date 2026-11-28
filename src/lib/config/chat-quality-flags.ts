@@ -6219,3 +6219,17 @@ export function createFormButtonPicksFormEnabled(): boolean {
 export function answerModeOnLoopEnabled(): boolean {
   return envFlag("ANSWER_MODE_ON_LOOP_ENABLED");
 }
+
+
+/**
+ * GENERAL_ADVICE (port from the sibling app; the owner, 28 Nov 2026, asked "Should the AI give clearly labelled general
+ * advice when company documents don't cover something? Never for policy, pay or legal.": "yes"; default off): when the
+ * company documents have nothing on a general management question ("how do I run a good team huddle?"), the agent loop
+ * and the chat may give short general advice under "General advice (not from <brand> documents):". Never on company
+ * policy, pay, wages, benefits, scheduling rules, discipline or Corrective Action levels, legal or HR-legal questions
+ * (those say it is not in the documents and point to HR or their manager), never mixed into a cited answer, never on a
+ * form card (`ai/general-advice.ts`). Off, as before: "not in the knowledge base".
+ */
+export function generalAdviceEnabled(): boolean {
+  return envFlag("GENERAL_ADVICE_ENABLED");
+}
