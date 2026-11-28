@@ -6,6 +6,7 @@ import { ArrowUpRight, Play } from "lucide-react";
 
 import { BubbleMark } from "@/components/brand-mark";
 import { RichText } from "@/components/rich-text";
+import { usePageLinks } from "@/lib/navigation/page-links-context";
 import { SourceList } from "@/components/source-list";
 import { ANSWER_MODE_LABEL } from "@/data/answer-modes";
 import { formatChatTime } from "@/lib/chat/history-time";
@@ -55,6 +56,7 @@ export function AnswerSheet({
    */
   showContinue?: boolean;
 }) {
+  const pageLinks = usePageLinks();
   /*
    * BEFORE ANY EARLY RETURN. The lookup is a hook, so it has to run on
    * every render of this component or the hook order changes between
@@ -168,6 +170,7 @@ export function AnswerSheet({
       <div className="max-w-[78ch]">
         <RichText
           content={body}
+          pageLinks={pageLinks}
           className="text-[13.5px] leading-[1.62] text-body-foreground"
         />
 

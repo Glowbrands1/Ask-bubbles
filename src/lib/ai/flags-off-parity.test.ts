@@ -349,6 +349,17 @@ const ALLOWED_UI = [
   "src/features/voice/",
   "src/features/dashboard/ask-band.tsx",
   "src/features/reports/ask-about-report.tsx",
+  /*
+   * WHAT'S NEW BADGES AND RED NOTES (Pau, 28 Nov 2026, both apps: "add a bubble HR ONLY in red", "make a note and
+   * highlight in red"): the page draws an entry's optional audience badge and note, and hides Before when an entry has
+   * none. What's New page only; no chat or form behaviour changes.
+   * A PAGE THE ANSWER NAMES IS A LINK (Pau, 28 Nov 2026, both apps: "make sure if sunny or bubble direct them to a page,
+   * make sure its clickable"): RichText (listed above) links a page's name, or a [label](/path) to it, only when the page
+   * is one this person's own sidebar shows (`src/lib/navigation/page-links.ts`); the chat bubble (above) and the Home
+   * answer sheet pass the person's pages. Without them RichText renders as before. Display only: answers do not change.
+   */
+  "src/features/whats-new/whats-new-screen.tsx",
+  "src/features/dashboard/answer-sheet.tsx",
 ];
 
 /*
