@@ -7,6 +7,7 @@ import {
 import { correctiveActionIssue } from "@/lib/forms/incident-issue";
 import { asksAboutPolicy, citationSetAside, policiesSetAside, setAsideAnything, withPolicySetAside } from "@/lib/forms/policy-set-aside";
 
+import { cardAccountText } from "@/lib/forms/account-spelling";
 import { managerWords, readSentenceEdit, readTurnEdit, remapEditLine, remapObservation } from "./edit-date-rules";
 import type { AskRequest, AskResponse } from "./types";
 
@@ -102,8 +103,10 @@ function withEditRules(response: AskResponse, request: AskRequest): AskResponse 
   if (issue === (card.issue ?? null) && !editLine) return response;
   let content = response.content;
   if (issue !== (card.issue ?? null)) {
-    const before = card.issue ? `**Issue:** ${card.issue}` : null;
-    content = before && content.includes(before) ? content.replace(before, `**Issue:** ${issue ?? ""}`) : content;
+    // ACCOUNT_TYPOS_FIXED_ENABLED: the card shows the Issue as `form-proposal.ts` prints it (`forms/account-spelling.ts`).
+    const shown = (text: string) => cardAccountText(text, card.employeeName ?? null);
+    const before = card.issue ? `**Issue:** ${shown(card.issue)}` : null;
+    content = before && content.includes(before) ? content.replace(before, `**Issue:** ${shown(issue ?? "")}`) : content;
   }
   if (editLine && !content.includes(editLine)) content = `${content}\n\n${editLine}`;
   return { ...response, content, formProposal: { ...card, issue } };

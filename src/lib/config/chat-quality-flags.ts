@@ -1395,6 +1395,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TITLE_BEFORE_NAME_REPLY_LINES_ENABLED",
   // coding 4: FORMS_ON_FILE_ORDER_MATCH_POSSIBLE (Bubbles 17h live test, QA, 11 Nov 2026; default off).
   "FORMS_ON_FILE_ORDER_MATCH_POSSIBLE_ENABLED",
+  "ACCOUNT_TYPOS_FIXED_ENABLED",
   "TAKE_OFF_STAYS_CARD_ENABLED",
   // coding 4: ACCOUNT_PLACE_LEAD (round 6; default off): forced off with the others.
   "ACCOUNT_PLACE_LEAD_ENABLED",
@@ -2159,6 +2160,16 @@ export function dayWordTyposEnabled(): boolean {
  */
 export function typoReadingCopyEnabled(): boolean {
   return envFlag("TYPO_READING_COPY_ENABLED");
+}
+
+/**
+ * ACCOUNT_TYPOS_FIXED_ENABLED (QA, the sibling app's sanitation report, 10 Nov 2026 18:49Z; port from the sibling app; default off;
+ * same flag in both apps). "not doing th e10 minute sanitaion" went onto the card's Issue line word for word. On, the card
+ * shows the manager's words with obvious slips mended ("the 10-minute sanitation"; `forms/account-spelling.ts`). The stored
+ * messages and the record keep what was typed. Off, as before.
+ */
+export function accountTyposFixedEnabled(): boolean {
+  return envFlag("ACCOUNT_TYPOS_FIXED_ENABLED");
 }
 
 /**
@@ -6194,7 +6205,6 @@ export function createFormButtonPicksFormEnabled(): boolean {
 export function answerModeOnLoopEnabled(): boolean {
   return envFlag("ANSWER_MODE_ON_LOOP_ENABLED");
 }
-
 
 /**
  * GENERAL_ADVICE (port from the sibling app; the owner, 28 Nov 2026, asked "Should the AI give clearly labelled general
