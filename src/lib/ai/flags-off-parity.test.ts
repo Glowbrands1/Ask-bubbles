@@ -349,6 +349,12 @@ const ALLOWED_UI = [
   "src/features/voice/",
   "src/features/dashboard/ask-band.tsx",
   "src/features/reports/ask-about-report.tsx",
+  /*
+   * WOVEN AUTO-DISABLE OF TERMINATED ACCOUNTS (owner, 28 Nov 2026: "make this automatic for both sunny and bubble"):
+   * the admin-only Access Preview tab names the new `apply` access mode in its read-only notice (one prop type and one
+   * label). Admin page only; no chat or form behaviour changes. WOVEN_ACCESS_MODE unset or "shadow", it reads as before.
+   */
+  "src/features/admin/woven/access-preview.tsx",
 ];
 
 /*
