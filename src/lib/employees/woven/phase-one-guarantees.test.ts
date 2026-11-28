@@ -391,8 +391,15 @@ describe("8. the access planner (stage 1) applies nothing", () => {
     expect(code).toMatch(/revoke all on function public\.employee_access_actions_guard\(\) from public, anon, authenticated, service_role;/);
   });
 
-  it("the access mode has no apply value", () => {
+  /*
+   * Changed on purpose (owner, 28 Nov 2026: "make this automatic for both sunny
+   * and bubble"): an apply value now exists, as in the sibling app, but its ONLY
+   * capability is DISABLE_TERMINATED. The test now pins that bound instead.
+   */
+  it("the access mode's only applying value is bounded to DISABLE_TERMINATED", () => {
     const config = readFileSync(join(repo, "src/lib/employees/woven/access/config.ts"), "utf8");
-    expect(config).toMatch(/export type WovenAccessMode = "off" \| "shadow";/);
+    expect(config).toMatch(/export type WovenAccessMode = "off" \| "shadow" \| "apply";/);
+    const types = readFileSync(join(repo, "src/lib/employees/woven/access/types.ts"), "utf8");
+    expect(types).toMatch(/export const APPLY_CAPABILITIES = \["DISABLE_TERMINATED"\] as const/);
   });
 });
