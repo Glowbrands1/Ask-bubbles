@@ -127,6 +127,7 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
         howToUse: "On the Forms Register or on the form, press Change next to Owner under the follow-up date, pick the person and press Save owner, or ask Bubbles \"assign this follow-up to someone else\".",
         showMe: { href: "/forms/monitoring", label: "Forms Register" },
         permission: "view_form_monitoring",
+        image: { src: "/whats-new/2026-11-27/follow-up-owner.webp", alt: "A form's follow-up with its date and the owner picker open, a colleague chosen and Save owner ready to press." },
       },
       {
         tag: "New",
