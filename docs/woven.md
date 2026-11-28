@@ -129,6 +129,50 @@ emails the link) and linked to Woven. The mailer's limit stops the hour and
 creates nothing for that person. Everybody hired before the date is left to
 an administrator (User Management, or the bulk provisioning).
 
+**The link is checked first** (Pau, 28 Nov 2026: "can u check first if the
+link is live?"): before any account is created or email sent, the run opens
+the invitation's landing page (`/auth/accept`) once. It must answer 2xx and
+still be that page after any redirect, within 8 seconds
+(`src/lib/admin/invite-link-check.ts`). Otherwise the run stops with
+`stoppedBy: "invite_link_not_live"` and creates nothing. Checked 28 Nov 2026:
+`https://askbubbles.vercel.app/auth/accept` answers 200.
+
+### Admins hear about every new hire (built 28 Nov 2026; OFF)
+
+Pau, 28 Nov 2026: "create a notification when a new person is onboarded like
+a manager, assistant etc. for admins only for now backfill it when creating the
+notification that a new employee [name], email address in woven has been hired
+as X position in X salon, and list if they have any other additional salon".
+
+After each successful, stored Woven directory sync (the daily cron and an
+admin's manual sync), every **active** employee whose Woven hire date is in the
+last `NEW_HIRE_NOTICE_BACKFILL_DAYS` days (today included) gets one notice in
+the bell of every active admin (`admin`, `owner`, `developer`). Any position.
+It reads, for example:
+
+> **New hire: Robin Quillfeather — Store Manager**
+> New employee Robin Quillfeather, robin.quillfeather@example.com in Woven, has
+> been hired as Store Manager at Maple Grove on Nov 24, 2026. Additional
+> stores: Birch Hollow (temporary, until Dec 15, 2026), Cedar Point.
+
+It opens the Woven directory. **Backfill:** the first run after the switch is on
+announces everybody hired in the window. Each employee is announced **once,
+ever** (`woven_new_hire_notices`, migration `20261128001000`): removing the
+notice does not bring it back, the next sync does not repeat it, and two runs
+at once never announce the same person twice. A failed bell write is retried by
+the next sync. The code is `src/lib/admin/new-hire-notices.ts`, outside the
+Woven sync, which still never reads `app_users`.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `NEW_HIRE_NOTICES_ENABLED` | off | The switch. Off: nothing is read. |
+| `NEW_HIRE_NOTICE_BACKFILL_DAYS` | 30 | How far back a hire date counts, 1–365. Anything else is 30. |
+
+To turn it on: apply `20261128001000_woven_new_hire_notices.sql` (Supabase MCP
+`apply_migration`), set `NEW_HIRE_NOTICES_ENABLED=true`, redeploy. Until the
+migration is applied the run fails quietly (`new_hire_notices_failed`) and the
+sync is unaffected.
+
 ### The exit form's Permanent Address (built 25 Nov 2026; OFF)
 
 Pau, 25 Nov 2026: "can we auto add the permanent address in exit form? from

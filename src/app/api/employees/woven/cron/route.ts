@@ -9,6 +9,7 @@ import {
 } from "@/lib/employees/woven/config";
 import { CRON_REQUESTER, outcomeHttpStatus, runWovenEmployeeSync } from "@/lib/employees/woven/sync";
 import { recordAccessShadowRun } from "@/lib/employees/woven/access/shadow";
+import { announceNewHires } from "@/lib/admin/new-hire-notices.server";
 
 /**
  * GET /api/employees/woven/cron — the scheduled Woven employee sync.
@@ -106,6 +107,12 @@ export async function GET(request: Request) {
    * response is exactly the sync's outcome.
    */
   const shadow = outcome.status === "succeeded" ? await recordAccessShadowRun(CRON_REQUESTER) : ({ status: "off" } as const);
-  const body = shadow.status === "off" ? outcome : { ...outcome, accessShadow: shadow };
+  /* NEW_HIRE_NOTICES_ENABLED: the admins' "new employee hired" bell (src/lib/admin/new-hire-notices.ts). Counts only. */
+  const newHireNotices = outcome.status === "succeeded" ? await announceNewHires({}) : ({ status: "off" } as const);
+  const body = {
+    ...outcome,
+    ...(shadow.status === "off" ? {} : { accessShadow: shadow }),
+    ...(newHireNotices.status === "off" ? {} : { newHireNotices }),
+  };
   return NextResponse.json(body, { status: outcomeHttpStatus(outcome) });
 }
