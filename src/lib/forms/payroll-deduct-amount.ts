@@ -1,4 +1,8 @@
-import { payrollAmountSameMessageEnabled, payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  payrollAmountAfterPayrollEnabled,
+  payrollAmountSameMessageEnabled,
+  payrollDeductAmountFieldEnabled,
+} from "@/lib/config/chat-quality-flags";
 
 import { field } from "./catalog";
 import type { FormBlock, FormDocument } from "./document";
@@ -50,7 +54,24 @@ function dollars(written: string): string | null {
  * outside the protected payroll reader goes through here.
  */
 export function managerPayrollAmount(text: string): string | null {
-  return payrollDeductAmount(payrollAmountSameMessageEnabled() ? joinReferredAmount(text) : text);
+  const joined = payrollAmountSameMessageEnabled() ? joinReferredAmount(text) : text;
+  return payrollDeductAmount(payrollAmountAfterPayrollEnabled() ? payrollAsDeduction(joined) : joined);
+}
+
+/*
+ * PAYROLL_AMOUNT_AFTER_PAYROLL_ENABLED (QA, 12 Nov 2026): "…showed up late on
+ * october 1, 2026. payroll $25." and "…payroll of 25.00 dollars" — a figure
+ * right after "payroll" (", of", "is", "amount (of)", ":") is the deduction.
+ * Nothing new is read as money: "payroll" becomes "payroll deduction of" and the
+ * same reader decides whether what follows is an amount ("$25", "25.00 dollars",
+ * "3.25"; never a bare "25" or a date). A comma or a word in between ("no
+ * payroll, $25 short") is not joined.
+ */
+const PAYROLL_THEN_FIGURE =
+  /\bpayroll(?:\s+(?:of|is|amount(?:\s+(?:of|is))?))?\s*:?\s*(?=\$|\d)/gi;
+
+function payrollAsDeduction(text: string): string {
+  return (text ?? "").replace(PAYROLL_THEN_FIGURE, "payroll deduction of ");
 }
 
 /**
