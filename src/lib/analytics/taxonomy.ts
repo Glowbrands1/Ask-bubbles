@@ -23,7 +23,7 @@ export const ACTIVITY_FEATURES = [
   "forms",
   "knowledge",
   "reports",
-  /* Port from Ask Sunny (Pau, 28 Nov 2026): the app's other areas, counted from opening them and what they record. */
+  /* Pau, 28 Nov 2026: the app's other areas, counted from opening them and what they record. */
   "l10",
   "form_monitoring",
   "ai_training",
@@ -50,7 +50,7 @@ export const ACTIVITY_CATEGORIES = [
   "report_upload",
   "document_upload",
   "document_search",
-  /* The other areas of the app, one category each (port from Ask Sunny, 28 Nov 2026). */
+  /* The other areas of the app, one category each (28 Nov 2026). */
   "l10_meeting",
   "form_monitoring",
   "ai_training",

@@ -207,7 +207,7 @@ export async function loadAnalytics(
     email: string | null;
   }[];
   /*
-   * Full names (port from Ask Sunny; Pau, 28 Nov 2026: "list all users per name"): an account set up with a first
+   * Full names (Pau, 28 Nov 2026: "list all users per name"): an account set up with a first
    * name only gets its surname from a first.last email that agrees with it. The emails stay on the server.
    */
   const nameOf = new Map(

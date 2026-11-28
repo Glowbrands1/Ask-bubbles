@@ -246,7 +246,7 @@ export function AnalyticsScreen({
           </div>
 
           {/*
-            EVERY PERSON, BY NAME, BY AREA (port from Ask Sunny; Pau, 28 Nov 2026: "list all users per name ... not
+            EVERY PERSON, BY NAME, BY AREA (Pau, 28 Nov 2026: "list all users per name ... not
             just by title"). The role chart says which titles use the app; this says which people, and in which areas.
           */}
           <section className="space-y-0">

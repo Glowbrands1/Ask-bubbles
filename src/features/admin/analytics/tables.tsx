@@ -311,7 +311,7 @@ function countCell(value: number) {
 }
 
 /**
- * USAGE BY PERSON, BY AREA (port from Ask Sunny; Pau, 28 Nov 2026: "list all users per name and backfill it please not just by title").
+ * USAGE BY PERSON, BY AREA (Pau, 28 Nov 2026: "list all users per name and backfill it please not just by title").
  *
  * Every account on the roster, by name, with what they did in each area of the app over the period, including the
  * people who did nothing (they are the rows an adoption push needs). The role chart above says which titles use the app;

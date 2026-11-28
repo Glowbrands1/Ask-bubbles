@@ -53,7 +53,7 @@ export default async function MeetingPage({ params, searchParams }: { params: Pr
     );
   }
   const m = opened.meeting;
-  // A day of use of this L10 meeting, for Analytics (port from Ask Sunny, 28 Nov 2026): only once the Hub let this attendee in.
+  // A day of use of this L10 meeting, for Analytics (28 Nov 2026): only once the Hub let this attendee in.
   noteAppUsage(identity, "l10", key);
   // A Bloom-style meeting shows "Last meeting's summary". A recap list that fails to load leaves it empty, and the page
   // says so ("Couldn't load the last meeting — refresh to try again") instead of looking like there is none (24 Nov 2026).

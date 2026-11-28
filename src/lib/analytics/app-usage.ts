@@ -6,7 +6,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import type { AuthenticatedIdentity } from "@/lib/auth/types";
 
 /**
- * A DAY OF USE OF ONE AREA OF THE APP (port from Ask Sunny; Pau, 28 Nov 2026: "add usage for the L10 all meetings and the form monitoring",
+ * A DAY OF USE OF ONE AREA OF THE APP (Pau, 28 Nov 2026: "add usage for the L10 all meetings and the form monitoring",
  * "also add ai training", "add google reviews too and calendar").
  *
  * Opening one of these pages left no trace, so the Analytics page could not say who used them. Each page now calls
