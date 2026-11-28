@@ -225,6 +225,27 @@ the Woven sync):
 | `WOVEN_POSITION_SYNC_ENABLED` | off | The switch. Off: nothing changes, and District Managers are not proposed. |
 | `WOVEN_POSITION_SYNC_ACTOR` | unset | Email of an active global admin the changes are made by. |
 
+### The account lifecycle (built 28 Nov 2026; OFF)
+
+Pau, 28 Nov 2026: "need lifecycle in bubble too". As in Ask Sunny, after each
+successful Woven sync (`src/lib/admin/woven-lifecycle.ts`, outside the sync):
+
+| Outcome | When | What applying it does |
+|---|---|---|
+| Create + invite | A new hire in an approved manager role | Already done by the hourly new-hire run (above) |
+| `LINK_EXISTING` | Exactly one Woven employee and one unclassified account share an email; Active; nothing in doubt | Stores the link (`email_discovery`, migration `20261128002000`). Status managed only for a GM/AGM account in a GM/AGM position at one store; never role or store. Changes nobody's access |
+| `DISABLE_TERMINATED` | The planner proposes it: Woven-linked, status-managed, unprotected, and Woven's own Terminated read returned the person | `patchUser` → disabled: Supabase Auth ban, every session ended, audited. Already disabled: done |
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `WOVEN_ACCESS_APPLY_ACTIONS` | empty | Any of `LINK_EXISTING`, `DISABLE_TERMINATED` (Ask Sunny's name). Anything else is ignored and reported. |
+| `WOVEN_POSITION_SYNC_ACTOR` | unset | The active global admin the changes are made by. |
+
+Only while the access guards allow changes; at most 25 links a run. The Woven
+access mode still has no apply value (`WOVEN_ACCESS_MODE` stays off/shadow):
+the lifecycle has its own switch. It runs before the position sync and the
+notices, so a termination notice says the sign-in is disabled.
+
 ### The exit form's Permanent Address (built 25 Nov 2026; OFF)
 
 Pau, 25 Nov 2026: "can we auto add the permanent address in exit form? from

@@ -11,6 +11,7 @@ import { CRON_REQUESTER, outcomeHttpStatus, runWovenEmployeeSync } from "@/lib/e
 import { recordAccessShadowRun } from "@/lib/employees/woven/access/shadow";
 import { announceNewHires } from "@/lib/admin/new-hire-notices.server";
 import { runPositionSync } from "@/lib/admin/position-sync.server";
+import { runAccountLifecycle } from "@/lib/admin/woven-lifecycle.server";
 
 /**
  * GET /api/employees/woven/cron — the scheduled Woven employee sync.
@@ -108,6 +109,11 @@ export async function GET(request: Request) {
    * response is exactly the sync's outcome.
    */
   const shadow = outcome.status === "succeeded" ? await recordAccessShadowRun(CRON_REQUESTER) : ({ status: "off" } as const);
+  /*
+   * WOVEN_ACCESS_APPLY_ACTIONS (LINK_EXISTING, DISABLE_TERMINATED): the account lifecycle, as in Ask Sunny
+   * (src/lib/admin/woven-lifecycle.ts). First, so the termination notice below can say the sign-in is disabled.
+   */
+  const lifecycle = outcome.status === "succeeded" ? await runAccountLifecycle() : ({ status: "off" } as const);
   /* WOVEN_POSITION_SYNC_ENABLED: access follows Woven's position and store within the manager tiers (src/lib/admin/position-sync.ts). */
   const positionSync = outcome.status === "succeeded" ? await runPositionSync() : ({ status: "off" } as const);
   /* NEW_HIRE_NOTICES_ENABLED: hires, terminations and the email webhook (src/lib/admin/new-hire-notices.ts). Counts only. */
@@ -115,6 +121,7 @@ export async function GET(request: Request) {
   const body = {
     ...outcome,
     ...(shadow.status === "off" ? {} : { accessShadow: shadow }),
+    ...(lifecycle.status === "off" && !("code" in lifecycle && lifecycle.code) ? {} : { accessLifecycle: lifecycle }),
     ...(positionSync.status === "off" && !("code" in positionSync && positionSync.code) ? {} : { positionSync }),
     ...(newHireNotices.status === "off" ? {} : { newHireNotices }),
   };
