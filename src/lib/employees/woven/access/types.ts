@@ -49,6 +49,22 @@ export function isMutating(action: AccessAction): action is MutatingAction {
   return (MUTATING_ACTIONS as readonly string[]).includes(action);
 }
 
+/**
+ * What WOVEN_ACCESS_MODE=apply may apply in Ask Bubbles: DISABLE_TERMINATED,
+ * and nothing else (`config.ts`, `apply.ts`). The sibling app also applies
+ * CREATE_USER, SEND_INVITE and LINK_EXISTING; those are not ported here and
+ * are refused by name (`SIBLING_ONLY_CAPABILITIES`).
+ */
+export const APPLY_CAPABILITIES = ["DISABLE_TERMINATED"] as const satisfies readonly MutatingAction[];
+export type ApplyCapability = (typeof APPLY_CAPABILITIES)[number];
+
+export function isApplyCapability(value: string): value is ApplyCapability {
+  return (APPLY_CAPABILITIES as readonly string[]).includes(value);
+}
+
+/** The sibling app's other lifecycle capabilities: named in config, they are refused, never silently ignored. */
+export const SIBLING_ONLY_CAPABILITIES = ["CREATE_USER", "SEND_INVITE", "LINK_EXISTING"] as const;
+
 /** One Woven employee, as the planner needs them (from `employee_directory_view`). */
 export interface PlannerEmployee {
   externalEmployeeId: string;

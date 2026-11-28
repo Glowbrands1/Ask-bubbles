@@ -455,6 +455,147 @@ describe("termination", () => {
   });
 });
 
+/*
+ * Owner, 28 Nov 2026: "make this automatic for both sunny and bubble". In
+ * production an assistant manager terminated in Woven on 26 Oct still had an
+ * active account that was never linked (its email matches the Woven record).
+ * The sibling links such an account by email while the person is Active and
+ * disables it on Terminated; here the same email-discovery rule is applied at
+ * the moment of termination, for the disable only.
+ */
+describe("termination of an unlinked account matched by exact email", () => {
+  const terminatedAm = (over: Partial<PlannerEmployee> = {}) =>
+    employee({ employmentStatus: "terminated", terminationDate: "2026-10-26", positionId: POS.asm, positionName: "Assistant Manager", ...over });
+
+  it("one Woven employee, one unclassified location-level account, same email (any case) → DISABLE_TERMINATED", () => {
+    const e = terminatedAm({ emailAddress: "Former.Assistant@Gmail.com" });
+    const unlinked = account({ email: "former.assistant@gmail.com", role: "assistant_manager" });
+    const rows = plan([e], [unlinked]);
+    const row = rowOf(rows, e);
+    expect(row.actions).toEqual(["DISABLE_TERMINATED"]);
+    expect(row.account).toMatchObject({ appUserId: unlinked.appUserId, via: "email_candidate" });
+    expect(row.appUserId).toBe(unlinked.appUserId);
+    expect(row.reasons).toEqual(["terminated_in_woven", "single_exact_email_match"]);
+    expect(row.before).toEqual({ status: "active" });
+    expect(row.after).toEqual({
+      status: "disabled",
+      auth_ban: true,
+      sessions_revoked: true,
+      terminated_on: "2026-10-26",
+      link: "termination_email_match",
+    });
+    /* The account appears once: not again as an unexplained account. */
+    expect(rows.filter((r) => r.appUserId === unlinked.appUserId)).toHaveLength(1);
+  });
+
+  it("team members and location managers too (WOVEN_AUTO_PROVISION_ROLES), and an invited account", () => {
+    const tm = terminatedAm({ positionId: POS.tm });
+    const lm = terminatedAm({ positionId: POS.lm });
+    const rows = plan([tm, lm], [account({ email: tm.emailAddress!, role: "employee", status: "invited" }), account({ email: lm.emailAddress!, role: "location_manager" })]);
+    expect(rowOf(rows, tm).actions).toEqual(["DISABLE_TERMINATED"]);
+    expect(rowOf(rows, lm).actions).toEqual(["DISABLE_TERMINATED"]);
+  });
+
+  it("an administrative or protected account with that email is never disabled", () => {
+    const a = terminatedAm();
+    const b = terminatedAm();
+    const rows = plan(
+      [a, b],
+      [
+        account({ email: a.emailAddress!, role: "admin", scopeLevel: "global", primaryAreaId: null }),
+        account({ email: b.emailAddress!, role: "assistant_manager", override: { role: "assistant_manager", scopeLevel: "location", externalEmployeeId: null } }),
+      ],
+    );
+    for (const e of [a, b]) {
+      expect(rowOf(rows, e).actions).toEqual(["FLAG_PROTECTED_ACCOUNT"]);
+      expect(rowOf(rows, e).reasons).toContain("terminated_in_woven_protected_account");
+    }
+    expect(mutating(rows)).toEqual([]);
+  });
+
+  it("an account marked not Woven-managed, or linked to another employee, is never disabled by email", () => {
+    const a = terminatedAm();
+    const b = terminatedAm();
+    const other = employee();
+    const rows = plan(
+      [a, b, other],
+      [
+        account({ email: a.emailAddress!, role: "assistant_manager", management: "not_woven_managed" }),
+        account({ email: b.emailAddress!, role: "assistant_manager", management: "woven_linked", linkedExternalEmployeeId: other.externalEmployeeId, managedStatus: true }),
+      ],
+    );
+    expect(rowOf(rows, a).actions).toEqual(["FLAG_NOT_WOVEN_MANAGED"]);
+    expect(rowOf(rows, b).actions).toEqual(["FLAG_DUPLICATE_EMAIL"]);
+    expect(rows.flatMap((r) => r.actions)).not.toContain("DISABLE_TERMINATED");
+  });
+
+  it("a different email, a shared Woven email, or two accounts: nothing is disabled", () => {
+    const differs = terminatedAm({ emailAddress: "someone@gmail.com" });
+    const sharedA = terminatedAm({ emailAddress: "shared@gmail.com" });
+    const sharedB = employee({ emailAddress: "shared@gmail.com" });
+    const rows = plan(
+      [differs, sharedA, sharedB],
+      [account({ email: "someone.else@gmail.com", role: "assistant_manager" }), account({ email: "shared@gmail.com", role: "assistant_manager" })],
+    );
+    expect(rowOf(rows, differs).actions).toEqual(["NO_CHANGE"]);
+    expect(rowOf(rows, sharedA).actions).toEqual(["FLAG_DUPLICATE_EMAIL"]);
+    expect(rows.flatMap((r) => r.actions)).not.toContain("DISABLE_TERMINATED");
+  });
+
+  it("status not read this run, a role above location level, or an unconfirmed Woven position: held for a person", () => {
+    const stale = terminatedAm({ missingSyncCount: 1 });
+    const dm = terminatedAm({ positionId: POS.dm });
+    const unmapped = terminatedAm({ positionId: POS.ops });
+    const rows = plan(
+      [stale, dm, unmapped],
+      [
+        account({ email: stale.emailAddress!, role: "assistant_manager" }),
+        account({ email: dm.emailAddress!, role: "district_manager", scopeLevel: "district", primaryAreaId: "dist-1" }),
+        account({ email: unmapped.emailAddress!, role: "assistant_manager" }),
+      ],
+    );
+    expect(rowOf(rows, stale).actions).toEqual(["FLAG_LINK_REVIEW"]);
+    expect(rowOf(rows, dm).actions).toEqual(["FLAG_LINK_REVIEW"]);
+    expect(rowOf(rows, dm).reasons).toContain("terminated_email_match_status_not_woven_managed");
+    expect(rowOf(rows, unmapped).actions).toEqual(["FLAG_LINK_REVIEW"]);
+    expect(mutating(rows)).toEqual([]);
+  });
+
+  it("an account already disabled by hand is not touched again", () => {
+    const e = terminatedAm();
+    const row = rowOf(plan([e], [account({ email: e.emailAddress!, role: "assistant_manager", status: "disabled" })]), e);
+    expect(row.actions).toEqual(["FLAG_LINK_REVIEW"]);
+    expect(row.reasons).toContain("account_already_disabled");
+  });
+
+  it("an ACTIVE employee's email match is still only proposed for review — unchanged", () => {
+    const e = employee({ positionId: POS.asm });
+    expect(rowOf(plan([e], [account({ email: e.emailAddress!, role: "assistant_manager" })]), e).actions).toEqual(["FLAG_LINK_REVIEW"]);
+  });
+
+  it("after the disable stores the link and revokes, the next plan does nothing (idempotent)", () => {
+    const e = terminatedAm();
+    const unlinked = account({ email: e.emailAddress!, role: "assistant_manager" });
+    const after: PlannerAccount = {
+      ...unlinked,
+      status: "disabled",
+      management: "woven_linked",
+      linkedExternalEmployeeId: e.externalEmployeeId,
+      linkMethod: "termination_email_match",
+      managedStatus: true,
+      terminatedAt: "2026-11-28T12:00:00Z",
+      accessRevokedAt: "2026-11-28T12:00:00Z",
+    };
+    const row = rowOf(plan([e], [after]), e);
+    expect(row.actions).toEqual(["NO_CHANGE"]);
+    expect(row.reasons).toContain("access_already_revoked");
+    /* Disabled but the auth revocation did not complete: proposed again, through the link. */
+    const partial = rowOf(plan([e], [{ ...after, accessRevokedAt: null }]), e);
+    expect(partial.actions).toEqual(["DISABLE_TERMINATED"]);
+    expect(partial.account?.via).toBe("link");
+  });
+});
+
 describe("rehire", () => {
   it("16. revoked because Woven said Terminated, now Active again → FLAG_REHIRE_REVIEW only; never re-enabled", () => {
     const e = employee({ primaryWovenLocationId: LOC.liberty, positionId: POS.asm });

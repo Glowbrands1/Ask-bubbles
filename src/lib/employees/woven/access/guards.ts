@@ -43,6 +43,18 @@ export type AccessGuardCode =
   | "creates_exceed_batch_limit"
   | "mappings_disappeared";
 
+/**
+ * Guards that only count actions Ask Bubbles' apply step never applies
+ * (`apply.ts` applies DISABLE_TERMINATED only). They still show on the preview
+ * and are recorded with every run, but they do not stop a disable. Every
+ * directory-health, termination-count and mapping guard still does.
+ */
+export const NOT_APPLIED_ACTION_GUARDS = [
+  "creates_exceed_batch_limit",
+  "location_moves_exceed_threshold",
+  "role_changes_exceed_threshold",
+] as const satisfies readonly AccessGuardCode[];
+
 export interface DirectoryRunFacts {
   status: "running" | "succeeded" | "failed" | "rejected";
   finishedAt: string | null;

@@ -1,4 +1,5 @@
 import { fullManualContextEnabled } from "@/lib/config/chat-quality-flags";
+import { aiErrorFacts } from "./ai-error-facts";
 
 import { updateChatTrace } from "./chat-trace-store";
 
@@ -48,10 +49,11 @@ export function classifyDiscardedError(error: unknown): {
   errorClass: string;
   errorStatus: number | null;
 } {
-  const errorClass = error instanceof Error ? error.constructor.name : typeof error;
+  // A readable name ("AI_APICallError"), not a minified class name ("aG"): ai-error-facts.ts.
+  const errorClass = error instanceof Error ? (aiErrorFacts(error).name ?? error.constructor.name) : typeof error;
   const errorStatus = readStatus(error);
   const type = readErrorType(error);
-  const name = error instanceof Error ? error.name : "";
+  const name = error instanceof Error ? (aiErrorFacts(error).name ?? error.name) : "";
   let subtype: ErrorSubtype = "model_failed";
   if (errorStatus === 429 || type === "rate_limit_error") subtype = "rate_limit";
   else if (errorStatus === 529 || type === "overloaded_error" || /overloaded/i.test(name)) subtype = "overloaded";
@@ -112,18 +114,13 @@ export function noteModelCall(input: {
   }
 }
 
+/** `status` (Anthropic SDK) or `statusCode` (AI SDK), through an AI SDK RetryError: ai-error-facts.ts. */
 function readStatus(error: unknown): number | null {
-  if (typeof error !== "object" || error === null || !("status" in error)) return null;
-  const status = (error as { status?: unknown }).status;
-  return typeof status === "number" ? status : null;
+  return aiErrorFacts(error).status;
 }
 
 function readErrorType(error: unknown): string | null {
-  if (typeof error !== "object" || error === null || !("error" in error)) return null;
-  const body = (error as { error?: unknown }).error;
-  if (typeof body !== "object" || body === null || !("type" in body)) return null;
-  const type = (body as { type?: unknown }).type;
-  return typeof type === "string" ? type : null;
+  return aiErrorFacts(error).type;
 }
 
 function readUsageNumber(
