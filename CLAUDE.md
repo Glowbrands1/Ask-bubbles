@@ -61,6 +61,16 @@ fixes that sat on unmerged branches reached this app but not Ask Sunny's
 `main`; port from the sibling's `main`, and if the source fix is only on a
 branch, say so in the pull request.
 
+**Spare the CI queue** (Pau, 28 Nov 2026). Both apps share about 20 CI jobs at
+once. On 28 Nov about 50 pull requests waited 1–3 hours for a runner.
+- Group related default-off fixes, and the ports of them, into one pull request
+  per batch, not one pull request per fix.
+- Open the pull request as a **draft** while you are still pushing. A draft runs
+  lint and typecheck only, and "checks" stays red. Mark it "Ready for review"
+  when it is done, and that runs every job.
+- Don't close and re-open a pull request, or push an empty commit, just to
+  re-trigger CI. Re-run the failed job instead.
+
 ## 5. Anything new in the app is readable by the AI
 
 The AI never looks at pages; it reads the app only through its readers (the

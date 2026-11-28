@@ -9,8 +9,19 @@ name: CI
 # gh-readonly-queue/main/… branch, and merges only when the required checks
 # ("checks" and "eval", below) pass there. They are the same jobs with the same
 # names; neither reads pull-request-only context, so they run unchanged.
+# (28 Nov 2026: neither Ask-bubbles nor ask-sunny has ever had a merge_group run, so
+# pull requests are merged directly and the pull_request run is the gate — keep every
+# test on it.)
+#
+# DRAFT PULL REQUESTS (28 Nov 2026, as in Ask Sunny; Pau: "OK" to fewer jobs per pull
+# request). The account runs ~20 jobs at once across both apps; on 28 Nov ~50 pull
+# requests waited 1–3 hours for a runner. A draft runs only lint-typecheck, and
+# "checks" fails on it saying the tests did not run, so a draft can never look green.
+# Marking it "Ready for review" (ready_for_review below) runs everything on the same
+# commit.
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   merge_group:
   push:
     branches: [main]
@@ -46,6 +57,7 @@ jobs:
         run: npx tsc --noEmit -p .
 
   unit-tests:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -59,6 +71,7 @@ jobs:
         run: npx vitest run --project unit
 
   flags-off-parity:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     # 45, not 30 (24 Nov 2026): the suite now takes about 29 minutes after a 1-minute install, so a busy runner pushed it
     # past 30 and the job was cancelled with every test passing (Ask Bubbles #1129). The tests decide pass or fail, not this.
@@ -78,6 +91,7 @@ jobs:
   # (Ask Sunny's DM L10 tab, ask-sunny#938). `next build` here needs no secrets: every route that reads one renders
   # on demand. Added with the DM L10 tab (15 Nov 2026).
   build:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -99,6 +113,11 @@ jobs:
     needs: [lint-typecheck, unit-tests, flags-off-parity, build]
     if: always()
     steps:
+      - name: Not a draft
+        if: github.event_name == 'pull_request' && github.event.pull_request.draft
+        run: |
+          echo "::error::Draft pull request: only lint and typecheck ran, the tests did not. Mark it \"Ready for review\" to run every job."
+          exit 1
       - name: Every job passed
         env:
           RESULTS: ${{ needs.lint-typecheck.result }} ${{ needs.unit-tests.result }} ${{ needs.flags-off-parity.result }} ${{ needs.build.result }}
@@ -116,6 +135,7 @@ jobs:
   # (may break no case, at most 25% slower). Local and deterministic: an
   # in-memory database and neutral model stand-ins, no secrets, no network.
   eval:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
