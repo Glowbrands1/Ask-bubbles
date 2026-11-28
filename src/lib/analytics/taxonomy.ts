@@ -18,7 +18,18 @@ import type { KnowledgeCategory } from "@/types";
  *   4. the question, read transiently       (only when 1–3 found none)
  */
 
-export const ACTIVITY_FEATURES = ["chat", "forms", "knowledge", "reports"] as const;
+export const ACTIVITY_FEATURES = [
+  "chat",
+  "forms",
+  "knowledge",
+  "reports",
+  /* Port from Ask Sunny (Pau, 28 Nov 2026): the app's other areas, counted from opening them and what they record. */
+  "l10",
+  "form_monitoring",
+  "ai_training",
+  "google_reviews",
+  "calendar",
+] as const;
 
 export type ActivityFeature = (typeof ACTIVITY_FEATURES)[number];
 
@@ -39,6 +50,12 @@ export const ACTIVITY_CATEGORIES = [
   "report_upload",
   "document_upload",
   "document_search",
+  /* The other areas of the app, one category each (port from Ask Sunny, 28 Nov 2026). */
+  "l10_meeting",
+  "form_monitoring",
+  "ai_training",
+  "google_reviews",
+  "calendar",
   "general_guidance",
   "unclassified",
 ] as const;
@@ -50,6 +67,11 @@ export const FEATURE_LABEL: Record<ActivityFeature, string> = {
   forms: "Forms",
   knowledge: "Knowledge Base",
   reports: "Reports",
+  l10: "L10 Meetings",
+  form_monitoring: "Forms Register",
+  ai_training: "AI Training",
+  google_reviews: "Google Reviews",
+  calendar: "Calendar",
 };
 
 export const CATEGORY_LABEL: Record<ActivityCategory, string> = {
@@ -69,6 +91,11 @@ export const CATEGORY_LABEL: Record<ActivityCategory, string> = {
   report_upload: "Report ingestions",
   document_upload: "Document uploads",
   document_search: "Knowledge searches",
+  l10_meeting: "L10 meetings",
+  form_monitoring: "Forms Register",
+  ai_training: "AI Training",
+  google_reviews: "Google Reviews",
+  calendar: "Calendar",
   general_guidance: "General guidance",
   unclassified: "Unclassified",
 };
@@ -90,6 +117,11 @@ export const CATEGORY_FEATURE: Record<ActivityCategory, ActivityFeature> = {
   report_upload: "reports",
   document_upload: "knowledge",
   document_search: "knowledge",
+  l10_meeting: "l10",
+  form_monitoring: "form_monitoring",
+  ai_training: "ai_training",
+  google_reviews: "google_reviews",
+  calendar: "calendar",
   general_guidance: "chat",
   unclassified: "chat",
 };
