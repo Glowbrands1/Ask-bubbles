@@ -6,6 +6,7 @@ import { loadReviewsData } from "@/features/reviews/load";
 import { ReviewsDashboard } from "@/features/reviews/reviews-dashboard";
 import { parseReviewsTab } from "@/features/reviews/reviews-tabs";
 import { requirePagePermission } from "@/lib/auth/page";
+import { noteAppUsage } from "@/lib/analytics/app-usage";
 
 export const metadata: Metadata = {
   title: "Google Reviews",
@@ -22,7 +23,8 @@ export default async function ReviewsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requirePagePermission("view_reports");
+  const identity = await requirePagePermission("view_reports");
+  noteAppUsage(identity, "google_reviews");
   const params = await searchParams;
   const tab = parseReviewsTab(params.tab);
   const data = await loadReviewsData(params, tab === "reviews");
