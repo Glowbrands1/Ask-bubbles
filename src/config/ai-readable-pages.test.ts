@@ -100,6 +100,12 @@ describe("the pages the AI can read", () => {
         // checks the admin console, as the page does; and a reader of a page that is not one does not refuse that role.
         expect(READER_ADMIN_CONSOLE.has(entry.reader.tool), `${entry.route}: the page ${entry.access.adminConsole ? "is" : "is not"} an admin console page; READER_ADMIN_CONSOLE must say the same for ${entry.reader.tool}`).toBe(entry.access.adminConsole === true);
       }
+      // Port from Ask Sunny (Pau, 28 Nov 2026, the meeting pages): a page any signed-in person opens has a reader that checks
+      // no permission, as the page checks none; the reader checks the verified sign-in instead (below), and the meeting's
+      // own access is the Hub's.
+      if (entry.kind === "page" && "signedIn" in entry.access) {
+        expect(READER_PERMISSION[entry.reader.tool], `${entry.route}: the page checks no permission, so ${entry.reader.tool} must not either`).toBeNull();
+      }
       expect(entry.reader.figures.length, `${entry.route}: name the figures`).toBeGreaterThan(0);
       expect(entry.reader.periods.length, `${entry.route}: name the periods`).toBeGreaterThan(0);
       expect(caseSources.some((source) => source.includes(`"${entry.reader!.replayCase}"`)), `${entry.route}: replay case ${entry.reader.replayCase} is not in the pack`).toBe(true);
@@ -111,6 +117,7 @@ describe("the pages the AI can read", () => {
     expect(dataTools).toContain("READER_PERMISSION.read_follow_ups)");
     expect(dataTools).toContain("READER_PERMISSION.read_whats_new)");
     expect(dataTools).toContain("READER_PERMISSION.read_knowledge_documents) || !canAccessAdminConsole(role)");
+    expect(dataTools, "read_meeting checks the verified sign-in the meeting pages require").toContain("if (context.actor.verified !== true || !context.actor.email) {\n    return { source: MEETING_SOURCE, refused:");
     expect(dataTools).toContain("READER_PERMISSION.read_calendar)");
     // read_reviews reads the chat's reviews block, which checks the Google Reviews page's own permission.
     const reviewsBlock = readFileSync(join(ROOT, "src", "lib", "ai", "google-reviews-chat-read.ts"), "utf8");
