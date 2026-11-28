@@ -321,8 +321,14 @@ describe.skipIf(!ENABLED)("stage 1 on real Postgres (local stack)", { timeout: 6
     expect(sql(`select count(*) from public.employee_account_links where app_user_id = '${ids.protectedAdmin}'`)).toBe("1");
   });
 
-  it("an apply mode does not exist in the database either", () => {
-    expect(sqlFails(`insert into public.employee_access_runs (mode, requested_by, policy_version, status) values ('apply', 'x', 'p', 'completed')`)).toMatch(
+  /*
+   * Changed on purpose (owner, 28 Nov 2026: "make this automatic for both sunny
+   * and bubble"): 20261128001000_woven_disable_terminated.sql adds the apply
+   * mode, for DISABLE_TERMINATED only. Stage 1's own migration still has none,
+   * and a shadow run is still final the moment it is written.
+   */
+  it("stage 1's migration has no apply mode; a shadow run can never be left running", () => {
+    expect(sqlFails(`insert into public.employee_access_runs (mode, requested_by, policy_version, status) values ('shadow', 'x', 'p', 'running')`)).toMatch(
       /check constraint/,
     );
     expect(readFileSync(MIGRATION, "utf8")).not.toMatch(/'applied'/);
