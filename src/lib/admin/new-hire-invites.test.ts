@@ -222,6 +222,19 @@ describe("the hourly run", () => {
     expect(f.made).toEqual(["E2"]);
   });
 
+  /*
+   * Pau, 28 Nov 2026: "where there is a position change it should detect it and give the correct link to the person
+   * with correct position and location" — someone hired in January and promoted to a manager role now gets the link;
+   * one hired before the date and not moved since still does not.
+   */
+  it("a person promoted since the date gets the link as a new hire does, whatever their hire date", async () => {
+    const f = fakes([ready("E1"), ready("E2")], { E1: "2026-01-19", E2: "2026-01-20" });
+    const promoted = vi.fn(async () => new Set(["E1"]));
+    await sendNewHireInvites({ config: config({ NEW_HIRE_INVITES_PER_HOUR: "2" }), now: NOW }, { ...f.deps, promoted });
+    expect(f.made).toEqual(["E1"]);
+    expect(promoted).toHaveBeenCalledWith(config().since);
+  });
+
   it("\"we need to add District manager also, just not corporate\": a District Manager at every store is invited when named", async () => {
     const dm = ready("D1", "district_manager");
     dm.after = { email: "d1@example.test", role: "district_manager", scope_level: "global", scope_primary_area_id: null };

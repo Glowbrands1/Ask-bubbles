@@ -3,7 +3,7 @@ import "server-only";
 import { recordToday } from "@/lib/business-today";
 import { INVITE_LINK_NOT_LIVE, inviteLinkIsLive } from "@/lib/admin/invite-link-check";
 import { announceInviteSent } from "@/lib/admin/new-hire-notices.server";
-import { unsettledEmployees } from "@/lib/admin/position-sync.server";
+import { promotedSince, unsettledEmployees } from "@/lib/admin/position-sync.server";
 import { createLinkedAccount, MANUAL_ROLES } from "@/lib/admin/woven-account";
 import { DirectoryError, type DirectoryActor } from "@/lib/admin/user-directory";
 import { loadAccessPlan, type AccessPlan } from "@/lib/employees/woven/access/load";
@@ -134,6 +134,13 @@ export interface NewHireInviteDeps {
    * Manager the same day gets the link as a District Manager). Omitted: nobody waits.
    */
   unsettled?(plan: AccessPlan): Promise<ReadonlySet<string>>;
+  /**
+   * EmployeeIDs whose position Woven changed on or after the set date (`promotedSince`). Someone hired long ago and
+   * promoted into a manager role now (a Team Member made Assistant General Manager) gets the link as a new hire does:
+   * Pau, 28 Nov 2026, "where there is a position change it should detect it and give the correct link to the person
+   * with correct position and location". Omitted: only hire dates count.
+   */
+  promoted?(since: string): Promise<ReadonlySet<string>>;
   /** Told after each account the invitation went out for (Pau's email through the webhook). */
   onSent?(row: PlannedRow): Promise<unknown>;
 }
@@ -161,8 +168,9 @@ export async function sendNewHireInvites(input: { config: NewHireConfig; now: Da
   const candidates = plan.rows.filter((row) => ready(row) && config.roles.includes(String((row.after as Record<string, unknown>).role) as Role));
   const hired = await deps.hireDates(candidates.map((row) => row.externalEmployeeId!));
   const unsettled = deps.unsettled ? await deps.unsettled(plan) : new Set<string>();
+  const promoted = deps.promoted && config.since ? await deps.promoted(config.since) : new Set<string>();
   const waiting = candidates
-    .filter((row) => isNewHire(hired.get(row.externalEmployeeId!), config) && !unsettled.has(row.externalEmployeeId!))
+    .filter((row) => (isNewHire(hired.get(row.externalEmployeeId!), config) || promoted.has(row.externalEmployeeId!)) && !unsettled.has(row.externalEmployeeId!))
     .sort((a, b) => (hired.get(a.externalEmployeeId!) ?? "").localeCompare(hired.get(b.externalEmployeeId!) ?? "") || a.key.localeCompare(b.key));
 
   /*
@@ -248,6 +256,7 @@ export async function runNewHireInvites(redirectTo: string, now: Date = new Date
         actor: readActor,
         linkIsLive: () => inviteLinkIsLive(redirectTo),
         unsettled: (plan) => unsettledEmployees(plan.directoryRunId),
+        promoted: (since) => promotedSince(since),
         // "if they get the link" (Pau, 28 Nov 2026): the webhook emails her. Off unless NEW_HIRE_NOTICES_ENABLED + URL.
         onSent: (row) => {
           const email = (row.after as Record<string, unknown> | null)?.email;
