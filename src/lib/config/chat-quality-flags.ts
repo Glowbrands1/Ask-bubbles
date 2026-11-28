@@ -1152,6 +1152,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "SHARED_LOGIN_NOT_STAFF_ENABLED",
   "STAFF_PICKER_NO_REPEAT_ENABLED",
   "COACHING_FOR_EVERYONE_ENABLED",
+  // COACHING_OBSERVED_SAVED (port from the sibling app; QA's P12, 10 Nov 2026; default off): in the list, as every chat flag.
+  "COACHING_OBSERVED_SAVED_ENABLED",
   "CHAT_RESPONSE_STREAM_ENABLED",
   "TRUNCATION_RETRY_BUDGET_ENABLED",
   "REPORT_NAME_NOT_A_PERSON_ENABLED",
@@ -4898,6 +4900,19 @@ export function madeAboutEmptyPatchAnswersSavedEnabled(): boolean {
  */
 export function addAlreadyOnFormSaysSoEnabled(): boolean {
   return envFlag("ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED");
+}
+
+/**
+ * COACHING_OBSERVED_SAVED_ENABLED (coding 6, 10 Nov 2026; default off; QA's
+ * P12, live in both apps). "make me a coaching form for <name> not hitting
+ * October numbers" → Create saved Details of Coaching with no "Observed:", or
+ * an empty one. On: a coaching narrative about to be saved with text but no
+ * heading gets "Observed:" over it; one with no Observed text gets
+ * "Observed:" first, with the manager's own words. An Observed with text is
+ * left as it is. See `forms/coaching-observed-saved.ts`. Off, as before.
+ */
+export function coachingObservedSavedEnabled(): boolean {
+  return envFlag("COACHING_OBSERVED_SAVED_ENABLED");
 }
 
 /**
