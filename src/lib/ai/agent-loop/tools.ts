@@ -82,6 +82,7 @@ import { RETRIEVAL } from "@/lib/config/models";
 import { manualScopeFetchLimit, scopeToCurrentManual } from "@/lib/knowledge/current-manual-scope";
 import { matchHybridKnowledge } from "@/lib/knowledge/hybrid-match";
 import { matchRecallKnowledge } from "@/lib/knowledge/recall-match";
+import { readRowsForBrand } from "@/lib/knowledge/brand-rows";
 import { rowToCitation, type MatchedChunkRow } from "@/lib/knowledge/mappers";
 import { conductLineCitation, topicHeadings, withConductLinePage } from "@/lib/forms/specific-policy-topics";
 import { formatManualCitation } from "@/lib/ai/policy-citation-fields";
@@ -8044,6 +8045,12 @@ export async function searchKnowledge(context: ToolContext, effects: ToolEffects
   } catch {
     return { reason_code: "read_failed", error: "The company knowledge base could not be searched just now. Say so; never answer from memory." };
   }
+  /*
+   * K2 port (owner's review, 28 Nov 2026): "only this company's brand" was a rules-book line here. The tool now holds it:
+   * the shared manual's rows reach the model as this company reads them (`brand-rows.ts`), whatever the retriever
+   * returned; a row the vector match already read passes as it is (read again on its own, the same text).
+   */
+  rows = await readRowsForBrand(rows);
   if (scopeManual) rows = scopeToCurrentManual(rows, { limit, dedupeBySection: manualSectionDedupeEnabled() });
   rows = rows.slice(0, limit);
   const markers = rows.map((row) => addSource(effects, rowToCitation(row)));

@@ -40,6 +40,11 @@
  * start of the next. Chunks overlap a little at their edges; the overlap
  * belongs to the same block as the end of the previous chunk, so carrying the
  * state forward reads it correctly.
+ *
+ * Two additions, ported back from the sibling app's port of this module (K1,
+ * owner's review, 28 Nov 2026): `startsInSection`, so a chunk read on its own (a
+ * retrieved row whose document could not be read in full) starts inside the
+ * section ingestion stored for it, and `listEndsBlock`, off for this company.
  */
 
 export interface ManualBrandScope {
@@ -63,6 +68,15 @@ export interface ManualBrandScope {
   readonly subHeadings: readonly RegExp[];
   /** Prose that opens an other-brand passage, running to the next heading. */
   readonly otherBrandPassages: readonly RegExp[];
+  /**
+   * When true, another brand's labelled block that is a lead line and a bullet
+   * list ("<Brand>:", "<Brand> is closed on the below listed holidays …:", then
+   * "o …" items) ends at the first paragraph after its list that names no other
+   * brand ("Additionally, the locations that are open …"): that paragraph is
+   * the section's again, not the brand's. A list item is a line under 60
+   * characters or one ending a sentence; a longer open line wraps onto the next.
+   */
+  readonly listEndsBlock?: boolean;
 }
 
 export interface ManualChunkText {
@@ -74,6 +88,10 @@ export interface ManualChunkText {
 interface ReadState {
   sectionExcluded: boolean;
   otherBrandBlock: boolean;
+  /** The other-brand block has had a list item ("o …"). */
+  blockListed: boolean;
+  /** The last non-blank line read, trimmed. */
+  previous: string;
 }
 
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -85,6 +103,7 @@ const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 export function readManualForBrand(
   chunks: readonly ManualChunkText[],
   scope: ManualBrandScope,
+  options: { readonly startsInSection?: string | null } = {},
 ): string[] {
   const labelNames = [...scope.otherBrands, ...scope.keptLabels]
     .sort((a, b) => b.length - a.length)
@@ -102,9 +121,19 @@ export function readManualForBrand(
   // "o <Brand> – MyGlow", "o <Brand> – January …", "o <Brand>: 50% off …"
   const OTHER_BULLET = new RegExp(`^o\\s+(?:${otherNames})\\b\\s*[–:-]`, "i");
 
-  const state: ReadState = { sectionExcluded: false, otherBrandBlock: false };
   const isExcludedSection = (heading: string) =>
     scope.excludedSections.some((pattern) => pattern.test(heading.trim()));
+  // A stored section that is a brand label ("<Brand>", as ingestion read "<Brand>:") starts inside that brand's block.
+  const START_LABEL = new RegExp(`^(${labelNames})(?:\\s+Specific\\s+Dress\\s+Code)?\\s*:?\\s*$`, "i");
+  const startLabel = options.startsInSection ? START_LABEL.exec(options.startsInSection.trim()) : null;
+  const state: ReadState = {
+    sectionExcluded: options.startsInSection ? isExcludedSection(options.startsInSection) : false,
+    otherBrandBlock: startLabel ? OTHER_LABEL.test(startLabel[1]!) : false,
+    blockListed: false,
+    previous: "",
+  };
+  const OTHER_NAME = new RegExp(`\\b(?:${otherNames})\\b`, "i");
+  const isListItem = (line: string) => /^o\s/.test(line) && (line.length < 60 || /[.:!?]$/.test(line));
   const isSubHeading = (heading: string) => scope.subHeadings.some((pattern) => pattern.test(heading.trim()));
 
   return chunks.map((chunk) => {
@@ -139,11 +168,14 @@ export function readManualForBrand(
         if (!state.sectionExcluded && !state.otherBrandBlock) kept.push(rawLine);
         continue;
       }
+      const previous = state.previous;
+      state.previous = line;
 
       const heading = headings.find((entry) => entry.toLowerCase() === line.toLowerCase());
       if (heading && !isSubHeading(heading)) {
         state.sectionExcluded = isExcludedSection(heading);
         state.otherBrandBlock = false;
+        state.blockListed = false;
         if (!state.sectionExcluded) kept.push(rawLine);
         continue;
       }
@@ -151,6 +183,7 @@ export function readManualForBrand(
       const label = LABEL.exec(line);
       if (label) {
         state.otherBrandBlock = OTHER_LABEL.test(label[1]!);
+        state.blockListed = false;
         if (!state.sectionExcluded && !state.otherBrandBlock) kept.push(rawLine);
         continue;
       }
@@ -165,6 +198,14 @@ export function readManualForBrand(
         continue;
       }
 
+      if (state.otherBrandBlock && scope.listEndsBlock) {
+        if (/^o\s/.test(line)) state.blockListed = true;
+        else if (state.blockListed && /^\p{Lu}/u.test(line) && !OTHER_NAME.test(line) && !isSubHeading(line) && (isListItem(previous) || /[.!?]$/.test(previous))) {
+          state.otherBrandBlock = false;
+          state.blockListed = false;
+        }
+      }
+
       if (!state.sectionExcluded && !state.otherBrandBlock) kept.push(rawLine);
     }
 
@@ -175,4 +216,13 @@ export function readManualForBrand(
 /** True when a document title names a manual this scope applies to. */
 export function isMultiBrandManual(title: string, titles: readonly RegExp[]): boolean {
   return titles.some((pattern) => pattern.test(title));
+}
+
+/**
+ * True when `heading` is another brand's label ("<Brand>", "<Brand>:", "<Brand> Specific Dress Code"), as ingestion
+ * sometimes stores it for a chunk's section: such a section never names what is kept of the chunk.
+ */
+export function isOtherBrandLabel(heading: string, scope: ManualBrandScope): boolean {
+  const names = scope.otherBrands.map((source) => `(?:${source})`).join("|");
+  return names !== "" && new RegExp(`^(?:${names})(?:\\s+Specific\\s+Dress\\s+Code)?\\s*:?\\s*$`, "i").test(heading.trim());
 }
