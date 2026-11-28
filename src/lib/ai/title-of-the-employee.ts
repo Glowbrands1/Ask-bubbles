@@ -1,7 +1,8 @@
-import { exitLetterAddresseeEnabled, exitStatedOnlyEnabled, fullPositionTitleEnabled, titleOfTheEmployeeEnabled } from "@/lib/config/chat-quality-flags";
+import { exitLetterAddresseeEnabled, exitStatedOnlyEnabled, titleOfTheEmployeeEnabled } from "@/lib/config/chat-quality-flags";
 import { displayName, normalizeTypedName, type RosterEmployee } from "@/lib/forms/employee-match";
 import { EXIT_TEMPLATE_KEY } from "@/lib/forms/exit-library";
 import { titleNamesAnotherPerson } from "@/lib/forms/title-of-another-person";
+import { fullPositionTitleEnabled } from "@/lib/config/chat-quality-flags";
 
 import type { AskRequest, AskResponse } from "./types";
 
