@@ -28,7 +28,7 @@ import { activeSpendMeter } from "../spend-meter";
 import { isAiTimeLimitError, logAiFailure, msLeftForCleanup, withStreamTimeLimit, type StreamWatch } from "../time-limit";
 import type { AskResponse } from "../types";
 import { withoutSensitiveDefaults } from "../sensitive-defaults";
-import { finalReplyWithoutMarkers, withoutSourceMarkers, withoutSourceNotes } from "../source-note";
+import { finalReplyWithoutMarkers, withoutLoopMarkers, withoutSourceMarkers, withoutSourceNotes } from "../source-note";
 import { extractUsedMarkers } from "../prompts";
 import { shownCitations } from "@/lib/knowledge/empty-card-drop";
 import { dataToolHandlers, dataToolSpecs } from "./data-tools";
@@ -1810,7 +1810,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
   const cited = used.length > 0
     ? used.map((marker) => sources[marker - 1]!)
     : sources.filter((source, index, all) => content.toLowerCase().includes(source.documentTitle.toLowerCase()) && all.findIndex((row) => row.documentId === source.documentId) === index);
-  content = content.replace(/\s?\[S\d{1,2}\]/g, "");
+  content = withoutLoopMarkers(content);
   /* A question code decided (effects.replyMustAsk) ends the reply even when the model left it out (QA, the live re-run of #1067). */
   /* Never twice: the reply already asks for a change in its own words (QA: "change" and a question mark in one sentence). */
   const asksForChange = /\bchange\b[^.!?\n]*\?/i.test(content);
