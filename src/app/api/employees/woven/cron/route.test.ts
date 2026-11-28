@@ -179,3 +179,81 @@ describe("GET /api/employees/woven/cron cannot bypass the write switch", () => {
     expect(seen.storesCreated).toBe(0);
   });
 });
+
+/*
+ * Owner, 28 Nov 2026: "make this automatic for both sunny and bubble". After a
+ * SUCCESSFUL directory sync — and only then — WOVEN_ACCESS_MODE=apply runs the
+ * apply step (DISABLE_TERMINATED); shadow records the plan; off does nothing.
+ */
+describe("GET /api/employees/woven/cron: the access step after the sync", () => {
+  const ACCESS_KEYS = ["WOVEN_ACCESS_MODE", "WOVEN_ACCESS_APPLY_ACTIONS"] as const;
+  const savedAccess = Object.fromEntries(ACCESS_KEYS.map((k) => [k, process.env[k]]));
+  afterEach(() => {
+    for (const key of ACCESS_KEYS) {
+      if (savedAccess[key] === undefined) delete process.env[key];
+      else process.env[key] = savedAccess[key];
+    }
+    vi.doUnmock("@/lib/employees/woven/access/apply-run");
+    vi.doUnmock("@/lib/employees/woven/access/shadow");
+  });
+
+  async function loadWith(syncStatus: string, access: Partial<Record<(typeof ACCESS_KEYS)[number], string>>) {
+    vi.resetModules();
+    for (const key of [...ENV_KEYS, ...ACCESS_KEYS]) delete process.env[key];
+    Object.assign(process.env, { NEXT_PUBLIC_SUPABASE_URL: "https://project.supabase.co", SUPABASE_SECRET_KEY: "sb_secret_test", ...ALL_ON, ...access });
+    const seen = { lifecycle: [] as unknown[][], shadow: [] as unknown[][] };
+    vi.doMock("@/lib/employees/woven/sync", async (importOriginal) => ({
+      ...(await importOriginal<typeof import("@/lib/employees/woven/sync")>()),
+      runWovenEmployeeSync: async () => ({ status: syncStatus, runId: "run-1", ...(syncStatus === "succeeded" ? { summary: {} } : { code: "woven_unavailable" }) }),
+    }));
+    vi.doMock("@/lib/employees/woven/access/apply-run", () => ({
+      runAccessLifecycle: async (...args: unknown[]) => {
+        seen.lifecycle.push(args);
+        return { status: "completed", accessRunId: "access-1", tally: { applied: { DISABLE_TERMINATED: 1 }, failed: {}, skipped: 0 } };
+      },
+    }));
+    vi.doMock("@/lib/employees/woven/access/shadow", () => ({
+      recordAccessShadowRun: async (...args: unknown[]) => {
+        seen.shadow.push(args);
+        return { status: "recorded", accessRunId: "shadow-1", aborted: false, actions: 3 };
+      },
+    }));
+    const { GET } = await import("./route");
+    return { GET, seen };
+  }
+
+  const APPLY = { WOVEN_ACCESS_MODE: "apply", WOVEN_ACCESS_APPLY_ACTIONS: "DISABLE_TERMINATED" };
+
+  it("apply: after a successful sync the apply step runs once, as cron, and its codes-only outcome is in the response", async () => {
+    const { GET, seen } = await loadWith("succeeded", APPLY);
+    const response = await GET(request(SECRET));
+    const body = await response.json();
+    expect(seen.lifecycle).toEqual([["cron"]]);
+    expect(seen.shadow).toEqual([]);
+    expect(body.accessLifecycle).toEqual({ status: "completed", accessRunId: "access-1", tally: { applied: { DISABLE_TERMINATED: 1 }, failed: {}, skipped: 0 } });
+    expect(body.accessShadow).toBeUndefined();
+  });
+
+  it.each(["failed", "rejected", "busy", "writes_disabled"])("apply: a sync that ends %s runs no apply step at all", async (status) => {
+    const { GET, seen } = await loadWith(status, APPLY);
+    const body = await (await GET(request(SECRET))).json();
+    expect(seen.lifecycle).toEqual([]);
+    expect(seen.shadow).toEqual([]);
+    expect(body.accessLifecycle).toBeUndefined();
+  });
+
+  it("shadow still only records; off (or a refused apply configuration) does neither", async () => {
+    const shadow = await loadWith("succeeded", { WOVEN_ACCESS_MODE: "shadow" });
+    expect((await (await shadow.GET(request(SECRET))).json()).accessShadow).toMatchObject({ status: "recorded" });
+    expect(shadow.seen.lifecycle).toEqual([]);
+
+    for (const access of [{}, { WOVEN_ACCESS_MODE: "apply", WOVEN_ACCESS_APPLY_ACTIONS: "DISABLE_TERMINATED,CREATE_USER" }]) {
+      const { GET, seen } = await loadWith("succeeded", access);
+      const body = await (await GET(request(SECRET))).json();
+      expect(seen.lifecycle).toEqual([]);
+      expect(seen.shadow).toEqual([]);
+      expect(body.accessLifecycle).toBeUndefined();
+      expect(body.accessShadow).toBeUndefined();
+    }
+  });
+});

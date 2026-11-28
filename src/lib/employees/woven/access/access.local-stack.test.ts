@@ -187,7 +187,7 @@ describe.skipIf(!ENABLED)("stage 1 on real Postgres (local stack)", { timeout: 6
     const outcome = await recordAccessShadowRun("test");
     expect(outcome.status).toBe("recorded");
     const runId = outcome.status === "recorded" ? outcome.accessRunId : "";
-    expect(sql(`select mode||','||policy_version from public.employee_access_runs where id = '${runId}'`)).toBe("shadow,access-policy-1");
+    expect(sql(`select mode||','||policy_version from public.employee_access_runs where id = '${runId}'`)).toBe("shadow,access-policy-2");
     expect(sql(`select string_agg(distinct result, ',') from public.employee_access_actions where access_run_id = '${runId}'`)).toBe("shadow");
     expect(Number(sql(`select count(*) from public.employee_access_actions where access_run_id = '${runId}' and action = 'CREATE_USER'`))).toBeGreaterThanOrEqual(1);
     expect(fingerprint()).toBe(before);
@@ -321,8 +321,14 @@ describe.skipIf(!ENABLED)("stage 1 on real Postgres (local stack)", { timeout: 6
     expect(sql(`select count(*) from public.employee_account_links where app_user_id = '${ids.protectedAdmin}'`)).toBe("1");
   });
 
-  it("an apply mode does not exist in the database either", () => {
-    expect(sqlFails(`insert into public.employee_access_runs (mode, requested_by, policy_version, status) values ('apply', 'x', 'p', 'completed')`)).toMatch(
+  /*
+   * Changed on purpose (owner, 28 Nov 2026: "make this automatic for both sunny
+   * and bubble"): 20261128003000_woven_disable_terminated.sql adds the apply
+   * mode, for DISABLE_TERMINATED only. Stage 1's own migration still has none,
+   * and a shadow run is still final the moment it is written.
+   */
+  it("stage 1's migration has no apply mode; a shadow run can never be left running", () => {
+    expect(sqlFails(`insert into public.employee_access_runs (mode, requested_by, policy_version, status) values ('shadow', 'x', 'p', 'running')`)).toMatch(
       /check constraint/,
     );
     expect(readFileSync(MIGRATION, "utf8")).not.toMatch(/'applied'/);

@@ -350,6 +350,12 @@ const ALLOWED_UI = [
   "src/features/dashboard/ask-band.tsx",
   "src/features/reports/ask-about-report.tsx",
   /*
+   * WOVEN AUTO-DISABLE OF TERMINATED ACCOUNTS (owner, 28 Nov 2026: "make this automatic for both sunny and bubble"):
+   * the admin-only Access Preview tab names the new `apply` access mode in its read-only notice (one prop type and one
+   * label). Admin page only; no chat or form behaviour changes. WOVEN_ACCESS_MODE unset or "shadow", it reads as before.
+   */
+  "src/features/admin/woven/access-preview.tsx",
+  /*
    * WHAT'S NEW BADGES AND RED NOTES (Pau, 28 Nov 2026, both apps: "add a bubble HR ONLY in red", "make a note and
    * highlight in red"): the page draws an entry's optional audience badge and note, and hides Before when an entry has
    * none. What's New page only; no chat or form behaviour changes.
