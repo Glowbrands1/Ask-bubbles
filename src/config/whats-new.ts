@@ -318,7 +318,7 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
     summary: "Bubbles' new assistant for every manager, with your own Action Plan steps.",
     entries: [
       {
-        tag: "New",
+        tag: "Improved",
         title: "Bubbles looks things up for you",
         before: "Only a few test accounts had Bubbles' new assistant.",
         now: "Every manager has it now: Bubbles looks up your forms on file and Google reviews for your stores as it answers, and drafts a form as a card you check before you create it.",
