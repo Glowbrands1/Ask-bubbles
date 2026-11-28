@@ -366,6 +366,13 @@ const ALLOWED_UI = [
    */
   "src/features/whats-new/whats-new-screen.tsx",
   "src/features/dashboard/answer-sheet.tsx",
+  /*
+   * FEEDBACK STATUS MENU CLOSES ON PICK (owner-approved re-land, 28 Nov 2026; port of the sibling app's fix): the
+   * admin-only feedback queue closes its Status menu once a status is chosen and shows the list is updating; the shared
+   * filter menu gains the close-on-pick it needs. Admin pages only; no chat or form behaviour changes.
+   */
+  "src/features/admin/analytics/feedback-queue.tsx",
+  "src/features/reports/filter-menu.tsx",
 ];
 
 /*
