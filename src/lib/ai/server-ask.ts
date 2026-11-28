@@ -102,6 +102,7 @@ import {
   coachingCardPolicyEnabled,
   outOfDateIsTheProposalEnabled,
   policyPageOnCardEnabled,
+  generalAdviceEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -154,8 +155,10 @@ import {
   extractUsedMarkers,
   stripMarkers,
   isCoachingFrameworkTitle,
+  withGeneralAdviceRule,
   type GroundingChunk,
 } from "./prompts";
+import { ASKS_FOR_WRITING, generalAdviceVerdict, restrictedTopic, settledGeneralAdvice } from "./general-advice";
 import { retrievalPlanFor } from "./retrieval-query";
 import { earlierAnsweredTurn, isReformatTurn, keepEarlierSources } from "./reformat-turn";
 import { slotOnlyRetrievalTopic } from "./slot-only-turn";
@@ -1194,7 +1197,14 @@ async function answerQuestionCore(
     .map((entry) => entry.documentTitle);
 
   markStage("system_prompt");
-  const system = buildSystemPrompt({
+  /*
+   * GENERAL_ADVICE_ENABLED (port from the sibling app; the owner, 28 Nov 2026): labelled general advice when the
+   * documents have nothing, never on a restricted topic (read from the manager's words this turn and the message
+   * before). Off, the prompt is unchanged.
+   */
+  const generalAdvice = generalAdviceEnabled();
+  const adviceWords = [[...request.history].reverse().find((turn) => turn.role === "user")?.content ?? "", request.question].map((part) => String(part)).join("\n");
+  const builtSystem = buildSystemPrompt({
     assistantName: ACTIVE_BRAND.assistantName,
     brandName: ACTIVE_BRAND.brandName,
     productName: ACTIVE_BRAND.productName,
@@ -1245,6 +1255,8 @@ async function answerQuestionCore(
       ? { frameworkGeneralSections: true }
       : {}),
   });
+
+  const system = generalAdvice ? withGeneralAdviceRule(builtSystem, ACTIVE_BRAND.brandName, restrictedTopic(adviceWords, ACTIVE_BRAND.brandName)) : builtSystem;
 
   markStage("long_context");
   const longContext = longContextEnabled()
@@ -1528,6 +1540,24 @@ async function answerQuestionCore(
     attachedDocumentIds: request.attachedDocumentIds,
     attachments: request.attachments,
   }).content;
+  /*
+   * GENERAL_ADVICE_ENABLED: the answer's general advice settled by code, as the agent loop's after its hand-back
+   * (`general-advice.ts`): a label on a restricted topic or beside a source card is cut (a restricted topic says "not in
+   * the documents" and HR or their manager), and uncited general advice on a turn with no other data gets the label.
+   */
+  if (generalAdvice) {
+    const verdict = generalAdviceVerdict({
+      reply: content,
+      words: adviceWords,
+      brand: ACTIVE_BRAND.brandName,
+      formTurn: Boolean(request.openForm),
+      sourceTitles: citations.map((citation) => citation.documentTitle),
+      cited: citations.length > 0,
+      searchedOnly: (briefing?.present.length ?? 0) === 0 && formRecords === null && reviewBlock?.figures !== true && !dataAddition.data && !(request.attachments?.length),
+      drafting: ASKS_FOR_WRITING.test(request.question),
+    });
+    content = settledGeneralAdvice(content, verdict, ACTIVE_BRAND.brandName);
+  }
   // CA_SALES_POLICY_ENABLED: the Corrective Action offer is added at the turn's one exit (`answerQuestion`, `withCaOffer`).
   return {
     content,
