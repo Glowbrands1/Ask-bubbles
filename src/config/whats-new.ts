@@ -58,6 +58,13 @@ export interface WhatsNewEntry {
   readonly tag: WhatsNewTag;
   readonly title: string;
   readonly before?: string;
+  /**
+   * lead (optional): one line shown under the title in place of Before, for a feature better introduced by what it is
+   * for (Pau, 28 Nov 2026: "remove before add instead … Cant do the follow up yourself?").
+   */
+  readonly lead?: string;
+  /** beta (optional): a "Beta - testing" badge beside the tag, for a feature still being tested (Pau, 28 Nov 2026). */
+  readonly beta?: true;
   /** Who the feature is for, shown as a red badge beside the tag (the owner, 28 Nov 2026). */
   readonly audience?: WhatsNewAudience;
   /** A caveat the reader must not miss, shown in red under How to use it (the owner, 28 Nov 2026). */
@@ -114,7 +121,8 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
       {
         tag: "New",
         title: "Hand a follow-up to someone else",
-        before: "A form's follow-up always stayed with whoever filed the form.",
+        lead: "Can't do the follow-up yourself? Hand it to your DM, or to another manager who covers your store.",
+        beta: true,
         now: "Give a form's follow-up to someone else who covers that store, such as your DM. It goes on their calendar with reminders, and you still get the reminders too.",
         howToUse: "On the Forms Register or on the form, press Change next to Owner under the follow-up date, pick the person and press Save owner, or ask Bubbles \"assign this follow-up to someone else\".",
         showMe: { href: "/forms/monitoring", label: "Forms Register" },
