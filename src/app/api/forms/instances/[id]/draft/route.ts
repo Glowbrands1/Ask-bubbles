@@ -217,6 +217,7 @@ import {
   proposalMakeItAboutEnabled,
   proposalPolicySetAsideEnabled,
   negatedLatenessTopicEnabled,
+  coachingObservedSavedEnabled,
   dateOnceEnabled,
   sameRequestOtherPersonEnabled,
   outlineOnOpenProposalEnabled,
@@ -2856,9 +2857,21 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
     // PROPOSAL_POLICY_SET_ASIDE_ENABLED: the policy fields and "Policy reference" lines leave a policy taken off out.
     const setAsideValues = setAsideAnything(setAside) ? valuesWithPolicySetAside(planned.values, setAside) : planned.values;
     // DATE_ONCE_ENABLED: the incident date is the Date field's; an account field does not say it again. See `lib/forms/date-once.ts`.
-    const plannedValues = dateOnceEnabled()
+    const datedOnce = dateOnceEnabled()
       ? (await import("@/lib/forms/date-once")).withFormDateOnce(setAsideValues, loaded.instance.formDate, narrativeKeys)
       : setAsideValues;
+    // COACHING_OBSERVED_SAVED_ENABLED (port from the sibling app): the saved coaching Details always have an "Observed:" with the account.
+    const plannedValues = coachingObservedSavedEnabled()
+      ? ((await import("@/lib/forms/coaching-observed-saved")).withCoachingObservedSaved({
+          values: datedOnce,
+          narrativeKeys: narrativeTargets,
+          coaching: isCoachingFamily,
+          notes,
+          employeeName: loaded.instance.employeeName,
+          // R678: only Details drafted this turn get the heading, never the form's saved (carried or kept) text.
+          saved: Object.fromEntries((loaded.values ?? []).map((row) => [row.fieldKey, row.value ?? ""])),
+        }) as typeof setAsideValues)
+      : datedOnce;
     /*
      * ========================================================================
      * AN AGENT-LOOP CARD'S OWN RECORD, ON THE DRAFT (ported from the sibling app, 17–20 Nov 2026)

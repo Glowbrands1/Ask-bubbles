@@ -37,13 +37,21 @@ async function reopened(t: T) {
   await earlier.say("I need a coaching form for Odalys Penwarden, she left the register drawer open on 10/15/26");
   t.draftWrites({ coaching_details: DETAILS });
   const id = await earlier.create();
+  /*
+   * Changed on purpose (R678, 14 Nov 2026): the saved Details are the finalized form's, compared as saved. With
+   * COACHING_OBSERVED_SAVED on, Create puts the drafted Details under "Observed:" (the flag's own change, on the first
+   * draft), so the saved text is no longer DETAILS letter for letter; what this case guards is that the reopen and the
+   * edit keep whatever was saved.
+   */
+  const savedDetails = t.values(id).coaching_details ?? "";
+  expect(savedDetails, "Create saved no Details").toContain(DETAILS);
   const row = t.forms().find((form) => form.id === id)!;
   row.status = "finalized";
   const thread = t.thread();
   const opened = (await thread.say("open my last coaching form for Odalys Penwarden")).formOpened as { instanceId: string } | undefined;
   expect(opened, "the Coaching Form on file did not reopen").toBeDefined();
-  expect(t.values(opened!.instanceId).coaching_details ?? "", "the reopened draft does not carry the Details").toBe(DETAILS);
-  return { thread, draft: opened!.instanceId };
+  expect(t.values(opened!.instanceId).coaching_details ?? "", "the reopened draft does not carry the Details").toBe(savedDetails);
+  return { thread, draft: opened!.instanceId, savedDetails };
 }
 
 const READINGS = [
@@ -63,11 +71,11 @@ export const NOV10_REOPENED_EDIT_KEEPS_ACCOUNT_CASES: ReplayCase[] = READINGS.ma
     status: { open },
     fixFlags: ["ACCOUNT_WIPE_GUARD_ENABLED"],
     async run(t: T) {
-      const { thread, draft } = await reopened(t);
+      const { thread, draft, savedDetails } = await reopened(t);
       t.patchWrites([reading]);
       const reply = await thread.say(SAID);
       const saved = t.values(draft).coaching_details ?? "";
-      expect(saved, `the saved Details were wiped:\n${saved}\n— reply:\n${reply.content}`).toBe(DETAILS);
+      expect(saved, `the saved Details were wiped:\n${saved}\n— reply:\n${reply.content}`).toBe(savedDetails);
       expect(reply.content, `the reply says Details changed:\n${reply.content}`).not.toMatch(/\b(?:Cleared|Changed)\s+Details of Coaching\b/);
     },
   }),
