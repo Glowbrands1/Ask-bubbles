@@ -3,6 +3,7 @@ import "server-only";
 import { recordToday } from "@/lib/business-today";
 import { INVITE_LINK_NOT_LIVE, inviteLinkIsLive } from "@/lib/admin/invite-link-check";
 import { announceInviteSent } from "@/lib/admin/new-hire-notices.server";
+import { unsettledEmployees } from "@/lib/admin/position-sync.server";
 import { createLinkedAccount, MANUAL_ROLES } from "@/lib/admin/woven-account";
 import { DirectoryError, type DirectoryActor } from "@/lib/admin/user-directory";
 import { loadAccessPlan, type AccessPlan } from "@/lib/employees/woven/access/load";
@@ -77,9 +78,9 @@ export function readNewHireConfig(env: Record<string, string | undefined> = proc
     return off(`${NEW_HIRE_INVITE_SINCE_ENV} must be a date (YYYY-MM-DD). New-hire invitations were treated as off.`);
   }
   const named = [...new Set((env[NEW_HIRE_INVITE_ROLES_ENV] ?? "").split(",").map((role) => role.trim()).filter(Boolean))];
-  const refused = named.filter((role) => !(MANUAL_ROLES as readonly string[]).includes(role));
+  const refused = named.filter((role) => !(NEW_HIRE_ROLES as readonly string[]).includes(role));
   if (refused.length > 0) {
-    return off(`${NEW_HIRE_INVITE_ROLES_ENV} may name only ${MANUAL_ROLES.join(", ")}; ${refused.join(", ")} is not one. New-hire invitations were treated as off.`);
+    return off(`${NEW_HIRE_INVITE_ROLES_ENV} may name only ${NEW_HIRE_ROLES.join(", ")}; ${refused.join(", ")} is not one. New-hire invitations were treated as off.`);
   }
   const actorEmail = (env[NEW_HIRE_INVITE_ACTOR_ENV] ?? "").trim().toLowerCase();
   if (!actorEmail.includes("@")) {
@@ -98,17 +99,19 @@ export function isNewHire(hireDate: string | null | undefined, config: Pick<NewH
 /** The bulk provisioning's READY rule: the plan says CREATE_USER, for one known location and an approved role. */
 function ready(row: PlannedRow): boolean {
   const after = row.after as Record<string, unknown> | null;
+  if (row.externalEmployeeId === null || row.actions[0] !== "CREATE_USER" || after === null || typeof after.email !== "string") return false;
+  /* WOVEN_POSITION_SYNC_ENABLED: a District Manager the plan proposes at every store, as the approved mapping says. */
+  if (after.role === "district_manager") return after.scope_level === "global" && after.scope_primary_area_id === null;
   return (
-    row.externalEmployeeId !== null &&
-    row.actions[0] === "CREATE_USER" &&
-    after !== null &&
-    typeof after.email === "string" &&
     after.scope_level === "location" &&
     typeof after.scope_primary_area_id === "string" &&
     isKnownAreaId(after.scope_primary_area_id) &&
     (MANUAL_ROLES as readonly string[]).includes(String(after.role))
   );
 }
+
+/** The roles NEW_HIRE_INVITE_ROLES may name: the approved provisioning roles, and District Manager (not corporate). */
+export const NEW_HIRE_ROLES: readonly Role[] = [...MANUAL_ROLES, "district_manager"];
 
 export interface NewHireInviteDeps {
   loadPlan(now: Date): Promise<AccessPlan>;
@@ -122,6 +125,12 @@ export interface NewHireInviteDeps {
    * the first account is created. False stops the run with `invite_link_not_live`: nothing is created, nobody emailed.
    */
   linkIsLive(): Promise<boolean>;
+  /**
+   * EmployeeIDs whose Woven record the latest sync saw arrive or change position / store (`unsettledEmployees`). They
+   * wait for the next sync to confirm it (Pau, 28 Nov 2026: a new hire made Team Member and changed to District
+   * Manager the same day gets the link as a District Manager). Omitted: nobody waits.
+   */
+  unsettled?(plan: AccessPlan): Promise<ReadonlySet<string>>;
   /** Told after each account the invitation went out for (Pau's email through the webhook). */
   onSent?(row: PlannedRow): Promise<unknown>;
 }
@@ -148,8 +157,9 @@ export async function sendNewHireInvites(input: { config: NewHireConfig; now: Da
   if (plan.guard.codes.some((code) => code !== "creates_exceed_batch_limit")) return { status: "blocked", code: "guards" };
   const candidates = plan.rows.filter((row) => ready(row) && config.roles.includes(String((row.after as Record<string, unknown>).role) as Role));
   const hired = await deps.hireDates(candidates.map((row) => row.externalEmployeeId!));
+  const unsettled = deps.unsettled ? await deps.unsettled(plan) : new Set<string>();
   const waiting = candidates
-    .filter((row) => isNewHire(hired.get(row.externalEmployeeId!), config))
+    .filter((row) => isNewHire(hired.get(row.externalEmployeeId!), config) && !unsettled.has(row.externalEmployeeId!))
     .sort((a, b) => (hired.get(a.externalEmployeeId!) ?? "").localeCompare(hired.get(b.externalEmployeeId!) ?? "") || a.key.localeCompare(b.key));
 
   /*
@@ -234,6 +244,7 @@ export async function runNewHireInvites(redirectTo: string, now: Date = new Date
         hireDates: readHireDates,
         actor: readActor,
         linkIsLive: () => inviteLinkIsLive(redirectTo),
+        unsettled: (plan) => unsettledEmployees(plan.directoryRunId),
         // "if they get the link" (Pau, 28 Nov 2026): the webhook emails her. Off unless NEW_HIRE_NOTICES_ENABLED + URL.
         onSent: (row) => {
           const email = (row.after as Record<string, unknown> | null)?.email;
@@ -245,7 +256,10 @@ export async function runNewHireInvites(redirectTo: string, now: Date = new Date
             {
               externalEmployeeId: row.externalEmployeeId!,
               role: after.role,
-              scope: { level: "location", primaryAreaId: after.scope_primary_area_id, alsoCoversAreaIds: [] },
+              scope:
+                after.scope_level === "global"
+                  ? { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] }
+                  : { level: "location", primaryAreaId: after.scope_primary_area_id, alsoCoversAreaIds: [] },
             },
             actor,
             { invite: { redirectTo } },

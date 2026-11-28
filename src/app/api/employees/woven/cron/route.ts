@@ -10,12 +10,13 @@ import {
 import { CRON_REQUESTER, outcomeHttpStatus, runWovenEmployeeSync } from "@/lib/employees/woven/sync";
 import { recordAccessShadowRun } from "@/lib/employees/woven/access/shadow";
 import { announceNewHires } from "@/lib/admin/new-hire-notices.server";
+import { runPositionSync } from "@/lib/admin/position-sync.server";
 
 /**
  * GET /api/employees/woven/cron — the scheduled Woven employee sync.
  *
  * ============================================================================
- * SCHEDULED DAILY — 11:17 UTC (`vercel.json`)
+ * SCHEDULED TWICE A DAY — 11:17 and 23:17 UTC (`vercel.json`)
  * ============================================================================
  *
  * Enabled after the first manual dry run and the first manual stored run were
@@ -107,11 +108,14 @@ export async function GET(request: Request) {
    * response is exactly the sync's outcome.
    */
   const shadow = outcome.status === "succeeded" ? await recordAccessShadowRun(CRON_REQUESTER) : ({ status: "off" } as const);
-  /* NEW_HIRE_NOTICES_ENABLED: the admins' "new employee hired" bell (src/lib/admin/new-hire-notices.ts). Counts only. */
+  /* WOVEN_POSITION_SYNC_ENABLED: access follows Woven's position and store within the manager tiers (src/lib/admin/position-sync.ts). */
+  const positionSync = outcome.status === "succeeded" ? await runPositionSync() : ({ status: "off" } as const);
+  /* NEW_HIRE_NOTICES_ENABLED: hires, terminations and the email webhook (src/lib/admin/new-hire-notices.ts). Counts only. */
   const newHireNotices = outcome.status === "succeeded" ? await announceNewHires({}) : ({ status: "off" } as const);
   const body = {
     ...outcome,
     ...(shadow.status === "off" ? {} : { accessShadow: shadow }),
+    ...(positionSync.status === "off" && !("code" in positionSync && positionSync.code) ? {} : { positionSync }),
     ...(newHireNotices.status === "off" ? {} : { newHireNotices }),
   };
   return NextResponse.json(body, { status: outcomeHttpStatus(outcome) });

@@ -605,3 +605,27 @@ describe("the vocabulary matches the database", () => {
     expect(listed).toEqual([...ACCESS_ACTIONS].sort());
   });
 });
+
+/*
+ * Pau, 28 Nov 2026: "we need to add District manager also, just not corporate". With WOVEN_POSITION_SYNC_ENABLED a
+ * District Manager without an account gets one, at the scope the approved mapping gives (every store today). Off: as
+ * before.
+ */
+describe("District Managers (WOVEN_POSITION_SYNC_ENABLED)", () => {
+  const everyStore = [{ ...positions.find((p) => p.role === "district_manager")!, scopeLevel: "global" as const }];
+  const dm = () => employee({ positionId: POS.dm, positionName: "District Manager", hasAllLocationAccess: true });
+  const rowFor = (createDistrictManagers: boolean) => {
+    const e = dm();
+    return planAccess({ employees: [e], positions: everyStore, locations, accounts: [], createDistrictManagers }).find((r) => r.externalEmployeeId === e.externalEmployeeId)!;
+  };
+
+  it("on: CREATE_USER as district_manager at every store, even with Woven's all-location access", () => {
+    const r = rowFor(true);
+    expect(r.actions[0]).toBe("CREATE_USER");
+    expect(r.after).toMatchObject({ role: "district_manager", scope_level: "global", scope_primary_area_id: null });
+  });
+
+  it("off: not created, as before", () => {
+    expect(rowFor(false).actions).not.toContain("CREATE_USER");
+  });
+});

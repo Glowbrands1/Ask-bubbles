@@ -123,7 +123,7 @@ export function planAccess(input: PlannerInput): PlannedRow[] {
   const rows: PlannedRow[] = [];
 
   for (const employee of [...input.employees].sort((a, b) => a.externalEmployeeId.localeCompare(b.externalEmployeeId))) {
-    const row = planEmployee(employee, { positions, locations, byLinkedEmployee, byEmail, emailHolders });
+    const row = planEmployee(employee, { positions, locations, byLinkedEmployee, byEmail, emailHolders, createDistrictManagers: input.createDistrictManagers === true });
     if (row.account) covered.add(row.account.appUserId);
     rows.push(row);
   }
@@ -169,6 +169,8 @@ interface Context {
   byLinkedEmployee: Map<string, PlannerAccount>;
   byEmail: Map<string, PlannerAccount[]>;
   emailHolders: Map<string, number>;
+  /** WOVEN_POSITION_SYNC_ENABLED: District Managers are created too, at their mapped scope. */
+  createDistrictManagers?: boolean;
 }
 
 function planEmployee(employee: PlannerEmployee, ctx: Context): PlannedRow {
@@ -371,10 +373,14 @@ function planWithoutAccount(
     reasons.push(employee.positionId ? "woven_position_not_confirmed" : "woven_position_missing");
     return row();
   }
-  if (!AUTO_PROVISION_ROLES.includes(role)) {
+  const districtManager = role === "district_manager" && ctx.createDistrictManagers === true;
+  if (!AUTO_PROVISION_ROLES.includes(role) && !districtManager) {
     reasons.push("position_not_auto_provisioned");
     return row();
   }
+  /* A District Manager mapped to every store needs no store of their own. */
+  const position = employee.positionId ? ctx.positions.get(employee.positionId) : undefined;
+  const everyStore = districtManager && position?.scopeLevel === "global";
   if (employee.issues.includes("status_termination_conflict")) {
     actions.push("FLAG_STATUS_CONFLICT");
     reasons.push("woven_shows_past_termination_date");
@@ -387,7 +393,7 @@ function planWithoutAccount(
     reasons.push("other_brand_location");
     return row();
   }
-  if (employee.hasAllLocationAccess === true || employee.issues.includes("affiliations_not_verified")) {
+  if (!everyStore && (employee.hasAllLocationAccess === true || employee.issues.includes("affiliations_not_verified"))) {
     actions.push("FLAG_LOCATION_REVIEW");
     reasons.push(employee.hasAllLocationAccess === true ? "all_location_access_not_provisioned" : "affiliations_not_verified");
     return row();
@@ -403,7 +409,7 @@ function planWithoutAccount(
     reasons.push("email_shared_by_several_woven_employees");
     return row();
   }
-  if (location.problem) {
+  if (location.problem && !everyStore) {
     actions.push("FLAG_UNMAPPED_LOCATION");
     reasons.push(location.problem);
     return row();
@@ -415,8 +421,8 @@ function planWithoutAccount(
     display_name: employee.name,
     role,
     status: "invited",
-    scope_level: "location",
-    scope_primary_area_id: location.areaId,
+    scope_level: everyStore ? "global" : "location",
+    scope_primary_area_id: everyStore ? null : location.areaId,
     scope_also_covers_area_ids: [],
     provisioned_by_source: "woven",
     external_employee_id: employee.externalEmployeeId,

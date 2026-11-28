@@ -212,6 +212,25 @@ describe("the hourly run", () => {
     expect(notTold).not.toHaveBeenCalled();
   });
 
+  /*
+   * Pau, 28 Nov 2026: "sometimes they make new hire DM as tanning employee but change it within the dayy to DM so we
+   * need to catch that too" — chosen: sync twice a day and hold the link until a second sync confirms the position.
+   */
+  it("holds a new hire the latest sync saw arrive or change position; the others go", async () => {
+    const f = fakes([ready("E1"), ready("E2")], { E1: "2026-10-28", E2: "2026-10-29" });
+    await sendNewHireInvites({ config: config({ NEW_HIRE_INVITES_PER_HOUR: "2" }), now: NOW }, { ...f.deps, unsettled: async () => new Set(["E1"]) });
+    expect(f.made).toEqual(["E2"]);
+  });
+
+  it("\"we need to add District manager also, just not corporate\": a District Manager at every store is invited when named", async () => {
+    const dm = ready("D1", "district_manager");
+    dm.after = { email: "d1@example.test", role: "district_manager", scope_level: "global", scope_primary_area_id: null };
+    const f = fakes([dm], { D1: "2026-10-29" });
+    await sendNewHireInvites({ config: config({ NEW_HIRE_INVITE_ROLES: "employee,district_manager" }), now: NOW }, f.deps);
+    expect(f.made).toEqual(["D1"]);
+    expect(readNewHireConfig({ ...ON, NEW_HIRE_INVITE_ROLES: "admin" }, NOW).enabled).toBe(false);
+  });
+
   it("does not open the link when nobody is waiting", async () => {
     const f = fakes([ready("E1")], { E1: "2026-10-27" });
     await sendNewHireInvites({ config: config(), now: NOW }, f.deps);

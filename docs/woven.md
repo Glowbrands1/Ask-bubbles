@@ -185,6 +185,43 @@ email, position, location, additionalLocations, hireDate, terminationDate } }`.
 To turn it on: apply `20261128001000_woven_employee_notices.sql`, set the
 variables, redeploy.
 
+### Access follows Woven's position and store (built 28 Nov 2026; OFF)
+
+Pau, 28 Nov 2026: "we need to add District manager also, just not corporate,
+also add a sync where there is a position change it should detect it and give
+the correct link to the person with correct position and location. sometimes
+they make new hire DM as tanning employee but change it within the dayy to DM
+so we need to catch that too, for new positions existing, make sure their
+access refreshes too depends on the access we have in the intergration both
+app". Chosen: **all changes within the manager tiers**, and **sync twice a day
++ hold the link**.
+
+With `WOVEN_POSITION_SYNC_ENABLED` on (`src/lib/admin/position-sync.ts`, outside
+the Woven sync):
+
+- **District Managers can get the automatic link**: the plan proposes them at
+  the scope the approved mapping gives (every store today), and
+  `NEW_HIRE_INVITE_ROLES` may now name `district_manager`. Corporate, Owner and
+  Operator never.
+- **After each sync, every Woven-linked account is compared with the position
+  mapping and the Woven primary store.** Within the tier — Team Member, AGM, GM,
+  DM — a promotion, a demotion or a move is applied: role and scope as the
+  mapping says. Extra stores an admin granted are kept. Protected, admin,
+  regional and corporate accounts are never changed. Only the accounts linked to
+  Woven are followed (3 today; link the rest in Access Preview › Link review).
+- Each change is made by `patchUser` in the name of
+  `WOVEN_POSITION_SYNC_ACTOR` (an active global admin), audited, and every
+  admin's bell says "Access updated from Woven". Only while the access guards
+  allow changes; more than 10 in one run changes nothing.
+- **The Woven sync runs twice a day** (11:17 and 23:17 UTC), and **a new hire's
+  link waits** while the latest sync saw them arrive or change position or
+  store, so "Team Member, then DM the same day" gets the link as a DM.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `WOVEN_POSITION_SYNC_ENABLED` | off | The switch. Off: nothing changes, and District Managers are not proposed. |
+| `WOVEN_POSITION_SYNC_ACTOR` | unset | Email of an active global admin the changes are made by. |
+
 ### The exit form's Permanent Address (built 25 Nov 2026; OFF)
 
 Pau, 25 Nov 2026: "can we auto add the permanent address in exit form? from
