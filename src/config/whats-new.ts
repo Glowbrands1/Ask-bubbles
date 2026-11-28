@@ -155,6 +155,7 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
         now: "On the Resignation/Exit form, the employee's Permanent Address now fills in automatically from their Woven employee record. If Bubbles can't find one clear address for them, the line stays blank for you to fill in by hand.",
         howToUse: "Ask Bubbles to start a Resignation/Exit form for the employee, then check the Permanent Address line before you finalize.",
         roles: [...ADMIN_CONSOLE_ROLES, ...HOME_ADDRESS_MANAGER_ROLES],
+        note: "If an employee has no address in Woven, none shows on the Resignation/Exit form either.",
       },
     ],
   },
