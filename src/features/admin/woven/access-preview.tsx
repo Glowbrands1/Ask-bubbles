@@ -53,6 +53,7 @@ const ACTION_LABEL: Record<AccessAction, string> = {
   FLAG_PROTECTED_ACCOUNT: "Protected account",
   FLAG_LINKED_EMPLOYEE_NOT_FOUND: "Linked employee not found",
   FLAG_STATUS_CONFLICT: "Status conflict",
+  FLAG_SAME_NAME_ACCOUNT: "Account with this name exists",
 };
 
 function actionTone(action: AccessAction): BadgeTone {
@@ -74,6 +75,8 @@ const REASON: Record<string, string> = {
   primary_location_unmapped: "The Woven primary location is not mapped to a location.",
   primary_location_not_a_location: "The Woven primary location is not a location (e.g. Corporate).",
   woven_email_missing: "Woven has no email address for this employee.",
+  account_with_same_name_exists:
+    "An Ask Bubbles account with this person's name already exists under another email and is not linked. No account is created automatically: link the existing account, or create one if it is a different person.",
   woven_email_invalid: "Woven's email address is not usable.",
   email_shared_by_several_woven_employees: "Several Woven employees share this email; nothing is linked or created automatically.",
   email_shared_by_several_accounts: "Several Ask Bubbles accounts share this email.",

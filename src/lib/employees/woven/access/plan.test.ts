@@ -233,6 +233,29 @@ describe("provisioning", () => {
   });
 });
 
+/*
+ * Pau, 28 Nov 2026: "Ok duplicate check". A manager had an account under a personal email; Woven has the work email,
+ * so the sync would have created a second one. Invented people.
+ */
+describe("an unlinked account with the same name holds the create", () => {
+  it("same name under another email → FLAG_SAME_NAME_ACCOUNT, nothing created (case, spacing and accents ignored)", () => {
+    const lm = employee({ name: "Marisol Quenby", emailAddress: "marisol.quenby@work.example" });
+    const accent = employee({ name: "José Arland", emailAddress: "jose.arland@work.example" });
+    const rows = plan([lm, accent], [account({ email: "marisolq@personal.example", displayName: "  marisol  QUENBY " }), account({ email: "ja@personal.example", displayName: "Jose Arland" })]);
+    expect(rowOf(rows, lm).actions).toEqual(["FLAG_SAME_NAME_ACCOUNT"]);
+    expect(rowOf(rows, lm).reasons).toContain("account_with_same_name_exists");
+    expect(rowOf(rows, accent).actions).toEqual(["FLAG_SAME_NAME_ACCOUNT"]);
+    expect(mutating(rows)).toEqual([]);
+  });
+
+  it("a same-name account linked to someone else, or disabled, does not hold the create", () => {
+    const other = employee({ name: "Taryn Welde" });
+    const e = employee({ name: "Taryn Welde", emailAddress: "taryn.new@work.example" });
+    const rows = plan([other, e], [linkedTo(other, { displayName: "Taryn Welde" }), account({ displayName: "Taryn Welde", status: "disabled" })]);
+    expect(rowOf(rows, e).actions).toEqual(["CREATE_USER"]);
+  });
+});
+
 describe("identity and linking", () => {
   it("19. an existing manually-created account with the same email → FLAG_LINK_REVIEW, no new account, nothing changed", () => {
     const e = employee({ emailAddress: "manager@gmail.com", primaryWovenLocationId: LOC.liberty });
@@ -740,8 +763,12 @@ describe("the mass-change guards", () => {
 
 describe("the vocabulary matches the database", () => {
   it("every action is in the employee_access_actions CHECK constraint, and nothing else is", () => {
-    const sql = readFileSync("supabase/migrations/20261002002000_woven_account_links.sql", "utf8");
-    const block = sql.slice(sql.indexOf("action                text not null check (action in ("));
+    /*
+     * The latest definition of the constraint. Changed on purpose (28 Nov 2026): it was the links migration's inline
+     * check; 20261128004000 adds FLAG_SAME_NAME_ACCOUNT ("Ok duplicate check").
+     */
+    const sql = readFileSync("supabase/migrations/20261128004000_woven_same_name_account_flag.sql", "utf8");
+    const block = sql.slice(sql.indexOf("add constraint employee_access_actions_action_check"));
     const listed = [...block.slice(0, block.indexOf("))")).matchAll(/'([A-Z_]+)'/g)].map((m) => m[1]).sort();
     expect(listed).toEqual([...ACCESS_ACTIONS].sort());
   });
