@@ -1312,25 +1312,94 @@ export function __setAgentLoopDirectoryForTests(read: (() => Promise<readonly Di
 
 export async function inactiveMatch(scope: AccessScope, typed: string): Promise<string | null> {
   const row = await inactiveMatchRow(scope, typed);
-  return row ? `${row.preferredFirstName?.trim() || row.firstName!.trim()} ${row.lastName!.trim()}` : null;
+  return row ? formerName(row) : null;
 }
 
-/** The one former employee in the login's scope the typed full name is (`inactiveMatch`), with their Woven stores. */
+/** The one former employee in the login's scope the typed name is (`formerEmployeeMatch`), with their Woven stores. */
 async function inactiveMatchRow(scope: AccessScope, typed: string): Promise<DirectoryRosterRow | null> {
+  const found = await formerEmployeeMatch(scope, typed);
+  return found.kind === "one" ? found.row : null;
+}
+
+/** A former employee's name as the reply says it: preferred first name, else first, and last. */
+function formerName(row: DirectoryRosterRow): string {
+  return `${row.preferredFirstName?.trim() || row.firstName!.trim()} ${row.lastName!.trim()}`;
+}
+
+/**
+ * What a typed name is among the former employees in the login's scope (E3): one person, several to ask about, or none.
+ */
+export type FormerMatch =
+  | { readonly kind: "none" }
+  | { readonly kind: "one"; readonly row: DirectoryRosterRow; readonly name: string }
+  | { readonly kind: "ask"; readonly rows: readonly DirectoryRosterRow[]; readonly names: readonly string[]; readonly askExactly: string };
+
+/**
+ * E3 (owner's review, 28 Nov 2026): a former (terminated) employee was found only when the manager typed the exact full
+ * name; an active one gets near-miss, first-name and accent-tolerant matching. A former employee now gets the same
+ * matching the active roster does (`loopNameMatch`, the app's own name check): an exact full name (any case, accents and
+ * apostrophes typed another way, any word order) is that person; a close spelling, a first name alone or a surname
+ * initial is ASKED ("Did you mean …?"), as it is for the active roster; and when more than one former employee fits,
+ * the manager is asked which. Never picked silently.
+ */
+export function formerMatchIn(rows: readonly DirectoryRosterRow[], typed: string): FormerMatch {
   const wanted = words(typed);
-  if (wanted.length < 2) return null;
+  if (wanted.length === 0 || rows.length === 0) return { kind: "none" };
+  const people = rows.filter((row) => row.firstName && row.lastName);
+  // Every typed word a whole word of the name, in any order (the rule before E3, now on folded names).
+  const whole = people.filter((row) => {
+    const own = words([row.firstName, row.preferredFirstName ?? "", row.lastName].join(" "));
+    return wanted.every((word) => own.includes(word));
+  });
+  if (wanted.length >= 2 && whole.length === 1) return { kind: "one", row: whole[0]!, name: formerName(whole[0]!) };
+  let candidates: DirectoryRosterRow[] = whole.length > 1 ? whole : [];
+  if (candidates.length === 0) {
+    const roster: RosterEmployee[] = people.map((row) => ({ id: row.id, firstName: row.firstName!, lastName: row.lastName!, preferredFirstName: row.preferredFirstName ?? null, locationIds: row.locationIds }));
+    const match = loopNameMatch(typed, roster);
+    if (match.kind === "exact") {
+      const row = people.find((entry) => entry.id === match.employee.id)!;
+      return { kind: "one", row, name: formerName(row) };
+    }
+    candidates = match.kind === "confirm" ? match.candidates.map((candidate) => people.find((entry) => entry.id === candidate.employee.id)!).filter(Boolean) : [];
+    if (candidates.length === 0 && whole.length === 1) candidates = whole;
+  }
+  if (candidates.length === 0) return { kind: "none" };
+  /* Two former employees with one name are told apart by their store, as find_staff tells two active ones apart. */
+  const labelled = candidates.map((row) => {
+    const shared = candidates.filter((other) => formerName(other).toLowerCase() === formerName(row).toLowerCase()).length > 1;
+    const store = shared && row.locationIds[0] ? salonLabel(row.locationIds[0]) : null;
+    return store ? `${formerName(row)} at ${store}` : formerName(row);
+  });
+  const names = [...new Set(labelled)];
+  const bold = names.map((name) => `**${name}**`);
+  const askExactly = names.length === 1
+    ? `Did you mean **${names[0]}**? ${names[0]} shows as no longer active in ${staffSystem()}. Reply "yes" to use **${names[0]}**, or give me the full name.`
+    : `Which former employee is this for: ${bold.length <= 2 ? bold.join(" or ") : `${bold.slice(0, -1).join(", ")} or ${bold.at(-1)}`}? Each shows as no longer active in ${staffSystem()}.`;
+  return { kind: "ask", rows: candidates, names, askExactly };
+}
+
+/** `formerMatchIn` over the former employees the login could see while they were active; none on a read failure. */
+export async function formerEmployeeMatch(scope: AccessScope, typed: string): Promise<FormerMatch> {
+  if (words(typed).length === 0) return { kind: "none" };
   try {
     // Every place in the login's scope (a district or region: all of its stores; Pau's decision 7); global: all.
     const allowed = scope.level === "global" ? null : new Set((await import("./places")).authorizedSalonIds(scope));
     const rows = (await (directoryForTests ?? appConfig().roster.readDirectory)()).filter((row) => row.employmentStatus === "terminated" && row.firstName && row.lastName && (!allowed || row.locationIds.some((id) => allowed.has(id))));
-    const hits = rows.filter((row) => {
-      const own = words([row.firstName, row.preferredFirstName ?? "", row.lastName].join(" "));
-      return wanted.every((word) => own.includes(word));
-    });
-    return hits.length === 1 ? hits[0]! : null;
+    return formerMatchIn(rows, typed);
   } catch {
-    return null;
+    return { kind: "none" };
   }
+}
+
+/** find_staff's and propose_form's answer when the typed name fits former employees that must be asked about (E3). */
+function formerEmployeeQuestion(typed: string, found: Extract<FormerMatch, { kind: "ask" }>): ToolResult {
+  return {
+    reason_code: "former_employee_to_confirm",
+    matches: [],
+    former_employees: found.names,
+    ask_exactly: found.askExactly,
+    note: `"${typed}" is nobody on the active staff list, and ${found.names.length === 1 ? "is close to a former employee" : `fits ${found.names.length} former employees`} (no longer active in ${staffSystem()}). Ask the manager, in these words: ${found.askExactly} Never choose one yourself. When the manager answers with one of these names (or "yes"), call find_staff again with that full name.`,
+  };
 }
 
 /** The one line a former employee's card says (the rules book's inactive_in_woven line, QA's live re-test B8). */
@@ -1758,6 +1827,10 @@ export async function findStaff(context: ToolContext, input: { name?: unknown; p
       const holdsName = named.ok && !isJobTitlePhrase(typed) && holdsPhrase(String((input.person_evidence as { quote: string }).quote), typed);
       if (holdsName) {
         const shown = typed.replace(/\s+/g, " ").trim();
+        /* E3: a first name alone, or a name the off-roster reading does not take, can still be a former employee: asked. */
+        const former = await formerEmployeeMatch(context.actor.scope, shown);
+        if (former.kind === "ask") return formerEmployeeQuestion(shown, former);
+        if (former.kind === "one") return { reason_code: "not_on_roster", matches: [], not_on_roster: shown, inactive_in_woven: former.name, note: `${shown} is a former employee: found in ${staffSystem()} as no longer active (${former.name}). Propose the card now with employee_name "${shown}" as typed, and say only that ${shown} shows as no longer active, as the rules book's Card replies teach.` };
         /*
          * The answer bridge (QA's ruling, 16 Nov 2026; Pau: every answer is used): this offer asks for the full name, so it
          * is recorded like a Did-you-mean, and a full name given in the next message confirms <shown> as that person.
@@ -1787,7 +1860,10 @@ export async function findStaff(context: ToolContext, input: { name?: unknown; p
      * gets the card at once with the typed name, and the reply says it is not on the Woven staff list. A person at a
      * salon outside the manager's scope is read the same way (the roster is scoped): their existence is never shown.
      */
-    const inactive = await inactiveMatch(context.actor.scope, person);
+    /* E3: a former employee is matched as the active roster is; several, or a close spelling, are asked about. */
+    const former = await formerEmployeeMatch(context.actor.scope, person);
+    if (former.kind === "ask") return formerEmployeeQuestion(person, former);
+    const inactive = former.kind === "one" ? former.name : null;
     /* QA's live re-test B8: a former employee is found in Woven as no longer active, never "not on the staff list" too. */
     if (inactive) return { reason_code: "not_on_roster", matches: [], not_on_roster: person, inactive_in_woven: inactive, note: `${person} is a former employee: found in ${staffSystem()} as no longer active. Propose the card now with employee_name "${person}" as typed, and say only that ${person} shows as no longer active, as the rules book's Card replies teach.` };
     return { reason_code: "not_on_roster", matches: [], not_on_roster: person, staff_list: context.actor.scope.level === PLACE_LEVEL ? `your ${locationWord()}'s` : "the", note: `Not on the ${staffSystem()} staff list. Propose the card now with employee_name "${person}" as typed, and say so as the rules book's Card replies teach.` };
@@ -6722,8 +6798,12 @@ export async function proposeForm(
      * no longer active is found in Woven: the card gives only the inactive line, never staff_list.
      */
     ...(offRosterName ? await (async () => {
-      const inactive = await inactiveMatch(context.actor.scope, employee.name);
-      return inactive
+      const former = await formerEmployeeMatch(context.actor.scope, employee.name);
+      /* E3: the typed name fits former employees to ask about (several, or a close spelling): the reply asks, never picks. */
+      if (former.kind === "ask") {
+        return { off_roster_name: employee.name, former_employee_question: { ask_exactly: former.askExactly, note: `${employee.name} is nobody on the active staff list and ${former.names.length === 1 ? "is close to a former employee" : `fits ${former.names.length} former employees`} (no longer active in ${staffSystem()}). End the reply with ask_exactly, once; never choose one yourself.` } };
+      }
+      return former.kind === "one"
         ? { off_roster_name: employee.name, inactive_in_woven: { say_exactly: inactiveLine(employee.name), note: `${employee.name} is a former employee, found in ${staffSystem()} as no longer active. Say say_exactly once, and never that ${employee.name} is not on the staff list.` } }
         : { off_roster_name: employee.name, staff_list: context.actor.scope.level === PLACE_LEVEL ? `your ${locationWord()}'s` : "the" };
     })() : {}),
