@@ -1152,6 +1152,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "SHARED_LOGIN_NOT_STAFF_ENABLED",
   "STAFF_PICKER_NO_REPEAT_ENABLED",
   "COACHING_FOR_EVERYONE_ENABLED",
+  // COACHING_OBSERVED_SAVED (port from the sibling app; QA's P12, 10 Nov 2026; default off): in the list, as every chat flag.
+  "COACHING_OBSERVED_SAVED_ENABLED",
   "CHAT_RESPONSE_STREAM_ENABLED",
   "TRUNCATION_RETRY_BUDGET_ENABLED",
   "REPORT_NAME_NOT_A_PERSON_ENABLED",
@@ -1611,8 +1613,6 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED",
   // ADD_ALREADY_ON_FORM_SAYS_SO (default off; QA's live 17u test, item 5, 13 Nov 2026): in the list, as every chat flag.
   "ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED",
-  // COACHING_OBSERVED_SAVED (port from the sibling app; QA's P12, 10 Nov 2026; default off): in the list, as every chat flag.
-  "COACHING_OBSERVED_SAVED_ENABLED",
 ] as const;
 
 /**
