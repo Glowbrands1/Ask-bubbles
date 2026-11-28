@@ -1187,6 +1187,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PAYROLL_DEDUCT_AMOUNT_ENABLED",
   // Missing from this list since its PR (QA, 7 Nov 2026): forced off with the others.
   "PAYROLL_AMOUNT_SAME_MESSAGE_ENABLED",
+  // PAYROLL_AMOUNT_AFTER_PAYROLL (default off; QA, 12 Nov 2026): in the list, as every chat flag.
+  "PAYROLL_AMOUNT_AFTER_PAYROLL_ENABLED",
   "CA_POLICY_RETRIEVAL_ENABLED",
   "CROSS_CHAT_DRAFT_DEDUPE_ENABLED",
   "PRIOR_RECORD_FINAL_ONLY_ENABLED",
@@ -1611,8 +1613,6 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED",
   // ADD_ALREADY_ON_FORM_SAYS_SO (default off; QA's live 17u test, item 5, 13 Nov 2026): in the list, as every chat flag.
   "ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED",
-  // PAYROLL_AMOUNT_AFTER_PAYROLL (default off; QA, 12 Nov 2026): in the list, as every chat flag.
-  "PAYROLL_AMOUNT_AFTER_PAYROLL_ENABLED",
 ] as const;
 
 /**
