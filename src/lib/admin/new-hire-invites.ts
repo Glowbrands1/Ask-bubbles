@@ -30,10 +30,10 @@ import type { Role } from "@/types";
  *   NEW_HIRE_INVITE_SINCE      YYYY-MM-DD. Only people whose Woven hire date
  *                              is on or after it, and not after today, are
  *                              new hires. Unset: off.
- *   NEW_HIRE_INVITE_ROLES      the roles that get the automatic link, from the
- *                              approved provisioning roles (location_manager,
- *                              assistant_manager, employee). Empty (default):
- *                              nobody.
+ *   NEW_HIRE_INVITE_ROLES      the roles that get the automatic link:
+ *                              location_manager, assistant_manager,
+ *                              district_manager. Never employee (28 Nov 2026).
+ *                              Empty (default): nobody.
  *   NEW_HIRE_INVITES_PER_HOUR  1 (default) or 2. Anything else is 1.
  *   NEW_HIRE_INVITE_ACTOR      the email of an active administrator with
  *                              access to all locations; the accounts are made
@@ -110,8 +110,11 @@ function ready(row: PlannedRow): boolean {
   );
 }
 
-/** The roles NEW_HIRE_INVITE_ROLES may name: the approved provisioning roles, and District Manager (not corporate). */
-export const NEW_HIRE_ROLES: readonly Role[] = [...MANUAL_ROLES, "district_manager"];
+/**
+ * The roles NEW_HIRE_INVITE_ROLES may name: General Manager, Assistant General Manager and District Manager. Never
+ * Team Members (Pau, 28 Nov 2026: "we dont add tanning consultants and employee in both apps"), never corporate.
+ */
+export const NEW_HIRE_ROLES: readonly Role[] = [...MANUAL_ROLES.filter((role) => role !== "employee"), "district_manager"];
 
 export interface NewHireInviteDeps {
   loadPlan(now: Date): Promise<AccessPlan>;

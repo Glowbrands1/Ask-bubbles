@@ -19,7 +19,7 @@ const NOW = new Date("2026-10-30T12:00:00Z");
 const ON = {
   NEW_HIRE_INVITES_ENABLED: "true",
   NEW_HIRE_INVITE_SINCE: "2026-10-28",
-  NEW_HIRE_INVITE_ROLES: "employee",
+  NEW_HIRE_INVITE_ROLES: "assistant_manager",
   NEW_HIRE_INVITE_ACTOR: "Admin@Example.test",
 };
 const actor = { id: "a", email: "admin@example.test", role: "admin" as const, scope: { level: "global" as const, primaryAreaId: null, alsoCoversAreaIds: [] } };
@@ -37,7 +37,7 @@ describe("readNewHireConfig", () => {
     expect(readNewHireConfig(ON, NOW)).toEqual({
       enabled: true,
       since: "2026-10-28",
-      roles: ["employee"],
+      roles: ["assistant_manager"],
       perHour: 1,
       actorEmail: "admin@example.test",
       today: "2026-10-30",
@@ -58,7 +58,7 @@ describe("readNewHireConfig", () => {
   });
 });
 
-function ready(id: string, role = "employee"): PlannedRow {
+function ready(id: string, role = "assistant_manager"): PlannedRow {
   return {
     key: `employee:${id}`,
     externalEmployeeId: id,
@@ -226,9 +226,11 @@ describe("the hourly run", () => {
     const dm = ready("D1", "district_manager");
     dm.after = { email: "d1@example.test", role: "district_manager", scope_level: "global", scope_primary_area_id: null };
     const f = fakes([dm], { D1: "2026-10-29" });
-    await sendNewHireInvites({ config: config({ NEW_HIRE_INVITE_ROLES: "employee,district_manager" }), now: NOW }, f.deps);
+    await sendNewHireInvites({ config: config({ NEW_HIRE_INVITE_ROLES: "assistant_manager,district_manager" }), now: NOW }, f.deps);
     expect(f.made).toEqual(["D1"]);
     expect(readNewHireConfig({ ...ON, NEW_HIRE_INVITE_ROLES: "admin" }, NOW).enabled).toBe(false);
+    // "we dont add tanning consultants and employee in both apps" (Pau, 28 Nov 2026).
+    expect(readNewHireConfig({ ...ON, NEW_HIRE_INVITE_ROLES: "employee" }, NOW).enabled).toBe(false);
   });
 
   it("does not open the link when nobody is waiting", async () => {

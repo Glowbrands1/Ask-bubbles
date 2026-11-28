@@ -75,12 +75,13 @@ const decide = (rows: PlannedRow[], also: Record<string, string[]> = {}) =>
   decidePositionChanges(rows, new Map(Object.entries(also).map(([k, v]) => [k, { alsoCoversAreaIds: v }])));
 
 describe("who moves, and to what", () => {
-  it("the same-day fix: a new hire made Team Member, corrected to District Manager, becomes a DM of every store", () => {
-    const { changes } = decide([row({ role: "employee", proposedRole: "district_manager", linkMethod: "provisioned" })]);
+  /* A new hire made Team Member gets no account ("we dont add tanning consultants and employee"); a manager corrected to DM moves here. */
+  it("the same-day fix: a new hire made Assistant General Manager, corrected to District Manager, becomes a DM of every store", () => {
+    const { changes } = decide([row({ role: "assistant_manager", proposedRole: "district_manager", linkMethod: "provisioned" })]);
     expect(changes).toEqual([
       expect.objectContaining({
         reason: "position_changed",
-        from: { role: "employee", scope: { level: "location", primaryAreaId: SALON_A, alsoCoversAreaIds: [] } },
+        from: { role: "assistant_manager", scope: { level: "location", primaryAreaId: SALON_A, alsoCoversAreaIds: [] } },
         to: { role: "district_manager", scope: { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] } },
       }),
     ]);
@@ -89,13 +90,13 @@ describe("who moves, and to what", () => {
   it("promotions, demotions and moves within the tier", () => {
     const { changes } = decide([
       row({ id: "P", role: "assistant_manager", proposedRole: "location_manager" }),
-      row({ id: "D", role: "location_manager", proposedRole: "employee" }),
+      row({ id: "D", role: "location_manager", proposedRole: "assistant_manager" }),
       row({ id: "M", role: "location_manager", proposedRole: "location_manager", proposedArea: SALON_B }),
       row({ id: "G", role: "district_manager", level: "global", area: null, proposedRole: "location_manager", proposedArea: SALON_B }),
     ]);
     expect(changes.map((c) => [c.externalEmployeeId, c.to.role, c.to.scope.level, c.to.scope.primaryAreaId, c.reason])).toEqual([
       ["P", "location_manager", "location", SALON_A, "position_changed"],
-      ["D", "employee", "location", SALON_A, "position_changed"],
+      ["D", "assistant_manager", "location", SALON_A, "position_changed"],
       ["M", "location_manager", "location", SALON_B, "location_changed"],
       ["G", "location_manager", "location", SALON_B, "position_changed"],
     ]);
@@ -116,19 +117,27 @@ describe("who moves, and to what", () => {
       row({ id: "2", role: "regional_manager", level: "global", area: null, proposedRole: "location_manager" }),
       row({ id: "3", role: "location_manager", proposedRole: "admin" }),
       row({ id: "4", role: "location_manager", proposedRole: null }),
-      row({ id: "5", role: "employee", proposedRole: "location_manager", proposedArea: null }),
-      row({ id: "6", role: "location_manager", proposedRole: "employee", woven: "terminated" }),
-      row({ id: "7", role: "location_manager", proposedRole: "employee", status: "disabled" }),
+      row({ id: "5", role: "assistant_manager", proposedRole: "location_manager", proposedArea: null }),
+      row({ id: "6", role: "location_manager", proposedRole: "assistant_manager", woven: "terminated" }),
+      row({ id: "7", role: "location_manager", proposedRole: "assistant_manager", status: "disabled" }),
+      // "we dont add tanning consultants and employee": a manager Woven now shows as a Team Member is left to an admin.
+      row({ id: "8", role: "location_manager", proposedRole: "employee" }),
     ]);
     expect(changes).toEqual([]);
-    expect(skipped.map((s) => s.reason).sort()).toEqual(["new_position_outside_the_tier", "outside_the_tier", "position_not_mapped", "woven_primary_location_not_a_store"]);
+    expect(skipped.map((s) => s.reason).sort()).toEqual([
+      "new_position_outside_the_tier",
+      "new_position_outside_the_tier",
+      "outside_the_tier",
+      "position_not_mapped",
+      "woven_primary_location_not_a_store",
+    ]);
   });
 
   it("the admins' bell says who, from what, to what", () => {
-    const [change] = decide([row({ role: "employee", proposedRole: "district_manager", linkMethod: "provisioned" })]).changes;
+    const [change] = decide([row({ role: "assistant_manager", proposedRole: "district_manager", linkMethod: "provisioned" })]).changes;
     expect(changeNoticeText(change)).toEqual({
       title: "Access updated from Woven: Robin Quillfeather",
-      body: `Robin Quillfeather's Ask Bubbles access now follows Woven: Team Member (${SALON_A}) → District Manager (every store).`,
+      body: `Robin Quillfeather's Ask Bubbles access now follows Woven: Assistant General Manager (${SALON_A}) → District Manager (every store).`,
     });
   });
 });
@@ -154,7 +163,7 @@ describe("runPositionSync", () => {
 
   it("off by default, and without an admin to act as", async () => {
     expect(readPositionSyncConfig({})).toEqual({ enabled: false, actorEmail: null });
-    const d = deps([row({ role: "employee", proposedRole: "location_manager" })]);
+    const d = deps([row({ role: "assistant_manager", proposedRole: "location_manager" })]);
     expect(await runPositionSync({ env: {} }, d)).toEqual({ status: "off" });
     expect(await runPositionSync({ env: { WOVEN_POSITION_SYNC_ENABLED: "true" } }, d)).toEqual({ status: "off", code: "actor_missing" });
     expect(await runPositionSync({ env: ON }, { ...d, actor: async () => null })).toEqual({ status: "off", code: "actor_not_an_administrator" });
@@ -162,25 +171,25 @@ describe("runPositionSync", () => {
   });
 
   it("applies each change in the admin's name and tells the admins", async () => {
-    const d = deps([row({ id: "A", role: "employee", proposedRole: "district_manager", linkMethod: "provisioned" }), row({ id: "B", role: "location_manager", proposedRole: "location_manager" })]);
+    const d = deps([row({ id: "A", role: "assistant_manager", proposedRole: "district_manager", linkMethod: "provisioned" }), row({ id: "B", role: "location_manager", proposedRole: "location_manager" })]);
     expect(await runPositionSync({ env: ON }, d)).toEqual({ status: "completed", applied: 1, failed: 0, skipped: 0 });
     expect(d.applied).toEqual(["A"]);
     expect(d.told).toEqual([1]);
   });
 
   it("nothing while the guards stop changes, or when more than the cap would change at once", async () => {
-    const one = row({ role: "employee", proposedRole: "location_manager" });
+    const one = row({ role: "assistant_manager", proposedRole: "location_manager" });
     expect(await runPositionSync({ env: ON }, deps([one], { loadPlan: async () => plan([one], false) }))).toEqual({ status: "blocked", code: "guards" });
-    const many = Array.from({ length: MAX_CHANGES_PER_RUN + 1 }, (_, i) => row({ id: `E${i}`, role: "employee", proposedRole: "location_manager" }));
+    const many = Array.from({ length: MAX_CHANGES_PER_RUN + 1 }, (_, i) => row({ id: `E${i}`, role: "assistant_manager", proposedRole: "location_manager" }));
     const d = deps(many);
     expect(await runPositionSync({ env: ON }, d)).toEqual({ status: "blocked", code: "too_many_changes", changes: MAX_CHANGES_PER_RUN + 1 });
     expect(d.apply).not.toHaveBeenCalled();
   });
 
   it("never changes the admin it acts as; a refused change is counted, the rest go on", async () => {
-    const self = { ...row({ id: "S", role: "employee", proposedRole: "location_manager" }) };
+    const self = { ...row({ id: "S", role: "assistant_manager", proposedRole: "location_manager" }) };
     self.account = { ...self.account!, appUserId: "admin-id" };
-    const d = deps([self, row({ id: "F", role: "employee", proposedRole: "location_manager" }), row({ id: "K", role: "employee", proposedRole: "location_manager" })], {
+    const d = deps([self, row({ id: "F", role: "assistant_manager", proposedRole: "location_manager" }), row({ id: "K", role: "assistant_manager", proposedRole: "location_manager" })], {
       apply: vi.fn(async (change) => {
         if (change.externalEmployeeId === "F") throw new Error("refused");
       }),

@@ -116,7 +116,7 @@ default (`src/lib/admin/new-hire-invites.ts`):
 |---|---|---|
 | `NEW_HIRE_INVITES_ENABLED` | off | Master switch. Off: the hourly route answers `disabled` and reads nothing. |
 | `NEW_HIRE_INVITE_SINCE` | unset | `YYYY-MM-DD`. Only people whose Woven hire date is on or after it (and not after today) are new hires. |
-| `NEW_HIRE_INVITE_ROLES` | empty | Which approved provisioning roles get the automatic link (`location_manager`, `assistant_manager`, `employee`). Empty: nobody. |
+| `NEW_HIRE_INVITE_ROLES` | empty | Which roles get the automatic link (`location_manager`, `assistant_manager`, `district_manager`). Never `employee`. Empty: nobody. |
 | `NEW_HIRE_INVITES_PER_HOUR` | 1 | `1` or `2`; anything else is 1. |
 | `NEW_HIRE_INVITE_ACTOR` | unset | Email of an active administrator with all-locations access; accounts are made in their name. |
 
@@ -202,10 +202,12 @@ the Woven sync):
 - **District Managers can get the automatic link**: the plan proposes them at
   the scope the approved mapping gives (every store today), and
   `NEW_HIRE_INVITE_ROLES` may now name `district_manager`. Corporate, Owner and
-  Operator never.
+  Operator never — and **never Team Members** (Pau, 28 Nov 2026: "we dont add
+  tanning consultants and employee in both apps"): `employee` may no longer be
+  named.
 - **After each sync, every Woven-linked account is compared with the position
-  mapping and the Woven primary store.** Within the tier — Team Member, AGM, GM,
-  DM — a promotion, a demotion or a move is applied: role and scope as the
+  mapping and the Woven primary store.** Within the tier — AGM, GM, DM — a
+  promotion, a demotion or a move is applied: role and scope as the
   mapping says. Extra stores an admin granted are kept. Protected, admin,
   regional and corporate accounts are never changed. Only the accounts linked to
   Woven are followed (3 today; link the rest in Access Preview › Link review).
@@ -215,7 +217,8 @@ the Woven sync):
   allow changes; more than 10 in one run changes nothing.
 - **The Woven sync runs twice a day** (11:17 and 23:17 UTC), and **a new hire's
   link waits** while the latest sync saw them arrive or change position or
-  store, so "Team Member, then DM the same day" gets the link as a DM.
+  store, so "Team Member, then DM the same day" (no account as a Team Member;
+  created once Woven says DM) gets the link as a DM.
 
 | Variable | Default | Meaning |
 |---|---|---|

@@ -19,9 +19,10 @@ import type { Role, ScopeLevel } from "@/types";
  * LINKED to a Woven employee is compared with Woven's approved position mapping
  * and primary store:
  *
- *   - Team Member, Assistant General Manager, General Manager and District
- *     Manager (the TIER) move between each other both ways: a promotion, a
- *     demotion, a move to another store. Role and scope follow the mapping:
+ *   - Assistant General Manager, General Manager and District Manager (the
+ *     TIER) move between each other both ways: a promotion, a demotion, a move
+ *     to another store. Team Members have no accounts; a manager Woven now
+ *     shows as one is left to an admin. Role and scope follow the mapping:
  *     the store roles at their Woven primary store, a District Manager at every
  *     store (as the approved mapping says today).
  *   - Admin, owner, developer, a role override, regional and anything outside
@@ -55,8 +56,8 @@ export const MAX_CHANGES_PER_RUN = 10;
  * As the approved position mapping in the Woven integration says (Admin › Integrations › Woven): Team Member,
  * Assistant General Manager and General Manager at their store; District Manager at every store.
  */
+/* No Team Members (Pau, 28 Nov 2026: "we dont add tanning consultants and employee in both apps"). */
 export const TIER: Readonly<Partial<Record<Role, ScopeLevel>>> = {
-  employee: "location",
   assistant_manager: "location",
   location_manager: "location",
   district_manager: "global",
