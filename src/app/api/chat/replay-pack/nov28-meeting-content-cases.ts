@@ -5,7 +5,7 @@ import { lastResult, loopStandIn, type LoopView } from "./loop-stand-in";
 
 /**
  * ============================================================================
- * THE AI READS WHAT IS ON AN L10, BY THE USER'S ACCESS (port from Ask Sunny; Pau, 28 Nov 2026)
+ * THE AI READS WHAT IS ON AN L10, BY THE USER'S ACCESS (port from the sibling app; Pau, 28 Nov 2026)
  * ============================================================================
  *
  * Pau, looking at the admins' AI-readable pages list, where every meeting page said "No": "why it cant read this?", then

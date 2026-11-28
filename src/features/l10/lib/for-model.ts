@@ -1,4 +1,4 @@
-// Ask Bubbles only (not copied from the Leadership Hub; ported from Ask Sunny): an L10 meeting as the chat's AI reads it. See src/features/l10/README.md.
+// Ask Bubbles only (not copied from the Leadership Hub; ported from the sibling app): an L10 meeting as the chat's AI reads it. See src/features/l10/README.md.
 import { formatValue, hasGoal, isMiss, issueTerm, readDoc, recentlySolved, ROCK_STATUS_LABEL } from "./doc";
 import { pastMeetings, type PastMeeting } from "./past";
 import { todoDueLabel } from "./todo-due";

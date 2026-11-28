@@ -70,7 +70,7 @@ const REVIEWS_READER: PageReader = {
 const NO_LOOP_READER = "no tool of the chat or the agent loop reads it.";
 const ADMIN = "An admin console page: ";
 /*
- * Port from Ask Sunny (Pau, 28 Nov 2026: "why it cant read this?" then "ok but depends on the access of the user ok? admin gets all"). read_meeting
+ * Port from the sibling app (Pau, 28 Nov 2026: "why it cant read this?" then "ok but depends on the access of the user ok? admin gets all"). read_meeting
  * reads the meeting pages from the Leadership Hub as the person asking: the pages' own sign-in, then the Hub's answer
  * (the meeting's attendees, and the Hub's admins, who get every meeting). Anyone else is told they are not an attendee.
  */

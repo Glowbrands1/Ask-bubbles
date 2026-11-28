@@ -726,7 +726,7 @@ export const READER_PERMISSION = {
   read_calendar: "view_overview",
   read_knowledge_documents: "view_knowledge",
   /*
-   * Port from Ask Sunny (Pau, 28 Nov 2026): the meeting pages are open to any signed-in person (requireAuthenticatedPage);
+   * Port from the sibling app (Pau, 28 Nov 2026): the meeting pages are open to any signed-in person (requireAuthenticatedPage);
    * then the Leadership Hub lets in only the meeting's attendees and its admins. read_meeting checks the same two things:
    * a verified sign-in, then the Hub's answer for that person. No permission of this app's matrix is involved.
    */
