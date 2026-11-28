@@ -1187,6 +1187,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PAYROLL_DEDUCT_AMOUNT_ENABLED",
   // Missing from this list since its PR (QA, 7 Nov 2026): forced off with the others.
   "PAYROLL_AMOUNT_SAME_MESSAGE_ENABLED",
+  // PAYROLL_AMOUNT_AFTER_PAYROLL (default off; QA, 12 Nov 2026): in the list, as every chat flag.
+  "PAYROLL_AMOUNT_AFTER_PAYROLL_ENABLED",
   "CA_POLICY_RETRIEVAL_ENABLED",
   "CROSS_CHAT_DRAFT_DEDUPE_ENABLED",
   "PRIOR_RECORD_FINAL_ONLY_ENABLED",
@@ -5640,6 +5642,17 @@ export function terminationIntakeEnabled(): boolean {
  */
 export function resentRequestIsYesEnabled(): boolean {
   return envFlag("RESENT_REQUEST_IS_YES_ENABLED");
+}
+
+/**
+ * PAYROLL_AMOUNT_AFTER_PAYROLL_ENABLED (coding 6, 12 Nov 2026; default off; QA, Gate-Bubbles-2 on
+ * INTENT_PAYROLL_MANAGER_ONLY). With INTENT_PAYROLL_MANAGER_ONLY on, "…showed up late on october 1, 2026. payroll $25."
+ * and "…payroll of 25.00 dollars" kept no payroll amount: the manager's amount reader read only "deduct(ion) $N" and
+ * "$N … deducted". On: "payroll $N", "payroll of N dollars", "payroll is $N", "payroll: $N" are the stated amount too
+ * (`forms/payroll-deduct-amount.ts`). Off, as before.
+ */
+export function payrollAmountAfterPayrollEnabled(): boolean {
+  return envFlag("PAYROLL_AMOUNT_AFTER_PAYROLL_ENABLED");
 }
 
 /**
