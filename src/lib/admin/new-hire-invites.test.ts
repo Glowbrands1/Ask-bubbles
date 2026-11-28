@@ -94,6 +94,7 @@ function fakes(rows: PlannedRow[], hired: Record<string, string | null>, codes: 
       createAndInvite: vi.fn(async (row: PlannedRow) => {
         made.push(row.externalEmployeeId!);
       }),
+      linkIsLive: vi.fn(async () => true),
     },
   };
 }
@@ -176,6 +177,30 @@ describe("the hourly run", () => {
     noActor.deps.actor = async () => null;
     expect(await sendNewHireInvites({ config: config(), now: NOW }, noActor.deps)).toEqual({ status: "off", code: "actor_not_an_administrator" });
     expect([...blocked.made, ...noActor.made]).toEqual([]);
+  });
+
+  /*
+   * Pau, 28 Nov 2026: "auto give them link from their woven email … but can u check first if the link is live?"
+   */
+  it("checks the link is live first: a dead accept page creates no account and emails nobody", async () => {
+    const f = fakes([ready("E1"), ready("E2")], { E1: "2026-10-30", E2: "2026-10-28" });
+    f.deps.linkIsLive.mockResolvedValue(false);
+    expect(await sendNewHireInvites({ config: config({ NEW_HIRE_INVITES_PER_HOUR: "2" }), now: NOW }, f.deps)).toEqual({
+      status: "completed",
+      sent: 0,
+      failed: 0,
+      skipped: 0,
+      waiting: 2,
+      stoppedBy: "invite_link_not_live",
+    });
+    expect(f.deps.linkIsLive).toHaveBeenCalledTimes(1);
+    expect(f.deps.createAndInvite).not.toHaveBeenCalled();
+  });
+
+  it("does not open the link when nobody is waiting", async () => {
+    const f = fakes([ready("E1")], { E1: "2026-10-27" });
+    await sendNewHireInvites({ config: config(), now: NOW }, f.deps);
+    expect(f.deps.linkIsLive).not.toHaveBeenCalled();
   });
 
   it("off: nothing is read", async () => {

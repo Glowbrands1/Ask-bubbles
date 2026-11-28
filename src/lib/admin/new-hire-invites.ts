@@ -1,6 +1,7 @@
 import "server-only";
 
 import { recordToday } from "@/lib/business-today";
+import { INVITE_LINK_NOT_LIVE, inviteLinkIsLive } from "@/lib/admin/invite-link-check";
 import { createLinkedAccount, MANUAL_ROLES } from "@/lib/admin/woven-account";
 import { DirectoryError, type DirectoryActor } from "@/lib/admin/user-directory";
 import { loadAccessPlan, type AccessPlan } from "@/lib/employees/woven/access/load";
@@ -115,6 +116,11 @@ export interface NewHireInviteDeps {
   /** The administrator the accounts are made by, or null when there is no such account. */
   actor(email: string): Promise<DirectoryActor | null>;
   createAndInvite(row: PlannedRow, actor: DirectoryActor): Promise<void>;
+  /**
+   * Is the invitation's landing page live (`invite-link-check.ts`)? Asked once, only when somebody is waiting, before
+   * the first account is created. False stops the run with `invite_link_not_live`: nothing is created, nobody emailed.
+   */
+  linkIsLive(): Promise<boolean>;
 }
 
 export type NewHireInviteOutcome =
@@ -156,6 +162,10 @@ export async function sendNewHireInvites(input: { config: NewHireConfig; now: Da
   let skipped = 0;
   let used = 0;
   let stoppedBy: string | null = null;
+  // Pau, 28 Nov 2026: "can u check first if the link is live?" — before any account is created or email sent.
+  if (waiting.length > 0 && !(await deps.linkIsLive())) {
+    return { status: "completed", sent: 0, failed: 0, skipped: 0, waiting: waiting.length, stoppedBy: INVITE_LINK_NOT_LIVE };
+  }
   for (const row of waiting.slice(0, MAX_TRIED)) {
     if (used >= config.perHour) break;
     try {
@@ -219,6 +229,7 @@ export async function runNewHireInvites(redirectTo: string, now: Date = new Date
         loadPlan: (at) => loadAccessPlan(at),
         hireDates: readHireDates,
         actor: readActor,
+        linkIsLive: () => inviteLinkIsLive(redirectTo),
         createAndInvite: async (row, actor) => {
           const after = row.after as Record<string, unknown>;
           await createLinkedAccount(
