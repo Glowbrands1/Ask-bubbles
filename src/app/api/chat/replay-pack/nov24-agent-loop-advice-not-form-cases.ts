@@ -75,4 +75,15 @@ export const NOV24_AGENT_LOOP_ADVICE_NOT_FORM_CASES: ReplayCase[] = [
     const reply = await t.thread().say("Create a coaching form.");
     expect(reply.content, reply.content).toMatch(/who is this Coaching Form for\?/i);
   }),
+  // The sibling app's QA review of its #1051 (follow-up): the no-person result also says how the person is named, so
+  // the answering turn looks the name up with find_staff and passes its employee_id.
+  loopCase("nov24-loop-no-person-result-names-find-staff", "\"Create a coaching form.\": the no-person result says to look the person up with find_staff and pass its employee_id", async (t) => {
+    start(t);
+    const standIn = proposesCoaching();
+    t.loopModel!(standIn);
+    const reply = await t.thread().say("Create a coaching form.");
+    expect(reply.content, reply.content).toMatch(/who is this Coaching Form for\?/i);
+    const errors = standIn.views.flatMap((view) => view.results).map((entry) => String((entry.output as { error?: unknown }).error ?? ""));
+    expect(errors.find((error) => /Nobody is named/.test(error)) ?? "", "the no-person result lost the employee_id hint").toMatch(/find_staff[\s\S]*employee_id/);
+  }),
 ];
