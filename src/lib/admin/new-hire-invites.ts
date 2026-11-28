@@ -1,6 +1,9 @@
 import "server-only";
 
 import { recordToday } from "@/lib/business-today";
+import { INVITE_LINK_NOT_LIVE, inviteLinkIsLive } from "@/lib/admin/invite-link-check";
+import { announceInviteSent } from "@/lib/admin/new-hire-notices.server";
+import { promotedSince, unsettledEmployees } from "@/lib/admin/position-sync.server";
 import { createLinkedAccount, MANUAL_ROLES } from "@/lib/admin/woven-account";
 import { DirectoryError, type DirectoryActor } from "@/lib/admin/user-directory";
 import { loadAccessPlan, type AccessPlan } from "@/lib/employees/woven/access/load";
@@ -27,10 +30,10 @@ import type { Role } from "@/types";
  *   NEW_HIRE_INVITE_SINCE      YYYY-MM-DD. Only people whose Woven hire date
  *                              is on or after it, and not after today, are
  *                              new hires. Unset: off.
- *   NEW_HIRE_INVITE_ROLES      the roles that get the automatic link, from the
- *                              approved provisioning roles (location_manager,
- *                              assistant_manager, employee). Empty (default):
- *                              nobody.
+ *   NEW_HIRE_INVITE_ROLES      the roles that get the automatic link:
+ *                              location_manager, assistant_manager,
+ *                              district_manager. Never employee (28 Nov 2026).
+ *                              Empty (default): nobody.
  *   NEW_HIRE_INVITES_PER_HOUR  1 (default) or 2. Anything else is 1.
  *   NEW_HIRE_INVITE_ACTOR      the email of an active administrator with
  *                              access to all locations; the accounts are made
@@ -75,9 +78,9 @@ export function readNewHireConfig(env: Record<string, string | undefined> = proc
     return off(`${NEW_HIRE_INVITE_SINCE_ENV} must be a date (YYYY-MM-DD). New-hire invitations were treated as off.`);
   }
   const named = [...new Set((env[NEW_HIRE_INVITE_ROLES_ENV] ?? "").split(",").map((role) => role.trim()).filter(Boolean))];
-  const refused = named.filter((role) => !(MANUAL_ROLES as readonly string[]).includes(role));
+  const refused = named.filter((role) => !(NEW_HIRE_ROLES as readonly string[]).includes(role));
   if (refused.length > 0) {
-    return off(`${NEW_HIRE_INVITE_ROLES_ENV} may name only ${MANUAL_ROLES.join(", ")}; ${refused.join(", ")} is not one. New-hire invitations were treated as off.`);
+    return off(`${NEW_HIRE_INVITE_ROLES_ENV} may name only ${NEW_HIRE_ROLES.join(", ")}; ${refused.join(", ")} is not one. New-hire invitations were treated as off.`);
   }
   const actorEmail = (env[NEW_HIRE_INVITE_ACTOR_ENV] ?? "").trim().toLowerCase();
   if (!actorEmail.includes("@")) {
@@ -96,17 +99,22 @@ export function isNewHire(hireDate: string | null | undefined, config: Pick<NewH
 /** The bulk provisioning's READY rule: the plan says CREATE_USER, for one known location and an approved role. */
 function ready(row: PlannedRow): boolean {
   const after = row.after as Record<string, unknown> | null;
+  if (row.externalEmployeeId === null || row.actions[0] !== "CREATE_USER" || after === null || typeof after.email !== "string") return false;
+  /* WOVEN_POSITION_SYNC_ENABLED: a District Manager the plan proposes at every store, as the approved mapping says. */
+  if (after.role === "district_manager") return after.scope_level === "global" && after.scope_primary_area_id === null;
   return (
-    row.externalEmployeeId !== null &&
-    row.actions[0] === "CREATE_USER" &&
-    after !== null &&
-    typeof after.email === "string" &&
     after.scope_level === "location" &&
     typeof after.scope_primary_area_id === "string" &&
     isKnownAreaId(after.scope_primary_area_id) &&
     (MANUAL_ROLES as readonly string[]).includes(String(after.role))
   );
 }
+
+/**
+ * The roles NEW_HIRE_INVITE_ROLES may name: General Manager, Assistant General Manager and District Manager. Never
+ * Team Members (Pau, 28 Nov 2026: "we dont add tanning consultants and employee in both apps"), never corporate.
+ */
+export const NEW_HIRE_ROLES: readonly Role[] = [...MANUAL_ROLES.filter((role) => role !== "employee"), "district_manager"];
 
 export interface NewHireInviteDeps {
   loadPlan(now: Date): Promise<AccessPlan>;
@@ -115,6 +123,26 @@ export interface NewHireInviteDeps {
   /** The administrator the accounts are made by, or null when there is no such account. */
   actor(email: string): Promise<DirectoryActor | null>;
   createAndInvite(row: PlannedRow, actor: DirectoryActor): Promise<void>;
+  /**
+   * Is the invitation's landing page live (`invite-link-check.ts`)? Asked once, only when somebody is waiting, before
+   * the first account is created. False stops the run with `invite_link_not_live`: nothing is created, nobody emailed.
+   */
+  linkIsLive(): Promise<boolean>;
+  /**
+   * EmployeeIDs whose Woven record the latest sync saw arrive or change position / store (`unsettledEmployees`). They
+   * wait for the next sync to confirm it (Pau, 28 Nov 2026: a new hire made Team Member and changed to District
+   * Manager the same day gets the link as a District Manager). Omitted: nobody waits.
+   */
+  unsettled?(plan: AccessPlan): Promise<ReadonlySet<string>>;
+  /**
+   * EmployeeIDs whose position Woven changed on or after the set date (`promotedSince`). Someone hired long ago and
+   * promoted into a manager role now (a Team Member made Assistant General Manager) gets the link as a new hire does:
+   * Pau, 28 Nov 2026, "where there is a position change it should detect it and give the correct link to the person
+   * with correct position and location". Omitted: only hire dates count.
+   */
+  promoted?(since: string): Promise<ReadonlySet<string>>;
+  /** Told after each account the invitation went out for (Pau's email through the webhook). */
+  onSent?(row: PlannedRow): Promise<unknown>;
 }
 
 export type NewHireInviteOutcome =
@@ -139,8 +167,10 @@ export async function sendNewHireInvites(input: { config: NewHireConfig; now: Da
   if (plan.guard.codes.some((code) => code !== "creates_exceed_batch_limit")) return { status: "blocked", code: "guards" };
   const candidates = plan.rows.filter((row) => ready(row) && config.roles.includes(String((row.after as Record<string, unknown>).role) as Role));
   const hired = await deps.hireDates(candidates.map((row) => row.externalEmployeeId!));
+  const unsettled = deps.unsettled ? await deps.unsettled(plan) : new Set<string>();
+  const promoted = deps.promoted && config.since ? await deps.promoted(config.since) : new Set<string>();
   const waiting = candidates
-    .filter((row) => isNewHire(hired.get(row.externalEmployeeId!), config))
+    .filter((row) => (isNewHire(hired.get(row.externalEmployeeId!), config) || promoted.has(row.externalEmployeeId!)) && !unsettled.has(row.externalEmployeeId!))
     .sort((a, b) => (hired.get(a.externalEmployeeId!) ?? "").localeCompare(hired.get(b.externalEmployeeId!) ?? "") || a.key.localeCompare(b.key));
 
   /*
@@ -156,12 +186,17 @@ export async function sendNewHireInvites(input: { config: NewHireConfig; now: Da
   let skipped = 0;
   let used = 0;
   let stoppedBy: string | null = null;
+  // Pau, 28 Nov 2026: "can u check first if the link is live?" — before any account is created or email sent.
+  if (waiting.length > 0 && !(await deps.linkIsLive())) {
+    return { status: "completed", sent: 0, failed: 0, skipped: 0, waiting: waiting.length, stoppedBy: INVITE_LINK_NOT_LIVE };
+  }
   for (const row of waiting.slice(0, MAX_TRIED)) {
     if (used >= config.perHour) break;
     try {
       await deps.createAndInvite(row, actor);
       sent += 1;
       used += 1;
+      await deps.onSent?.(row).catch(() => undefined);
     } catch (error) {
       const code = error instanceof DirectoryError ? error.code : null;
       if (code === "email_rate_limited") {
@@ -219,13 +254,24 @@ export async function runNewHireInvites(redirectTo: string, now: Date = new Date
         loadPlan: (at) => loadAccessPlan(at),
         hireDates: readHireDates,
         actor: readActor,
+        linkIsLive: () => inviteLinkIsLive(redirectTo),
+        unsettled: (plan) => unsettledEmployees(plan.directoryRunId),
+        promoted: (since) => promotedSince(since),
+        // "if they get the link" (Pau, 28 Nov 2026): the webhook emails her. Off unless NEW_HIRE_NOTICES_ENABLED + URL.
+        onSent: (row) => {
+          const email = (row.after as Record<string, unknown> | null)?.email;
+          return row.externalEmployeeId && typeof email === "string" ? announceInviteSent({ externalEmployeeId: row.externalEmployeeId, sentTo: email }) : Promise.resolve();
+        },
         createAndInvite: async (row, actor) => {
           const after = row.after as Record<string, unknown>;
           await createLinkedAccount(
             {
               externalEmployeeId: row.externalEmployeeId!,
               role: after.role,
-              scope: { level: "location", primaryAreaId: after.scope_primary_area_id, alsoCoversAreaIds: [] },
+              scope:
+                after.scope_level === "global"
+                  ? { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] }
+                  : { level: "location", primaryAreaId: after.scope_primary_area_id, alsoCoversAreaIds: [] },
             },
             actor,
             { invite: { redirectTo } },
