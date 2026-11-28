@@ -27,10 +27,18 @@ describe("recoveryForwardTarget", () => {
     expect(recoveryForwardTarget("/reset-password", RECOVERY)).toBeNull();
   });
 
-  it("does not touch invitation links or other token types", () => {
-    expect(recoveryForwardTarget("/", RECOVERY.replace("recovery", "invite"))).toBeNull();
+  /*
+   * Changed on purpose (Pau, 28 Nov 2026: "it auto sends me to curt's log in when i invited myself"). An invitation
+   * the Site URL fallback dropped on the home page used to be left alone, so the session already in the browser was
+   * shown. It now goes to /auth/accept, which sets the invited person's own session.
+   */
+  it("forwards an invitation that landed on the wrong page to /auth/accept; leaves /auth/accept and other types alone", () => {
+    const INVITE = RECOVERY.replace("recovery", "invite");
+    for (const path of ["/", "/login", "/chat"]) expect(recoveryForwardTarget(path, INVITE)).toBe(`/auth/accept${INVITE}`);
+    expect(recoveryForwardTarget("/auth/accept", INVITE)).toBeNull();
+    expect(recoveryForwardTarget("/", "#access_token=a&type=invite")).toBeNull();
     expect(recoveryForwardTarget("/", RECOVERY.replace("&type=recovery", ""))).toBeNull();
-    expect(recoveryForwardTarget("/auth/accept", RECOVERY.replace("recovery", "invite"))).toBeNull();
+    expect(recoveryForwardTarget("/", RECOVERY.replace("recovery", "magiclink"))).toBeNull();
   });
 
   it("needs both tokens: a half-link is not forwarded as if it could work", () => {
