@@ -86,6 +86,19 @@ export interface WhatsNewRelease {
 
 export const WHATS_NEW: readonly WhatsNewRelease[] = [
   {
+    date: "2026-11-28",
+    summary: "Bubbles can tell you what is on your L10.",
+    entries: [
+      {
+        tag: "Improved",
+        title: "Ask Bubbles about your L10",
+        before: "Bubbles knew when your L10 meets and who attends, but not what is on it.",
+        now: "Bubbles reads your L10's to-dos, issues, headlines, rocks, scorecard, notes and past meetings, live from the Leadership Hub. You only get the meetings you attend; admins get every meeting.",
+        howToUse: "Ask Bubbles \"what are my to-dos from the DM L10?\", \"what issues are still open?\" or \"what did we solve last meeting?\".",
+      },
+    ],
+  },
+  {
     date: "2026-11-27",
     summary: "One calendar for follow-ups and every L10, talking to Bubbles, attaching files, the exit form's address, and a better phone layout.",
     entries: [
