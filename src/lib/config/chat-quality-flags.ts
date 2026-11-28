@@ -1393,6 +1393,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TITLE_BEFORE_NAME_ENABLED",
   // TITLE_BEFORE_NAME_REPLY_LINES (QA 17o live, 12 Nov 2026; default off).
   "TITLE_BEFORE_NAME_REPLY_LINES_ENABLED",
+  // APPROVER_TITLE_NOT_EMPLOYEE (ported from the sibling app, QA r37 live, 12 Nov 2026; default off).
+  "APPROVER_TITLE_NOT_EMPLOYEE_ENABLED",
   // coding 4: FORMS_ON_FILE_ORDER_MATCH_POSSIBLE (Bubbles 17h live test, QA, 11 Nov 2026; default off).
   "FORMS_ON_FILE_ORDER_MATCH_POSSIBLE_ENABLED",
   "TAKE_OFF_STAYS_CARD_ENABLED",
@@ -3749,6 +3751,18 @@ export function animalVisitorsOnlyWhenVisitorEnabled(): boolean {
  */
 export function titleOfTheEmployeeEnabled(): boolean {
   return envFlag("TITLE_OF_THE_EMPLOYEE_ENABLED");
+}
+
+/**
+ * APPROVER_TITLE_NOT_EMPLOYEE_ENABLED (ported from the sibling app; QA's r37 live check there, 12 Nov 2026; same flag in
+ * both apps; default off). "CA for <A>, probably termination once the DM approves" put District Manager on the card as
+ * the title the manager gave: "DM" there names who approves. On: a title the manager wrote only in a clause about who
+ * approves, signs off or is waited on is not the employee's; the card takes the roster's own position or none, and the
+ * reply's line about the title the manager gave goes (`forms/approver-title.ts`, `ai/title-of-the-employee.ts`). Off,
+ * as before.
+ */
+export function approverTitleNotEmployeeEnabled(): boolean {
+  return envFlag("APPROVER_TITLE_NOT_EMPLOYEE_ENABLED");
 }
 
 /**
@@ -6194,7 +6208,6 @@ export function createFormButtonPicksFormEnabled(): boolean {
 export function answerModeOnLoopEnabled(): boolean {
   return envFlag("ANSWER_MODE_ON_LOOP_ENABLED");
 }
-
 
 /**
  * GENERAL_ADVICE (port from the sibling app; the owner, 28 Nov 2026, asked "Should the AI give clearly labelled general
