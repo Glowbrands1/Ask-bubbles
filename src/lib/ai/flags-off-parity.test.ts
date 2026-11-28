@@ -157,13 +157,6 @@ const PROTECTED = [
  * OTHER_NOT_A_POLICY_NAME_ENABLED (default off); off, the names are read as before. ca-action-plan.ts is already
  * excluded below.
  *
- * Under Pau's standing approval for protected-file edits (relayed by QA, 14 Nov 2026, for Gate-Bubbles-5's #892
- * probes, QA's ruling (b)), in src/lib/ai/form-proposal.ts, exactly the lines of
- * docs/patches/other-beside-described-form-proposal.patch: the import `withoutCleaningDuty`, and at the start of
- * namedPolicyFor a cleaning duty beside a second described offense reads that offense from the account without the duty
- * (marked `besideOther`). Behind OTHER_POLICY_AGREES_ENABLED (default off here); off, as before. form-proposal.ts is
- * already excluded below.
- *
  * The user (Pau) approved, under Pau's standing approval via QA, 11 Nov 2026, in
  * src/lib/ai/form-proposal.ts, exactly: the import
  * `import { cardAccountText } from "@/lib/forms/account-spelling";` and the
@@ -172,6 +165,13 @@ const PROTECTED = [
  * with its comment (port from Ask Sunny b206494f: the card's account keeps the
  * manager's words with obvious slips mended). Behind ACCOUNT_TYPOS_FIXED_ENABLED,
  * default off; off, cardAccountText returns its input and the card is as before.
+ *
+ * Under Pau's standing approval for protected-file edits (relayed by QA, 14 Nov 2026, for Gate-Bubbles-5's #892
+ * probes, QA's ruling (b)), in src/lib/ai/form-proposal.ts, exactly the lines of
+ * docs/patches/other-beside-described-form-proposal.patch: the import `withoutCleaningDuty`, and at the start of
+ * namedPolicyFor a cleaning duty beside a second described offense reads that offense from the account without the duty
+ * (marked `besideOther`). Behind OTHER_POLICY_AGREES_ENABLED (default off here); off, as before. form-proposal.ts is
+ * already excluded below.
  */
 const APPROVED_PROTECTED_EDITS = [
   ":(exclude)src/lib/forms/location-scope.ts",
