@@ -19,7 +19,7 @@ const NOW = new Date("2026-10-30T12:00:00Z");
 const ON = {
   NEW_HIRE_INVITES_ENABLED: "true",
   NEW_HIRE_INVITE_SINCE: "2026-10-28",
-  NEW_HIRE_INVITE_ROLES: "employee",
+  NEW_HIRE_INVITE_ROLES: "assistant_manager",
   NEW_HIRE_INVITE_ACTOR: "Admin@Example.test",
 };
 const actor = { id: "a", email: "admin@example.test", role: "admin" as const, scope: { level: "global" as const, primaryAreaId: null, alsoCoversAreaIds: [] } };
@@ -37,7 +37,7 @@ describe("readNewHireConfig", () => {
     expect(readNewHireConfig(ON, NOW)).toEqual({
       enabled: true,
       since: "2026-10-28",
-      roles: ["employee"],
+      roles: ["assistant_manager"],
       perHour: 1,
       actorEmail: "admin@example.test",
       today: "2026-10-30",
@@ -58,7 +58,7 @@ describe("readNewHireConfig", () => {
   });
 });
 
-function ready(id: string, role = "employee"): PlannedRow {
+function ready(id: string, role = "assistant_manager"): PlannedRow {
   return {
     key: `employee:${id}`,
     externalEmployeeId: id,
@@ -94,6 +94,7 @@ function fakes(rows: PlannedRow[], hired: Record<string, string | null>, codes: 
       createAndInvite: vi.fn(async (row: PlannedRow) => {
         made.push(row.externalEmployeeId!);
       }),
+      linkIsLive: vi.fn(async () => true),
     },
   };
 }
@@ -119,6 +120,23 @@ describe("the hourly run", () => {
     });
     expect(await sendNewHireInvites({ config: config({ NEW_HIRE_INVITES_PER_HOUR: "2" }), now: NOW }, f.deps)).toMatchObject({ sent: 0, failed: 1, stoppedBy: "email_rate_limited" });
     expect(f.deps.createAndInvite).toHaveBeenCalledTimes(1);
+  });
+
+  /*
+   * Pau, 28 Nov 2026: "our Supabase has a limit of 2 invites per hour … we reach the limit. Make sure that the apps
+   * check if it was sent or not … the code or the app or the automation will resend the link once the cooldown period
+   * is over." A refused invitation creates no account, so next hour the same person is still waiting, first in line,
+   * and is sent the link; no attempt is used up by the limit.
+   */
+  it("refused for the hourly limit this hour, the same person gets the link next hour", async () => {
+    const f = fakes([ready("E1"), ready("E2")], { E1: "2026-10-28", E2: "2026-10-29" });
+    f.deps.createAndInvite.mockImplementationOnce(async () => {
+      throw new DirectoryError("email_rate_limited", "limit", 429);
+    });
+    expect(await sendNewHireInvites({ config: config(), now: NOW }, f.deps)).toMatchObject({ sent: 0, stoppedBy: "email_rate_limited" });
+    expect(f.made).toEqual([]);
+    expect(await sendNewHireInvites({ config: config(), now: NOW }, f.deps)).toMatchObject({ sent: 1, stoppedBy: null });
+    expect(f.made).toEqual(["E1"]);
   });
 
   /*
@@ -176,6 +194,79 @@ describe("the hourly run", () => {
     noActor.deps.actor = async () => null;
     expect(await sendNewHireInvites({ config: config(), now: NOW }, noActor.deps)).toEqual({ status: "off", code: "actor_not_an_administrator" });
     expect([...blocked.made, ...noActor.made]).toEqual([]);
+  });
+
+  /*
+   * Pau, 28 Nov 2026: "auto give them link from their woven email … but can u check first if the link is live?"
+   */
+  it("checks the link is live first: a dead accept page creates no account and emails nobody", async () => {
+    const f = fakes([ready("E1"), ready("E2")], { E1: "2026-10-30", E2: "2026-10-28" });
+    f.deps.linkIsLive.mockResolvedValue(false);
+    expect(await sendNewHireInvites({ config: config({ NEW_HIRE_INVITES_PER_HOUR: "2" }), now: NOW }, f.deps)).toEqual({
+      status: "completed",
+      sent: 0,
+      failed: 0,
+      skipped: 0,
+      waiting: 2,
+      stoppedBy: "invite_link_not_live",
+    });
+    expect(f.deps.linkIsLive).toHaveBeenCalledTimes(1);
+    expect(f.deps.createAndInvite).not.toHaveBeenCalled();
+  });
+
+  it("tells Pau's webhook about each link that went out, and only those (\"if they get the link\")", async () => {
+    const f = fakes([ready("E1"), ready("E2")], { E1: "2026-10-30", E2: "2026-10-28" });
+    const onSent = vi.fn(async () => undefined);
+    await sendNewHireInvites({ config: config(), now: NOW }, { ...f.deps, onSent });
+    expect(onSent).toHaveBeenCalledTimes(1);
+    expect(onSent).toHaveBeenCalledWith(expect.objectContaining({ externalEmployeeId: "E2" }));
+    const limited = fakes([ready("E1")], { E1: "2026-10-30" });
+    limited.deps.createAndInvite.mockImplementation(async () => {
+      throw new DirectoryError("email_rate_limited", "limit", 429);
+    });
+    const notTold = vi.fn(async () => undefined);
+    await sendNewHireInvites({ config: config(), now: NOW }, { ...limited.deps, onSent: notTold });
+    expect(notTold).not.toHaveBeenCalled();
+  });
+
+  /*
+   * Pau, 28 Nov 2026: "sometimes they make new hire DM as tanning employee but change it within the dayy to DM so we
+   * need to catch that too" — chosen: sync twice a day and hold the link until a second sync confirms the position.
+   */
+  it("holds a new hire the latest sync saw arrive or change position; the others go", async () => {
+    const f = fakes([ready("E1"), ready("E2")], { E1: "2026-10-28", E2: "2026-10-29" });
+    await sendNewHireInvites({ config: config({ NEW_HIRE_INVITES_PER_HOUR: "2" }), now: NOW }, { ...f.deps, unsettled: async () => new Set(["E1"]) });
+    expect(f.made).toEqual(["E2"]);
+  });
+
+  /*
+   * Pau, 28 Nov 2026: "where there is a position change it should detect it and give the correct link to the person
+   * with correct position and location" — someone hired in January and promoted to a manager role now gets the link;
+   * one hired before the date and not moved since still does not.
+   */
+  it("a person promoted since the date gets the link as a new hire does, whatever their hire date", async () => {
+    const f = fakes([ready("E1"), ready("E2")], { E1: "2026-01-19", E2: "2026-01-20" });
+    const promoted = vi.fn(async () => new Set(["E1"]));
+    await sendNewHireInvites({ config: config({ NEW_HIRE_INVITES_PER_HOUR: "2" }), now: NOW }, { ...f.deps, promoted });
+    expect(f.made).toEqual(["E1"]);
+    expect(promoted).toHaveBeenCalledWith(config().since);
+  });
+
+  it("\"we need to add District manager also, just not corporate\": a District Manager at every store is invited when named", async () => {
+    const dm = ready("D1", "district_manager");
+    dm.after = { email: "d1@example.test", role: "district_manager", scope_level: "global", scope_primary_area_id: null };
+    const f = fakes([dm], { D1: "2026-10-29" });
+    await sendNewHireInvites({ config: config({ NEW_HIRE_INVITE_ROLES: "assistant_manager,district_manager" }), now: NOW }, f.deps);
+    expect(f.made).toEqual(["D1"]);
+    expect(readNewHireConfig({ ...ON, NEW_HIRE_INVITE_ROLES: "admin" }, NOW).enabled).toBe(false);
+    // "we dont add tanning consultants and employee in both apps" (Pau, 28 Nov 2026).
+    expect(readNewHireConfig({ ...ON, NEW_HIRE_INVITE_ROLES: "employee" }, NOW).enabled).toBe(false);
+  });
+
+  it("does not open the link when nobody is waiting", async () => {
+    const f = fakes([ready("E1")], { E1: "2026-10-27" });
+    await sendNewHireInvites({ config: config(), now: NOW }, f.deps);
+    expect(f.deps.linkIsLive).not.toHaveBeenCalled();
   });
 
   it("off: nothing is read", async () => {
