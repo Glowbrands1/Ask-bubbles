@@ -2163,6 +2163,16 @@ export function typoReadingCopyEnabled(): boolean {
 }
 
 /**
+ * ACCOUNT_TYPOS_FIXED_ENABLED (QA, the sibling app's sanitation report, 10 Nov 2026 18:49Z; port from the sibling app; default off;
+ * same flag in both apps). "not doing th e10 minute sanitaion" went onto the card's Issue line word for word. On, the card
+ * shows the manager's words with obvious slips mended ("the 10-minute sanitation"; `forms/account-spelling.ts`). The stored
+ * messages and the record keep what was typed. Off, as before.
+ */
+export function accountTyposFixedEnabled(): boolean {
+  return envFlag("ACCOUNT_TYPOS_FIXED_ENABLED");
+}
+
+/**
  * The form routes' readers (the draft's notes; the create route's payroll
  * amount and warning level) see the manager's words with each typo read as the
  * one known word it can only be; stored text stays as typed (QA, 27 Oct 2026;
@@ -6207,14 +6217,4 @@ export function answerModeOnLoopEnabled(): boolean {
  */
 export function generalAdviceEnabled(): boolean {
   return envFlag("GENERAL_ADVICE_ENABLED");
-}
-
-/**
- * ACCOUNT_TYPOS_FIXED_ENABLED (QA, the sibling app's sanitation report, 10 Nov 2026 18:49Z; port from the sibling app; default off;
- * same flag in both apps). "not doing th e10 minute sanitaion" went onto the card's Issue line word for word. On, the card
- * shows the manager's words with obvious slips mended ("the 10-minute sanitation"; `forms/account-spelling.ts`). The stored
- * messages and the record keep what was typed. Off, as before.
- */
-export function accountTyposFixedEnabled(): boolean {
-  return envFlag("ACCOUNT_TYPOS_FIXED_ENABLED");
 }
