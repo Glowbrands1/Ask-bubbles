@@ -613,12 +613,17 @@ vi.mock("@/lib/forms/employee-roster", async (importOriginal) => {
           : {}),
       })),
     // The turn's roster limit (`withRosterLimit`), as production's loadScopedRoster applies it.
-    // AGENT_LOOP_ENABLED: find_staff reads the roster here too (`appConfig().roster.readScoped`); `t.rosterFails()` makes it fail, as a directory outage would.
+    /*
+     * `t.rosterFails()`: a directory outage, as production has it (E1, owner's review, 28 Nov 2026). The scoped roster
+     * reader never throws: it gives an empty roster, and the read's outcome says "unavailable". This stand-in used to
+     * throw instead, which production never does, so the outage's "not on your staff list" reply was never seen here.
+     */
     loadScopedRoster: async (scope: AccessScope | null) => {
-      if (loop.rosterFails) throw new Error("The employee directory could not be read.");
+      if (loop.rosterFails) return [];
       return actual.withinRosterLimit(actual.scopeRoster(state.directory as never, scope));
     },
-    loadScopedRosterResult: async (scope: AccessScope | null) => rosterResultFor(actual.scopeRoster, state.directory as never, scope),
+    loadScopedRosterResult: async (scope: AccessScope | null) =>
+      loop.rosterFails ? { status: "unavailable" as const } : rosterResultFor(actual.scopeRoster, state.directory as never, scope),
   };
 });
 

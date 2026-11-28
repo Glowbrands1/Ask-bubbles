@@ -34,7 +34,7 @@ import { detectTemplateIntent } from "@/lib/forms/template-intent";
 import { checkboxGroupsForVariant, parseFormDocument } from "@/lib/forms/document";
 import { draftableCheckboxGroups, draftableFields } from "@/lib/forms/responsibility";
 import { authorizedSalonIds, PLACE_LEVEL, readSalonMentions, rosterSalonName, salonStreet } from "./places";
-import type { DirectoryRosterRow } from "@/lib/forms/employee-roster";
+import { withinRosterLimit, type DirectoryRosterRow } from "@/lib/forms/employee-roster";
 import { inlineDraftVariantKey, supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { authorizeInstance, InstanceNotVisibleError, instanceListFilterFor, visibleInstances } from "@/lib/forms/instance-scope";
 import { applyAssistantRevision, deleteInstance, listInstances } from "@/lib/forms/instances";
@@ -1289,12 +1289,35 @@ export async function namedEmployee(scope: AccessScope, text: string): Promise<s
 
 type RosterRead = { readonly kind: "read"; readonly roster: readonly RosterEmployee[] } | { readonly kind: "unchecked" } | { readonly kind: "failed" };
 
+/**
+ * E1 (owner's review, 28 Nov 2026): a roster read that fails or runs past this is a failed read, never an empty roster.
+ */
+export const ROSTER_READ_BUDGET_MS = 8_000;
+
 async function rosterFor(scope: AccessScope): Promise<RosterRead> {
   /* Pau's decision 7 (this app, 21 Nov 2026): a district or region login reads the roster of all its stores. */
+  /*
+   * E1 (owner's review, 28 Nov 2026): the scoped roster reader never throws (a directory outage must not stop a form), so
+   * an outage came back as an empty roster, and find_staff and propose_form told the manager the person "isn't on your
+   * staff list". The read's own outcome is read instead: "unavailable" (or no answer within the budget) is a failed read,
+   * which says the staff list could not be checked. A district or region whose area names no store this app knows
+   * ("area_scope": nothing to check against) is unchecked, so the name is used as typed and never called off the list.
+   */
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    return { kind: "read", roster: await appConfig().roster.readScoped(scope) };
+    const result = await Promise.race([
+      appConfig().roster.readScopedResult(scope),
+      new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), ROSTER_READ_BUDGET_MS);
+      }),
+    ]);
+    if (!result || result.status === "unavailable") return { kind: "failed" };
+    if (result.status === "not_checked" && result.reason === "area_scope") return { kind: "unchecked" };
+    return { kind: "read", roster: result.status === "ok" ? withinRosterLimit(result.roster) : [] };
   } catch {
     return { kind: "failed" };
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
   }
 }
 
@@ -1338,7 +1361,8 @@ export function inactiveLine(name: string): string {
   return `**${name}** shows as no longer active in ${staffSystem()}; I've used the name as you typed it.`;
 }
 
-const ROSTER_FAILED = "The staff roster could not be loaded just now, so nobody could be looked up. Say so to the manager; do not guess a name.";
+/* E1: a failed read is never "not on the staff list": the list could not be checked. */
+const ROSTER_FAILED = "The staff list could not be checked just now (the roster did not load), so nobody could be looked up. Tell the manager the staff list couldn't be checked right now and to try again in a moment. Never say the person is not on the staff list, and do not guess a name.";
 const ROSTER_UNCHECKED = "This login covers a district or region, so the roster cannot be searched here. Use the name exactly as the manager typed it.";
 
 /** Item 27: `typed` is whole words of `name`, in order ("ann" in "Ann Sato", "sato" in "Ann Sato"; never "ann" in "Maryann"). */

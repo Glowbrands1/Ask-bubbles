@@ -1,7 +1,7 @@
 import { AI_READABLE_PAGES, type AiReadablePage } from "@/config/ai-readable-pages";
 import { BUBBLES_METRICS, BUBBLES_POLICY_GUARDS, bubblesLoopContent, BUBBLES_LOOP_JOB_TITLES, BUBBLES_LOOP_ROLE_WORDS } from "@/config/company/agent-loop";
 import { ACTIVE_BRAND } from "@/lib/brand";
-import { loadScopedRoster, readDirectoryFacts, readDirectoryRoster } from "@/lib/forms/employee-roster";
+import { loadScopedRoster, loadScopedRosterResult, readDirectoryFacts, readDirectoryRoster } from "@/lib/forms/employee-roster";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
 
 /**
@@ -142,6 +142,8 @@ export interface AppConfig {
   /** The roster readers: the signed-in manager's scoped roster, the whole directory, and its per-person facts. */
   readonly roster: {
     readonly readScoped: typeof loadScopedRoster;
+    /** The same read with its outcome: "unavailable" is a directory outage, never an empty staff list (E1). */
+    readonly readScopedResult: typeof loadScopedRosterResult;
     readonly readDirectory: typeof readDirectoryRoster;
     readonly readDirectoryFacts: typeof readDirectoryFacts;
   };
@@ -196,6 +198,7 @@ export const BUBBLES_CONFIG: AppConfig = {
   // Wrappers, so a test that replaces the roster module's export is still seen at call time.
   roster: {
     readScoped: (...args) => loadScopedRoster(...args),
+    readScopedResult: (...args) => loadScopedRosterResult(...args),
     readDirectory: (...args) => readDirectoryRoster(...args),
     readDirectoryFacts: (...args) => readDirectoryFacts(...args),
   },
