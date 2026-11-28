@@ -16,6 +16,7 @@ import { MANAGER_NAME_RULE } from "./manager-name-guard";
 import { CROSS_CHAT_REPLY_RULE } from "@/lib/chat/cross-chat-guard";
 import { CHAT_STYLE_RULES } from "./chat-style-rules";
 import { withCoachingHowTo } from "./coaching-how-to";
+import { generalAdviceLabel, generalAdviceRuleLine, type RestrictedTopic } from "./general-advice";
 import { PRIOR_COACHING_OPTIONAL_RULES } from "./prior-coaching-optional";
 import { RETRIEVED_NOT_SHARED_NOTE, RETRIEVED_NOT_SHARED_RULE } from "./sources-not-shared";
 import type { AskContext, OpenFormSummary } from "./types";
@@ -823,4 +824,18 @@ function stripMarkersTidily(answer: string): string {
     .join("\n")
     .replace(/[^\S\n]{2,}/g, " ")
     .trim();
+}
+
+/** The no-match line's general-guidance clause, as the prompt writes it. */
+const NO_MATCH_GENERAL = "Say so directly, offer general guidance only if it genuinely helps, and label it as general.";
+
+/**
+ * GENERAL_ADVICE_ENABLED (port from the sibling app; the owner, 28 Nov 2026: labelled general advice when the documents
+ * have nothing; "Never for policy, pay or legal."). The general advice rule follows the uncovered-question rule, with this
+ * question's restricted topic, and the no-match line's "offer general guidance … label it as general" (which named no
+ * topic it must never touch) defers to it. Off, the prompt is unchanged.
+ */
+export function withGeneralAdviceRule(prompt: string, brand: string, topic: RestrictedTopic | null): string {
+  const ruled = prompt.includes(UNCOVERED_RULE) ? prompt.split(UNCOVERED_RULE).join(`${UNCOVERED_RULE}\n- ${generalAdviceRuleLine(brand, topic)}`) : `${prompt}\n\n- ${generalAdviceRuleLine(brand, topic)}`;
+  return ruled.split(NO_MATCH_GENERAL).join(`Say so directly. General advice only as the general advice rule allows: under "${generalAdviceLabel(brand)}", and never on ${topic ? "this question" : "a restricted topic"}.`);
 }

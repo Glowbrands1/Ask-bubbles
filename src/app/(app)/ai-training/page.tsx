@@ -5,6 +5,7 @@ import { TrainingHome } from "@/features/ai-training/training-home";
 import { canSeeAssignmentTracker } from "@/lib/ai-training/assignments";
 import { loadAssignmentTracker } from "@/lib/ai-training/assignments-repository";
 import { requirePagePermission } from "@/lib/auth/page";
+import { noteAppUsage } from "@/lib/analytics/app-usage";
 import { businessToday } from "@/lib/business-date";
 import { getPage, listMySubmissions, loadCatalog } from "@/lib/ai-training/repository";
 
@@ -16,6 +17,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AiTrainingPage() {
   const identity = await requirePagePermission("view_ai_training");
+  noteAppUsage(identity, "ai_training");
   const isAdmin = viewerIsAdmin(identity);
 
   const loaded = await readOrExplain(async () => {
