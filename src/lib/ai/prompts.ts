@@ -837,5 +837,18 @@ const NO_MATCH_GENERAL = "Say so directly, offer general guidance only if it gen
  */
 export function withGeneralAdviceRule(prompt: string, brand: string, topic: RestrictedTopic | null): string {
   const ruled = prompt.includes(UNCOVERED_RULE) ? prompt.split(UNCOVERED_RULE).join(`${UNCOVERED_RULE}\n- ${generalAdviceRuleLine(brand, topic)}`) : `${prompt}\n\n- ${generalAdviceRuleLine(brand, topic)}`;
-  return ruled.split(NO_MATCH_GENERAL).join(`Say so directly. General advice only as the general advice rule allows: under "${generalAdviceLabel(brand)}", and never on ${topic ? "this question" : "a restricted topic"}.`);
+  const deferred = ruled.split(NO_MATCH_GENERAL).join(`Say so directly. General advice only as the general advice rule allows: under "${generalAdviceLabel(brand)}", and never on ${topic ? "this question" : "a restricted topic"}.`);
+  return deferred.replace(GENERAL_GUIDANCE_PHRASE, () => generalGuidanceUnderLabel(brand, topic));
+}
+
+/**
+ * The statement taxonomy's "General guidance" kind, as the prompt writes it (any brand): its own judgement was marked
+ * only by "a phrase like 'as a general approach'", so a cited policy answer could carry general practice with no label
+ * (the owner, 28 Nov 2026: "ok good" to the labelled general advice rule for those lines too).
+ */
+const GENERAL_GUIDANCE_PHRASE = /make it obvious they are general practice rather than [^\n]{1,80}? policy\. A phrase like "as a general approach" is enough\./;
+
+function generalGuidanceUnderLabel(brand: string, topic: RestrictedTopic | null): string {
+  const never = topic ? "never on this question" : "never on company policy, pay, benefits, scheduling rules, discipline or legal questions";
+  return `give such guidance only under the line "${generalAdviceLabel(brand)}" exactly, never in an answer that cites a policy or document (one with a [p.N] or [S#] marker), and ${never}. Otherwise leave it out.`;
 }

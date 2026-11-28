@@ -16,7 +16,7 @@ import { CLAUDE_EFFORT, CLAUDE_MAX_TOKENS, CLAUDE_MODEL } from "@/lib/config/mod
 import { MissingConfigurationError, requireEnv } from "@/lib/config/server-env";
 import { mainAnswerTimeoutMs, streamGapTimeoutMs } from "@/lib/config/ai-timeouts";
 import { chatTraceEnabled, editSeesSavedFormEnabled, generalAdviceEnabled, statedPlanStepsEnabled } from "@/lib/config/chat-quality-flags";
-import { ASKS_FOR_WRITING, generalAdviceNote, generalAdviceVerdict, restrictedTopic, settledGeneralAdvice } from "@/lib/ai/general-advice";
+import { ASKS_FOR_WRITING, generalAdviceNote, generalAdviceVerdict, restrictedTopic, settledGeneralAdvice, settledGeneralPractice } from "@/lib/ai/general-advice";
 import { countModelCalls } from "../model-call-scope";
 import { authorizedSalonIds, rosterSalonName } from "./places";
 import type { ChatFormProposal, ChatMessage } from "@/types";
@@ -1669,6 +1669,15 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
             const second = again ? verdictOf(again) : verdict;
             text = settledGeneralAdvice(again || text, second, brand);
           }
+          // Unlabelled "as a general approach…" practice: cut beside a citation, a restricted topic or a form; labelled otherwise.
+          text = settledGeneralPractice({
+            reply: text,
+            words: adviceWords,
+            brand,
+            formTurn: Boolean(effects.proposal || effects.formUpdate || effects.formOpened || effects.reminderProposal),
+            sourceTitles: (effects.sources ?? []).map((source) => source.documentTitle),
+            drafting: ASKS_FOR_WRITING.test(input.question),
+          });
         }
       }
     });
