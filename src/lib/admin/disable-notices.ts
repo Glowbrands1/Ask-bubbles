@@ -51,7 +51,7 @@ const capitalised = (word: string) => word.charAt(0).toUpperCase() + word.slice(
 /*
  * THE REASON IN THE NOTICE (Pau, 28 Nov 2026: "Can we add the reason like terminated X date, position X location X ,
  * then sign in in X app disabled"). In that order: who and when Woven terminated them (with the last day worked), the
- * position, the store (Ask Sunny: salon) and any additional ones, then the sign-in that was turned off. A fact Woven does not
+ * position, the store and any additional ones, then the sign-in that was turned off. A fact Woven does not
  * have is left out, never guessed.
  */
 export function disabledNotice(person: DisabledPerson): { kind: string; title: string; body: string; href: string } {
