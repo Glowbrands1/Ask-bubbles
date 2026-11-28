@@ -15,7 +15,8 @@ import { cardTurns, personKey, readLoopRecords, shownTextKey, replyTurns, type C
 import { CLAUDE_EFFORT, CLAUDE_MAX_TOKENS, CLAUDE_MODEL } from "@/lib/config/models";
 import { MissingConfigurationError, requireEnv } from "@/lib/config/server-env";
 import { mainAnswerTimeoutMs, streamGapTimeoutMs } from "@/lib/config/ai-timeouts";
-import { chatTraceEnabled, editSeesSavedFormEnabled, statedPlanStepsEnabled } from "@/lib/config/chat-quality-flags";
+import { chatTraceEnabled, editSeesSavedFormEnabled, generalAdviceEnabled, statedPlanStepsEnabled } from "@/lib/config/chat-quality-flags";
+import { ASKS_FOR_WRITING, generalAdviceNote, generalAdviceVerdict, restrictedTopic, settledGeneralAdvice } from "@/lib/ai/general-advice";
 import { countModelCalls } from "../model-call-scope";
 import { authorizedSalonIds, rosterSalonName } from "./places";
 import type { ChatFormProposal, ChatMessage } from "@/types";
@@ -28,7 +29,7 @@ import { activeSpendMeter } from "../spend-meter";
 import { isAiTimeLimitError, logAiFailure, msLeftForCleanup, withStreamTimeLimit, type StreamWatch } from "../time-limit";
 import type { AskResponse } from "../types";
 import { withoutSensitiveDefaults } from "../sensitive-defaults";
-import { finalReplyWithoutMarkers, withoutSourceMarkers, withoutSourceNotes } from "../source-note";
+import { finalReplyWithoutMarkers, withoutLoopMarkers, withoutSourceMarkers, withoutSourceNotes } from "../source-note";
 import { extractUsedMarkers } from "../prompts";
 import { shownCitations } from "@/lib/knowledge/empty-card-drop";
 import { dataToolHandlers, dataToolSpecs } from "./data-tools";
@@ -591,7 +592,7 @@ function buildAgentLoopTools(config: AppConfig, planSteps = false) {
         exit_reason_evidence: evidence("With exit_reason: the manager message of this request and its words that give the reason (e.g. \"she is resigning due to second job\")."),
         job_title: { type: "string", description: "Only when the manager tells you which job title to put on this form (\"no, use Shift Lead\", \"put her title as <title>\"): that title. Never a title they only used to refer to the person (\"my <title> <first name>\"); left out, the card uses " + config.staffSystem + "'s title." },
         job_title_evidence: evidence("With job_title: the manager message from this request and their words from it that tell you the form's title, holding the title."),
-        effective_date: { type: "string", description: "Employee Exit Form termination only: the effective or termination date as the manager typed it (e.g. 11/28)." },
+        effective_date: { type: "string", description: "Employee Exit Form termination only: the date the manager states as the termination's own date (\"effective 11/28\", \"termination date 11/28\", \"we fired her on 11/12\"), as typed. Never a no-show date or the last day worked; \"effective immediately\" states none: leave it out and the form is dated today." },
         payroll_deduct: { type: "string", enum: ["yes", "no"], description: "Only when the manager said whether payroll deduct applies." },
         payroll_amount: { type: "string", description: "The deduction amount the manager stated, digits." },
         prior_actions: { type: "string", description: "Earlier steps only as the manager stated them (\"verbal on 10/2\", \"coached last month\"); never from records on file." },
@@ -1025,6 +1026,12 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
   const [templates, manual] = await Promise.all([templateChoices(input.actor.role), turnManual(context)]);
   /* CREATE_FORM_BUTTON_PICKS_FORM (port from the sibling app; Pau, 25 Nov 2026): the rail's button, by the app's own sentence (`create-form-button.ts`). */
   const buttonPressed = isCreateFormButtonTurn(input.question);
+  /*
+   * GENERAL_ADVICE (port from the sibling app; the owner, 28 Nov 2026): the manager's words this turn and the message
+   * before (a follow-up keeps its topic), read for the topics general advice never touches.
+   */
+  const generalAdvice = generalAdviceEnabled();
+  const adviceWords = [[...input.history].reverse().find((turn) => turn.role === "user")?.content ?? "", input.question].map((part) => String(part)).join("\n");
   const dynamic = agentLoopSystem({
     cardOpen: cardOpenAtStart,
     cardOpenForm: cardOnScreen?.templateName ?? null,
@@ -1038,6 +1045,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
     answeringWhoQuestion: whoAsked ? (templates.find((row) => row.key === whoAsked.templateKey)?.name ?? "form") : null,
     createFormButton: buttonPressed ? (input.openFormId ? { kind: "draft_open" } : cardOnScreen ? { kind: "card_open", form: cardOnScreen.templateName ?? null } : { kind: "nothing" }) : null,
     ...(input.answerMode && input.answerMode !== "standard" ? { answerMode: input.answerMode } : {}),
+    ...(generalAdvice ? { generalAdvice: { topic: restrictedTopic(adviceWords, appConfig().brandName) } } : {}),
   });
 
   /*
@@ -1635,6 +1643,33 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
             text = withLibraryForms(text, outside, templates.map((row) => row.name));
           }
         }
+        /*
+         * GENERAL_ADVICE (port from the sibling app; the owner, 28 Nov 2026: labelled general advice when the documents
+         * have nothing; "Never for policy, pay or legal."). The label on a restricted topic, beside a citation or on a form
+         * turn, or general advice from memory on a restricted topic, goes back once; if it comes back, the code settles it
+         * (`general-advice.ts`): the labelled part is cut, a restricted topic gets "not in the documents" and HR or their
+         * manager. General advice on a turn that only searched the documents and cites nothing gets the label, with no
+         * model call.
+         */
+        if (stoppedAt === "reply" && generalAdvice) {
+          const brand = appConfig().brandName;
+          const verdictOf = (reply: string) => generalAdviceVerdict({
+            reply,
+            words: adviceWords,
+            brand,
+            formTurn: Boolean(effects.proposal || effects.formUpdate || effects.formOpened || effects.reminderProposal),
+            sourceTitles: (effects.sources ?? []).map((source) => source.documentTitle),
+            searchedOnly: turnSteps.some((step) => step.tool === "search_knowledge" || step.tool === "read_policy") && turnSteps.every((step) => step.tool === "search_knowledge" || step.tool === "read_policy") && !(input.attachments?.length),
+            drafting: ASKS_FOR_WRITING.test(input.question),
+          });
+          const verdict = verdictOf(text);
+          if (verdict.kind === "label_missing") text = settledGeneralAdvice(text, verdict, brand);
+          else if (verdict.kind !== "ok") {
+            const again = await handBack(generalAdviceNote(verdict, brand));
+            const second = again ? verdictOf(again) : verdict;
+            text = settledGeneralAdvice(again || text, second, brand);
+          }
+        }
       }
     });
   } catch (error) {
@@ -1810,7 +1845,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
   const cited = used.length > 0
     ? used.map((marker) => sources[marker - 1]!)
     : sources.filter((source, index, all) => content.toLowerCase().includes(source.documentTitle.toLowerCase()) && all.findIndex((row) => row.documentId === source.documentId) === index);
-  content = content.replace(/\s?\[S\d{1,2}\]/g, "");
+  content = withoutLoopMarkers(content);
   /* A question code decided (effects.replyMustAsk) ends the reply even when the model left it out (QA, the live re-run of #1067). */
   /* Never twice: the reply already asks for a change in its own words (QA: "change" and a question mark in one sentence). */
   const asksForChange = /\bchange\b[^.!?\n]*\?/i.test(content);

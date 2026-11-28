@@ -3077,7 +3077,7 @@ function fullNameTakenAsTyped(context: ToolContext, roster: readonly RosterEmplo
 async function askWhoFor(context: ToolContext, template: { key: string; name: string }, effects: ToolEffects): Promise<ToolResult> {
   const ask = (await policyQuestion(context, template.name)) ?? `Who is this ${template.name} for?`;
   effects.personAsked = { templateKey: template.key };
-  return { reason_code: "missing_input", error: "Nobody is named for this form yet. End your reply with ask_exactly, exactly, once.", ask_exactly: ask };
+  return { reason_code: "missing_input", error: "Nobody is named for this form yet. End your reply with ask_exactly, exactly, once. When the manager names the person, look them up with find_staff and pass its employee_id.", ask_exactly: ask };
 }
 
 /** fix-name, live s10: the message being answered now confirms, in answer to a recorded name question, the roster person this typed name is. */
@@ -5923,11 +5923,18 @@ export async function proposeForm(
    * the stated last day, is always kept; today only when no date was stated.
    */
   const askedExitTermination = template.key === appConfig().formKeys.exit && input.exit_type === "termination";
+  /*
+   * Pau's ruling (24 Nov 2026, via QA): "effective immediately for termination - should be dated today". A termination
+   * is dated the date the manager's words state as its own ("effective 11/20", "termination date 11/28", "fired her on
+   * 11/12": `statedTerminationDates`); the model's effective_date counts only when it is one of those. Never a no-show date, never the last day
+   * worked (item 7: that is its own line); with none stated ("effective immediately"), today, said in one line.
+   */
   const exitTermination = askedExitTermination && (await import("@/lib/forms/termination-word")).saysTerminationWord(ownRequestWords)
     ? await (async () => {
-        const effective = lockedExitDate(input.effective_date, requestWords, today);
-        const lastDay = effective ? null : (await import("@/lib/forms/exit-facts")).readExitFacts(requestWords, today).lastDayWorked;
-        return { date: effective ?? lastDay ?? today, dated_today: !effective && !lastDay };
+        const stated = (await import("@/lib/forms/exit-facts")).statedTerminationDates(requestWords, today);
+        const asked = lockedExitDate(input.effective_date, requestWords, today);
+        const effective = asked && stated.includes(asked) ? asked : stated.length === 1 ? stated[0]! : null;
+        return { date: effective ?? today, dated_today: !effective };
       })()
     : null;
   /*
@@ -8047,7 +8054,16 @@ export async function searchKnowledge(context: ToolContext, effects: ToolEffects
   if (scopeManual) rows = scopeToCurrentManual(rows, { limit, dedupeBySection: manualSectionDedupeEnabled() });
   rows = rows.slice(0, limit);
   const markers = rows.map((row) => addSource(effects, rowToCitation(row)));
-  if (rows.length === 0) return { results: [], note: "Nothing in the company knowledge base matches. Say so; never answer from memory." };
+  if (rows.length === 0) {
+    /* GENERAL_ADVICE (the owner, 28 Nov 2026): a general management question may get labelled general advice; a restricted topic points to HR. */
+    const { generalAdviceEnabled } = await import("@/lib/config/chat-quality-flags");
+    if (generalAdviceEnabled()) {
+      const { noMatchNote, restrictedTopic } = await import("@/lib/ai/general-advice");
+      const brand = appConfig().brandName;
+      return { results: [], note: noMatchNote(brand, restrictedTopic(context.question, brand)) };
+    }
+    return { results: [], note: "Nothing in the company knowledge base matches. Say so; never answer from memory." };
+  }
   return {
     results: rows.map((row, index) => ({
       source: markers[index],
