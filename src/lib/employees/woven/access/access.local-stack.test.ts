@@ -187,7 +187,7 @@ describe.skipIf(!ENABLED)("stage 1 on real Postgres (local stack)", { timeout: 6
     const outcome = await recordAccessShadowRun("test");
     expect(outcome.status).toBe("recorded");
     const runId = outcome.status === "recorded" ? outcome.accessRunId : "";
-    expect(sql(`select mode||','||policy_version from public.employee_access_runs where id = '${runId}'`)).toBe("shadow,access-policy-1");
+    expect(sql(`select mode||','||policy_version from public.employee_access_runs where id = '${runId}'`)).toBe("shadow,access-policy-2");
     expect(sql(`select string_agg(distinct result, ',') from public.employee_access_actions where access_run_id = '${runId}'`)).toBe("shadow");
     expect(Number(sql(`select count(*) from public.employee_access_actions where access_run_id = '${runId}' and action = 'CREATE_USER'`))).toBeGreaterThanOrEqual(1);
     expect(fingerprint()).toBe(before);

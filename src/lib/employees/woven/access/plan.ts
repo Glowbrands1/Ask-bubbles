@@ -22,7 +22,8 @@ import type { AccessAction, PlannedRow, PlannerAccount, PlannerEmployee, Planner
  *   IDENTITY. A confirmed link (Woven EmployeeID → account) is authoritative.
  *     Without one, an exact, case-insensitive email match to exactly ONE
  *     unclassified account is only PROPOSED (FLAG_LINK_REVIEW) — never acted
- *     on, never merged. Email is never used to re-match a linked account.
+ *     on, never merged — with ONE exception, Woven's Terminated (TERMINATION
+ *     below). Email is never used to re-match a linked account.
  *
  *   ACCOUNTS. Only a Woven position whose APPROVED mapping is in AUTO_PROVISION_ROLES
  *     (default: Location Manager, Assistant Manager) may get an account automatically, and only
@@ -32,9 +33,13 @@ import type { AccessAction, PlannedRow, PlannerAccount, PlannerEmployee, Planner
  *     positions — gets no account from Woven.
  *
  *   TERMINATION. Only Woven's own Terminated status, read in the latest run,
- *     disables a linked account whose status is Woven-managed. Absence from
- *     Woven is review only. Unknown status fails closed. Protected accounts
- *     and administrators are never disabled automatically.
+ *     disables a linked account whose status is Woven-managed — or (owner,
+ *     28 Nov 2026) an UNCLASSIFIED account whose email exactly matches that
+ *     one terminated employee's, when it is a location-level account in a
+ *     provisioned role and the Woven position confirms it; the link is
+ *     stored when it is disabled. Absence from Woven is review only. Unknown
+ *     status fails closed. Protected accounts, accounts marked not Woven-
+ *     managed and administrators are never disabled automatically.
  *
  *   LOCATION AND ROLE. Only for a linked account in LOCATION_MANAGED_ROLES whose scope is a single location, with the matching managed flag:
  *     the PRIMARY location follows Woven's mapped primary location, and the role
@@ -49,7 +54,7 @@ import type { AccessAction, PlannedRow, PlannerAccount, PlannerEmployee, Planner
  *     email is never changed.
  */
 
-export const ACCESS_POLICY_VERSION = "access-policy-1";
+export const ACCESS_POLICY_VERSION = "access-policy-2";
 
 /** Company policy (src/config/company/woven.ts): who the preview may propose an account for. */
 export const AUTO_PROVISION_ROLES: readonly Role[] = WOVEN_AUTO_PROVISION_ROLES;
@@ -216,6 +221,14 @@ function planEmployee(employee: PlannerEmployee, ctx: Context): PlannedRow {
       if ((ctx.emailHolders.get(email) ?? 0) > 1 || employee.issues.includes("duplicate_email")) {
         actions.push("FLAG_DUPLICATE_EMAIL");
         reasons.push("email_shared_by_several_woven_employees");
+      } else if (unclassified.length === 1 && status === "terminated" && notManaged.length === 0 && linkedElsewhere.length === 0) {
+        const candidate = unclassified[0]!;
+        const disable = planTerminatedEmailMatch(employee, candidate, role, actions, reasons);
+        if (disable) {
+          account = accountView(candidate, "email_candidate");
+          before = disable.before;
+          after = disable.after;
+        }
       } else if (unclassified.length === 1) {
         actions.push("FLAG_LINK_REVIEW");
         reasons.push("exact_email_match_awaiting_confirmation");
@@ -344,6 +357,59 @@ function planEmployee(employee: PlannerEmployee, ctx: Context): PlannedRow {
 
   if (actions.length === 0) reasons.push("in_sync_with_woven");
   return row();
+}
+
+/**
+ * Whether Woven manages EMPLOYMENT STATUS for an account found by email: a
+ * location-level account in a role Woven may provision, whose confirmed Woven
+ * position is one of those roles. The sibling app's email-discovery rule
+ * (`discoveredLinkManagesStatus`), with this company's roles. Mirrored by
+ * `employee_access_disable_terminated` (20261128001000), which re-checks it.
+ */
+export function emailMatchManagesStatus(account: Pick<PlannerAccount, "role" | "scopeLevel">, wovenRole: Role | null): boolean {
+  const provisioned = (r: Role | null) => r !== null && AUTO_PROVISION_ROLES.includes(r);
+  return provisioned(account.role) && account.scopeLevel === "location" && provisioned(wovenRole);
+}
+
+/**
+ * A Terminated Woven employee whose exact email (case-insensitive) names ONE
+ * unclassified account, and no other employee holds that email: the account
+ * is disabled when Woven manages its status (`emailMatchManagesStatus`), and
+ * the apply step stores the link in the same transaction. Protected accounts
+ * are flagged; anything else is held for a person, as before. Never fuzzy,
+ * never for an Active employee (that is still FLAG_LINK_REVIEW).
+ */
+function planTerminatedEmailMatch(
+  employee: PlannerEmployee,
+  candidate: PlannerAccount,
+  role: Role | null,
+  actions: AccessAction[],
+  reasons: string[],
+): { before: NonNullable<PlannedRow["before"]>; after: NonNullable<PlannedRow["after"]> } | null {
+  if (isProtected(candidate)) {
+    actions.push("FLAG_PROTECTED_ACCOUNT");
+    reasons.push("terminated_in_woven_protected_account", "email_matches_protected_account");
+    return null;
+  }
+  const hold = (why: string) => {
+    actions.push("FLAG_LINK_REVIEW");
+    reasons.push("exact_email_match_awaiting_confirmation", "terminated_in_woven", why);
+    return null;
+  };
+  if (candidate.status === "disabled") return hold("account_already_disabled");
+  if (!emailMatchManagesStatus(candidate, role)) return hold("terminated_email_match_status_not_woven_managed");
+  actions.push("DISABLE_TERMINATED");
+  reasons.push("terminated_in_woven", "single_exact_email_match");
+  return {
+    before: { status: candidate.status },
+    after: {
+      status: "disabled",
+      auth_ban: true,
+      sessions_revoked: true,
+      terminated_on: employee.terminationDate,
+      link: "termination_email_match",
+    },
+  };
 }
 
 function planWithoutAccount(
