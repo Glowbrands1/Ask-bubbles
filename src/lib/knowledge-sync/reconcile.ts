@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 
+import { wovenDocumentKeepOutEnabled } from "@/lib/config/chat-quality-flags";
+
 import { audienceKey, audienceLabel, decideAccess } from "./access";
+import { keptOut } from "./inventory";
 import type {
   AttentionItem,
   AudienceDecision,
@@ -180,6 +183,14 @@ function plan(
   previous: ManifestItem | undefined,
 ): { state: SyncState; pendingAction: PendingAction; reason: string | null } {
   const live = previous?.inKnowledgeBase === true;
+  /*
+   * WOVEN_DOCUMENT_KEEP_OUT_ENABLED (ported from the sibling app, QA, 10 Nov 2026): an administrator kept this one
+   * document out of Ask Bubbles. It is retired if live and never ingested again while the choice stands, whatever Woven
+   * says about it; removing the choice plans it as new again.
+   */
+  if (wovenDocumentKeepOutEnabled() && keptOut({ contentType: record.contentType, entityId: record.entityId, partKey: part.partKey }, input.decisions)) {
+    return { state: "EXCLUDED", pendingAction: live ? "retire" : "none", reason: "kept_out" };
+  }
   const retire = (state: SyncState, reason: string) => ({
     state: live ? state : state === "UNPUBLISHED" ? "EXCLUDED" : state,
     pendingAction: (live ? "retire" : "none") as PendingAction,
@@ -288,7 +299,7 @@ function count(report: TypeReport, state: SyncState, reason: string | null): voi
       break;
     case "EXCLUDED":
       if (reason === "unsupported_format") report.excludedUnsupported += 1;
-      else if (reason === "audience_excluded") report.excludedByDecision += 1;
+      else if (reason === "audience_excluded" || reason === "kept_out") report.excludedByDecision += 1;
       else if (reason !== null && RESTRICTED_REASONS.has(reason)) report.excludedRestricted += 1;
       else report.excludedUnpublished += 1;
       break;

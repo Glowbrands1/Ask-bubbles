@@ -64,7 +64,8 @@ async function supersededRefs(
 function asSinkError(error: unknown, fallback: string): SinkError {
   if (error instanceof IngestionError) {
     /* Not retryable: the file itself is the problem, and trying again tomorrow changes nothing. */
-    const permanent = ["unsupported_type", "too_large", "empty_file", "no_text"].includes(error.code) &&
+    // WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED: a duplicate waits for a person to resolve it in Woven; retrying changes nothing.
+    const permanent = ["unsupported_type", "too_large", "empty_file", "no_text", "duplicate_content"].includes(error.code) &&
       // WOVEN_FAILED_RETRY_ENABLED: with OCR on, a PDF with no text layer can be read by a later run, so it is retried.
       !(error.code === "no_text" && wovenFailedRetryEnabled() && wovenPdfOcrEnabled());
     return new SinkError(`ingest_${error.code}`, error.message.slice(0, 300), !permanent);
