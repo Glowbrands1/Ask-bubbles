@@ -197,6 +197,21 @@ describe("the hourly run", () => {
     expect(f.deps.createAndInvite).not.toHaveBeenCalled();
   });
 
+  it("tells Pau's webhook about each link that went out, and only those (\"if they get the link\")", async () => {
+    const f = fakes([ready("E1"), ready("E2")], { E1: "2026-10-30", E2: "2026-10-28" });
+    const onSent = vi.fn(async () => undefined);
+    await sendNewHireInvites({ config: config(), now: NOW }, { ...f.deps, onSent });
+    expect(onSent).toHaveBeenCalledTimes(1);
+    expect(onSent).toHaveBeenCalledWith(expect.objectContaining({ externalEmployeeId: "E2" }));
+    const limited = fakes([ready("E1")], { E1: "2026-10-30" });
+    limited.deps.createAndInvite.mockImplementation(async () => {
+      throw new DirectoryError("email_rate_limited", "limit", 429);
+    });
+    const notTold = vi.fn(async () => undefined);
+    await sendNewHireInvites({ config: config(), now: NOW }, { ...limited.deps, onSent: notTold });
+    expect(notTold).not.toHaveBeenCalled();
+  });
+
   it("does not open the link when nobody is waiting", async () => {
     const f = fakes([ready("E1")], { E1: "2026-10-27" });
     await sendNewHireInvites({ config: config(), now: NOW }, f.deps);

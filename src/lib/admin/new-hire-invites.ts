@@ -2,6 +2,7 @@ import "server-only";
 
 import { recordToday } from "@/lib/business-today";
 import { INVITE_LINK_NOT_LIVE, inviteLinkIsLive } from "@/lib/admin/invite-link-check";
+import { announceInviteSent } from "@/lib/admin/new-hire-notices.server";
 import { createLinkedAccount, MANUAL_ROLES } from "@/lib/admin/woven-account";
 import { DirectoryError, type DirectoryActor } from "@/lib/admin/user-directory";
 import { loadAccessPlan, type AccessPlan } from "@/lib/employees/woven/access/load";
@@ -121,6 +122,8 @@ export interface NewHireInviteDeps {
    * the first account is created. False stops the run with `invite_link_not_live`: nothing is created, nobody emailed.
    */
   linkIsLive(): Promise<boolean>;
+  /** Told after each account the invitation went out for (Pau's email through the webhook). */
+  onSent?(row: PlannedRow): Promise<unknown>;
 }
 
 export type NewHireInviteOutcome =
@@ -172,6 +175,7 @@ export async function sendNewHireInvites(input: { config: NewHireConfig; now: Da
       await deps.createAndInvite(row, actor);
       sent += 1;
       used += 1;
+      await deps.onSent?.(row).catch(() => undefined);
     } catch (error) {
       const code = error instanceof DirectoryError ? error.code : null;
       if (code === "email_rate_limited") {
@@ -230,6 +234,11 @@ export async function runNewHireInvites(redirectTo: string, now: Date = new Date
         hireDates: readHireDates,
         actor: readActor,
         linkIsLive: () => inviteLinkIsLive(redirectTo),
+        // "if they get the link" (Pau, 28 Nov 2026): the webhook emails her. Off unless NEW_HIRE_NOTICES_ENABLED + URL.
+        onSent: (row) => {
+          const email = (row.after as Record<string, unknown> | null)?.email;
+          return row.externalEmployeeId && typeof email === "string" ? announceInviteSent({ externalEmployeeId: row.externalEmployeeId, sentTo: email }) : Promise.resolve();
+        },
         createAndInvite: async (row, actor) => {
           const after = row.after as Record<string, unknown>;
           await createLinkedAccount(
