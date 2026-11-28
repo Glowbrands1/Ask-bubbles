@@ -30,6 +30,9 @@ import type { Permission, Role } from "@/types";
  *   - image (optional): a screenshot under `public/whats-new/<date>/`, taken from this app running locally in demo mode
  *     with invented data only (never production), about 1200 px wide and under 200 KB, with alt text saying what it
  *     shows. The page shows it under "Now"; the AI is told one exists.
+ *   - before (optional): leave it out when there is nothing useful to say about how it was.
+ *   - audience (optional): "HR only" or "Admin only", a red badge beside the tag.
+ *   - note (optional): a caveat shown in red under How to use it.
  *   Plain manager language: no flag or code names.
  *
  * This is Ask Bubbles' list, from Ask Bubbles' own changes. The sibling app keeps its own.
@@ -47,11 +50,25 @@ export function whatsNewEnabled(): boolean {
   return typeof raw === "string" && ["1", "true", "yes", "on"].includes(raw.trim().toLowerCase());
 }
 export type WhatsNewTag = "New" | "Improved";
+/** The red "HR ONLY" / "ADMIN ONLY" badge (the owner, 28 Nov 2026). A label only: who SEES the entry is still
+ * permission / adminConsole / roles. */
+export type WhatsNewAudience = "HR only" | "Admin only";
 
 export interface WhatsNewEntry {
   readonly tag: WhatsNewTag;
   readonly title: string;
-  readonly before: string;
+  readonly before?: string;
+  /**
+   * lead (optional): one line shown under the title in place of Before, for a feature better introduced by what it is
+   * for (Pau, 28 Nov 2026: "remove before add instead … Cant do the follow up yourself?").
+   */
+  readonly lead?: string;
+  /** beta (optional): a "Beta - testing" badge beside the tag, for a feature still being tested (Pau, 28 Nov 2026). */
+  readonly beta?: true;
+  /** Who the feature is for, shown as a red badge beside the tag (the owner, 28 Nov 2026). */
+  readonly audience?: WhatsNewAudience;
+  /** A caveat the reader must not miss, shown in red under How to use it (the owner, 28 Nov 2026). */
+  readonly note?: string;
   readonly now: string;
   readonly howToUse: string;
   readonly showMe?: { readonly href: string; readonly label: string };
@@ -70,7 +87,7 @@ export interface WhatsNewRelease {
 export const WHATS_NEW: readonly WhatsNewRelease[] = [
   {
     date: "2026-11-27",
-    summary: "One calendar for follow-ups and every L10, talking to Bubbles, attaching files, the exit form's address, a better phone layout, and the Knowledge Base for administrators.",
+    summary: "One calendar for follow-ups and every L10, talking to Bubbles, attaching files, the exit form's address, and a better phone layout.",
     entries: [
       {
         tag: "New",
@@ -104,7 +121,8 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
       {
         tag: "New",
         title: "Hand a follow-up to someone else",
-        before: "A form's follow-up always stayed with whoever filed the form.",
+        lead: "Can't do the follow-up yourself? Hand it to your DM, or to another manager who covers your store.",
+        beta: true,
         now: "Give a form's follow-up to someone else who covers that store, such as your DM. It goes on their calendar with reminders, and you still get the reminders too.",
         howToUse: "On the Forms Register or on the form, press Change next to Owner under the follow-up date, pick the person and press Save owner, or ask Bubbles \"assign this follow-up to someone else\".",
         showMe: { href: "/forms/monitoring", label: "Forms Register" },
@@ -145,16 +163,6 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
         now: "On the Resignation/Exit form, the employee's Permanent Address now fills in automatically from their Woven employee record. If Bubbles can't find one clear address for them, the line stays blank for you to fill in by hand.",
         howToUse: "Ask Bubbles to start a Resignation/Exit form for the employee, then check the Permanent Address line before you finalize.",
         roles: [...ADMIN_CONSOLE_ROLES, ...HOME_ADDRESS_MANAGER_ROLES],
-      },
-      {
-        tag: "Improved",
-        title: "Ask Bubbles about the Knowledge Base's documents",
-        before: "Bubbles could quote what a document says, but could not tell you which documents the Knowledge Base holds or whether one had failed.",
-        now: "Administrators can ask which documents there are, when one was last updated, and which failed and why. Everyone else still gets answers from the documents themselves.",
-        howToUse: "Ask Bubbles \"which documents do we have?\" or \"did any document fail?\".",
-        showMe: { href: "/knowledge", label: "Knowledge Base" },
-        permission: "view_knowledge",
-        adminConsole: true,
       },
     ],
   },
@@ -210,6 +218,7 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
       {
         tag: "New",
         title: "Search every form for one employee",
+        audience: "HR only",
         before: "HR scrolled the Forms Register to find one person's forms, and older ones were past the end of the list.",
         now: "HR and administrators type an employee's name and see every form on file for them, drafts included, with the date.",
         howToUse: "On the Forms Register, type the name in the search bar, then narrow it to Drafts, Finalized or Approved by HR.",
@@ -219,12 +228,14 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
       {
         tag: "New",
         title: "Employee address in the Employee Directory",
+        audience: "Admin only",
         before: "An employee's home address was only in Woven.",
         now: "Administrators can see an employee's home address from Woven in the Employee Directory. It is read from Woven each time and never saved in Ask Bubbles.",
         howToUse: "Open Integrations, then Woven Employee Sync, then the Employee Directory tab, and press \"Show address\" on the person's row.",
         showMe: { href: "/admin/integrations/woven", label: "Woven Employee Sync" },
         permission: "manage_integrations",
         roles: ADMIN_CONSOLE_ROLES,
+        note: "If an employee has no address in Woven, none shows on the Resignation/Exit form either.",
       },
       {
         tag: "Improved",
@@ -240,6 +251,7 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
         title: "The Corrective Action history box fills itself",
         before: "You wrote the history box yourself, and a form still with HR did not count as history.",
         now: "N/A is filled in when there is no history, and every earlier coaching and corrective action for that employee counts, including ones waiting for HR or sent back.",
+        note: "Bubbles fills it in as long as the employee has history in the Forms Register.",
         howToUse: "Open a Corrective Action and check its history box before you finalize.",
         showMe: { href: "/forms/monitoring", label: "Forms Register" },
         permission: "view_form_monitoring",
@@ -253,7 +265,6 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
       {
         tag: "Improved",
         title: "Missing fields explained at Finalize",
-        before: "Finalize refused a form with blank fields and did not say which.",
         now: "A pop-up lists the blank fields, and each one is outlined in red on the form until it is filled.",
         howToUse: "Press \"Show me the blank fields\" in the pop-up to jump to the first one.",
         showMe: { href: "/chat", label: "Ask Bubbles" },
@@ -301,15 +312,6 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
       },
       {
         tag: "Improved",
-        title: "Delete several drafts at once",
-        before: "Drafts were deleted one at a time.",
-        now: "You can tick several drafts and delete them together.",
-        howToUse: "On the Forms Register, tick the drafts' checkboxes and press \"Delete selected\".",
-        showMe: { href: "/forms/monitoring", label: "Forms Register" },
-        permission: "manage_form_records",
-      },
-      {
-        tag: "Improved",
         title: "Google Reviews leaderboard by period",
         before: "The store leaderboard ranked one month at a time.",
         now: "Rank stores by this month, L3, L6 or YTD, as well as by a single month such as October.",
@@ -324,7 +326,7 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
     summary: "Bubbles' new assistant for every manager, with your own Action Plan steps.",
     entries: [
       {
-        tag: "New",
+        tag: "Improved",
         title: "Bubbles looks things up for you",
         before: "Only a few test accounts had Bubbles' new assistant.",
         now: "Every manager has it now: Bubbles looks up your forms on file and Google reviews for your stores as it answers, and drafts a form as a card you check before you create it.",

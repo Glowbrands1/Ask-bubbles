@@ -182,8 +182,9 @@ Two adapters, both **observe-only** and **off by default**:
 
 - **Employee directory** (`src/lib/employees/woven`) — read-only copy of
   people, positions and locations; person-reviewed location and position
-  mappings; an access preview (`WOVEN_ACCESS_MODE=off|shadow`; there is no
-  apply mode).
+  mappings; an access preview (`WOVEN_ACCESS_MODE=off|shadow|apply`; apply
+  does one thing, with `WOVEN_ACCESS_APPLY_ACTIONS=DISABLE_TERMINATED`: an
+  account Woven marks Terminated is disabled and its sign-in revoked).
 - **Knowledge** (`src/lib/knowledge-sync/woven/bcs`) — Buff City Soap's Woven
   company (Midwest Soap Makers, pinned by Company ID) into the knowledge base:
   Policies, Handbooks, Procedures, File Library and Communications, with

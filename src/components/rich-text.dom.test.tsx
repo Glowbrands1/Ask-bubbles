@@ -313,3 +313,53 @@ describe("an edit reply quoted line by line", () => {
     expect(container.querySelector("blockquote")).toBeNull();
   });
 });
+
+/**
+ * Pau, 28 Nov 2026: "make sure if sunny or bubble direct them to a page, make sure its clickable". Given the pages
+ * the person may open (`usePageLinks`), a page the answer names is a link to it; anything else stays text.
+ */
+describe("make sure if sunny or bubble direct them to a page, make sure its clickable", () => {
+  const PAGES = [
+    { href: "/forms/monitoring", names: ["Forms Register"] },
+    { href: "/calendar", names: ["Calendar"] },
+    { href: "/", names: ["Home page"] },
+    { href: "/whats-new", names: ["What's New"] },
+    { href: "/meetings/bcs-dm", names: ["DM L10", "L10"] },
+  ];
+  const linkTo = (name: string) => screen.getByRole("link", { name }).getAttribute("href");
+
+  it("the L10 is a link to the person's own meeting", () => {
+    render(<RichText content="The DM L10 is kept on the L10 page. I cannot change it from the chat." pageLinks={PAGES} />);
+    expect(linkTo("DM L10")).toBe("/meetings/bcs-dm");
+    expect(linkTo("L10")).toBe("/meetings/bcs-dm");
+  });
+
+  it("a page named in a sentence, in bold or in a list is a link", () => {
+    render(<RichText content={"Open the **Forms Register** to see it.\n\n- Check your Calendar for the follow-up.\n- The latest figures are on the Home page."} pageLinks={PAGES} />);
+    expect(linkTo("Forms Register")).toBe("/forms/monitoring");
+    expect(linkTo("Calendar")).toBe("/calendar");
+    expect(linkTo("Home page")).toBe("/");
+  });
+
+  it("a curly apostrophe still links", () => {
+    render(<RichText content="See What’s New." pageLinks={PAGES} />);
+    expect(linkTo("What’s New")).toBe("/whats-new");
+  });
+
+  it("a [label](/path) to one of the person's pages is a link; any other path or a web address stays text", () => {
+    render(<RichText content="Open [your calendar](/calendar), not [users](/admin/users) or [this](https://example.com)." pageLinks={PAGES} />);
+    expect(linkTo("your calendar")).toBe("/calendar");
+    expect(screen.queryByRole("link", { name: "users" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "this" })).toBeNull();
+  });
+
+  it("a page the person cannot open, lowercase words and headings stay text", () => {
+    render(<RichText content={"### Calendar\n\nHere is your calendar and their Home address. Integrations are set up by an administrator."} pageLinks={PAGES} />);
+    expect(screen.queryAllByRole("link")).toEqual([]);
+  });
+
+  it("with no pages given (an answer outside the signed-in app), names stay text as before", () => {
+    render(<RichText content="Open the Forms Register." />);
+    expect(screen.queryAllByRole("link")).toEqual([]);
+  });
+});

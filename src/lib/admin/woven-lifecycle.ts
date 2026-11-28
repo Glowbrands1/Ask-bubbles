@@ -4,61 +4,50 @@ import type { Role } from "@/types";
 
 /**
  * ============================================================================
- * THE ACCOUNT LIFECYCLE — what the sibling app's Woven access sync applies, here too
+ * LINK AN EXISTING ACCOUNT BY ITS ONE EXACT EMAIL MATCH
  * ============================================================================
  *
- * Pau, 28 Nov 2026: "need lifecycle in bubble too". The sibling app applies three
- * outcomes of the access plan after each Woven sync: create the account of an
- * eligible manager, link an existing account by its one exact email match, and
- * turn off the sign-in of someone Woven marks Terminated. In this app accounts
- * are already created (and invited) by the hourly new-hire run
- * (`new-hire-invites.ts`); this adds the other two. It lives here, outside the
- * Woven sync, which still never writes `app_users` (phase-one guarantees).
+ * Pau, 28 Nov 2026: "need lifecycle in bubble too". The sibling app's account
+ * lifecycle creates accounts, links an existing account by its one exact email
+ * match, and turns off the sign-in of someone Woven marks Terminated. In this
+ * app:
+ *   - accounts are created (and invited) by the hourly new-hire run
+ *     (`new-hire-invites.ts`);
+ *   - the Terminated disable is the Woven access sync's apply step
+ *     (`src/lib/employees/woven/access/apply.ts`, WOVEN_ACCESS_MODE=apply with
+ *     WOVEN_ACCESS_APPLY_ACTIONS=DISABLE_TERMINATED);
+ *   - this module adds the link. It lives here, outside the Woven sync, which
+ *     still never writes `app_users` (phase-one guarantees).
  *
- *   WOVEN_ACCESS_APPLY_ACTIONS  the outcomes to apply, any of
- *                               LINK_EXISTING, DISABLE_TERMINATED
- *                               (the sibling app's switch name). Empty or unset: none,
- *                               the default. Anything else named: ignored, and
- *                               the run says so.
- *   WOVEN_POSITION_SYNC_ACTOR   the active global admin the changes are made by
- *                               (the same admin as the position sync).
+ *   WOVEN_LINK_EXISTING_ENABLED  "true" to link. Anything else, or unset: off,
+ *                                the default. Its own switch, so it never
+ *                                changes what WOVEN_ACCESS_APPLY_ACTIONS means
+ *                                to the apply step (which refuses any action
+ *                                it does not apply).
+ *   WOVEN_POSITION_SYNC_ACTOR    the active global admin the links are set by
+ *                                (the same admin as the position sync).
  *
- *   DISABLE_TERMINATED  the planner proposes it only for a Woven-linked,
- *                       status-managed, unprotected account whose employee
- *                       Woven's own Terminated read returned in the latest run.
- *                       Applied with `patchUser` → disabled: the profile, the
- *                       Supabase Auth ban and every session (`revokeAuthAccess`),
- *                       audited. An account already disabled is done.
- *   LINK_EXISTING       an exact-email match the planner proposes for review
- *                       (one Woven employee, one unclassified account), where
- *                       the employee is Active, the account is not protected or
- *                       disabled, and nothing else on the row is in doubt. The
- *                       link is stored as `email_discovery`; it manages status
- *                       only for a General Manager / Assistant General Manager
- *                       account in a GM/AGM position at one store, and never
- *                       role or store. Linking changes nobody's access.
+ * The link: an exact-email match the planner proposes for review (one Woven
+ * employee, one unclassified account), where the employee is Active, the
+ * account is not protected or disabled, and nothing else on the row is in
+ * doubt. Stored as `email_discovery`; it manages status only for a General
+ * Manager / Assistant General Manager account in a GM/AGM position at one
+ * store, and never role or store. Linking changes nobody's access.
  *
  * Only while the access guards allow changes. Pure; `woven-lifecycle.server.ts`
  * runs it.
  */
 
-export const WOVEN_ACCESS_APPLY_ACTIONS_ENV = "WOVEN_ACCESS_APPLY_ACTIONS";
-export type LifecycleAction = "LINK_EXISTING" | "DISABLE_TERMINATED";
-const KNOWN: readonly LifecycleAction[] = ["LINK_EXISTING", "DISABLE_TERMINATED"];
+export const WOVEN_LINK_EXISTING_ENABLED_ENV = "WOVEN_LINK_EXISTING_ENABLED";
 /** At most this many links in one run; more waits for the next. */
 export const MAX_LINKS_PER_RUN = 25;
 
 export interface LifecycleConfig {
-  actions: LifecycleAction[];
-  ignored: string[];
+  linkExisting: boolean;
 }
 
 export function readLifecycleConfig(env: Record<string, string | undefined> = process.env): LifecycleConfig {
-  const named = [...new Set((env[WOVEN_ACCESS_APPLY_ACTIONS_ENV] ?? "").split(",").map((a) => a.trim().toUpperCase()).filter(Boolean))];
-  return {
-    actions: named.filter((a): a is LifecycleAction => (KNOWN as readonly string[]).includes(a)),
-    ignored: named.filter((a) => !(KNOWN as readonly string[]).includes(a)),
-  };
+  return { linkExisting: (env[WOVEN_LINK_EXISTING_ENABLED_ENV] ?? "").trim().toLowerCase() === "true" };
 }
 
 /** The roles whose account Woven may manage the status of after an automatic link. */
@@ -80,19 +69,12 @@ export interface LinkToInsert {
 }
 
 export interface LifecyclePlan {
-  disables: { appUserId: string; externalEmployeeId: string }[];
   links: LinkToInsert[];
 }
 
 export function decideLifecycle(rows: readonly PlannedRow[], config: LifecycleConfig, setBy: string): LifecyclePlan {
-  const disables = config.actions.includes("DISABLE_TERMINATED")
-    ? rows
-        .filter((r) => r.actions.includes("DISABLE_TERMINATED") && r.account && !r.account.isProtected && r.account.status !== "disabled" && r.externalEmployeeId)
-        .map((r) => ({ appUserId: r.account!.appUserId, externalEmployeeId: r.externalEmployeeId! }))
-    : [];
-
   const links: LinkToInsert[] = [];
-  if (config.actions.includes("LINK_EXISTING")) {
+  if (config.linkExisting) {
     for (const row of pendingLinkReviews(rows)) {
       const account = row.account!;
       if (row.wovenStatus !== "active" || account.isProtected || account.status === "disabled") continue;
@@ -114,5 +96,5 @@ export function decideLifecycle(rows: readonly PlannedRow[], config: LifecycleCo
       if (links.length >= MAX_LINKS_PER_RUN) break;
     }
   }
-  return { disables, links };
+  return { links };
 }

@@ -314,16 +314,18 @@ message, answer mode, or retrieval does not change that prefix.
 
 | Call | cache_creation_input_tokens | cache_read_input_tokens | First token |
 | --- | --- | --- | --- |
-| OLD, one string, no cache | 0 | 0 | 59 ms |
-| NEW, 1st call | 2300 | 0 | 59 ms |
-| NEW, later calls | 0 | 2300 | 14 ms |
+| OLD, one string, no cache | 0 | 0 | 60 ms |
+| NEW, 1st call | 2505 | 0 | 60 ms |
+| NEW, later calls | 0 | 2505 | 14 ms |
 
 The static prefix was 1482 stand-in tokens until the retrieved-sources
 rule (conv_mvnljjl32xlit48: retrieved sources are never something the
 manager shared) joined the static rules; it was 1603 until the coaching
 how-to rule (26 Nov 2026: coaching how-to answers are a prep package)
 joined them; it was 2140 until the rule said to build coaching answers from the
-knowledge base's coaching guide first; it is 2300 since.
+knowledge base's coaching guide first; it was 2300 until the rule said
+coaching and corrective-action advice about a named employee starts from
+their forms on file (28 Nov 2026); it is 2505 since.
 
 Card replay pass/fail is unchanged. The form card does not read this
 prompt, and the round 1 table above keeps the same expectations.
@@ -391,7 +393,7 @@ stand-in waits.
 | Call | cache_creation_input_tokens | cache_read_input_tokens | First token |
 | --- | --- | --- | --- |
 | OLD | 0 | 0 | 59 ms |
-| NEW, 1st call | 2300 | 0 | 59 ms |
+| NEW, 1st call | 2505 | 0 | 60 ms |
 | NEW, later call | 0 | 2300 | 14 ms |
 
 The rows above, and the matching rows in the item 9 section, are a local

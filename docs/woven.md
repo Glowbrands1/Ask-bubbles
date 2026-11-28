@@ -104,6 +104,20 @@ the API's schema but **not yet observed live** for this company.
    to save, then `WOVEN_SYNC_SCHEDULE_ENABLED=true` for the daily cron.
 5. Review the location and position mappings on the Woven screen.
 6. Optionally `WOVEN_ACCESS_MODE=shadow` to record the access plan each run.
+7. To disable leavers automatically (owner, 28 Nov 2026): apply
+   `supabase/migrations/20261128003000_woven_disable_terminated.sql`, then
+   `WOVEN_ACCESS_MODE=apply` and `WOVEN_ACCESS_APPLY_ACTIONS=DISABLE_TERMINATED`
+   (optionally `WOVEN_ACCESS_APPLY_EMPLOYEE_IDS` for a first batch). After each
+   successful scheduled sync, an account whose Woven employee is Terminated in
+   that read is disabled, banned and signed out everywhere: a linked account
+   whose status Woven manages, or an unlinked account whose email exactly
+   matches that one employee's Woven email (location-level, a provisioned role,
+   confirmed position; the link is then stored). Never an administrator, a
+   protected override or an account marked not Woven-managed. The plan's guards
+   stop the whole run when the directory is stale or broken, or more than
+   max(3, 5%) accounts would be disabled. Every decision is in
+   `employee_access_runs` / `employee_access_actions`, as codes. Nothing else is
+   applied: no account is created or invited and no role or location changes.
 
 ### New hires invited one at a time (built 28 Oct 2026; OFF)
 
@@ -228,23 +242,22 @@ the Woven sync):
 ### The account lifecycle (built 28 Nov 2026; OFF)
 
 Pau, 28 Nov 2026: "need lifecycle in bubble too". As in Ask Sunny, after each
-successful Woven sync (`src/lib/admin/woven-lifecycle.ts`, outside the sync):
+successful Woven sync:
 
-| Outcome | When | What applying it does |
+| Outcome | Where | What applying it does |
 |---|---|---|
-| Create + invite | A new hire in an approved manager role | Already done by the hourly new-hire run (above) |
-| `LINK_EXISTING` | Exactly one Woven employee and one unclassified account share an email; Active; nothing in doubt | Stores the link (`email_discovery`, migration `20261128002000`). Status managed only for a GM/AGM account in a GM/AGM position at one store; never role or store. Changes nobody's access |
-| `DISABLE_TERMINATED` | The planner proposes it: Woven-linked, status-managed, unprotected, and Woven's own Terminated read returned the person | `patchUser` → disabled: Supabase Auth ban, every session ended, audited. Already disabled: done |
+| Create + invite | The hourly new-hire run (above) | A new hire in an approved manager role gets an account and the link |
+| Turn off sign-in on Terminated | The access sync's apply step (`access/apply.ts`): `WOVEN_ACCESS_MODE=apply` with `WOVEN_ACCESS_APPLY_ACTIONS=DISABLE_TERMINATED` | Disabled under row locks, Auth ban and sessions ended, recorded per run, admins told |
+| Link by one exact email | `src/lib/admin/woven-lifecycle.ts`, outside the sync | Exactly one Woven employee and one unclassified account share an email; Active; nothing in doubt. Stores the link (`email_discovery`, migration `20261128002000`). Status managed only for a GM/AGM account in a GM/AGM position at one store; never role or store. Changes nobody's access |
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `WOVEN_ACCESS_APPLY_ACTIONS` | empty | Any of `LINK_EXISTING`, `DISABLE_TERMINATED` (Ask Sunny's name). Anything else is ignored and reported. |
-| `WOVEN_POSITION_SYNC_ACTOR` | unset | The active global admin the changes are made by. |
+| `WOVEN_LINK_EXISTING_ENABLED` | off | `true` turns on the link. Its own switch: the apply step turns itself off when `WOVEN_ACCESS_APPLY_ACTIONS` names anything but `DISABLE_TERMINATED`. |
+| `WOVEN_POSITION_SYNC_ACTOR` | unset | The active global admin the links are set by. |
 
-Only while the access guards allow changes; at most 25 links a run. The Woven
-access mode still has no apply value (`WOVEN_ACCESS_MODE` stays off/shadow):
-the lifecycle has its own switch. It runs before the position sync and the
-notices, so a termination notice says the sign-in is disabled.
+Only while the access guards allow changes; at most 25 links a run. The cron
+runs the apply step first, then the link, the position sync and the notices,
+so a termination notice says the sign-in is disabled.
 
 ### The exit form's Permanent Address (built 25 Nov 2026; OFF)
 

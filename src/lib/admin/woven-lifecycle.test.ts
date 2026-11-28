@@ -9,8 +9,13 @@ import { decideLifecycle, readLifecycleConfig } from "./woven-lifecycle";
 import { runAccountLifecycle, type LifecycleDeps } from "./woven-lifecycle.server";
 
 /*
- * Pau, 28 Nov 2026: "need lifecycle in bubble too" — link an existing account by its one exact email match, and turn
- * off the sign-in of someone Woven marks Terminated, as Ask Sunny's lifecycle does. Invented people only.
+ * Pau, 28 Nov 2026: "need lifecycle in bubble too" — link an existing account by its one exact email match, as the
+ * sibling app's lifecycle does. Invented people only.
+ *
+ * Changed on purpose (28 Nov 2026): this module no longer turns off a Terminated person's sign-in. That is the access
+ * sync's apply step (src/lib/employees/woven/access/apply.ts, merged in #1212), which re-checks under row locks and
+ * records each run; running both would disable twice. The link has its own switch, WOVEN_LINK_EXISTING_ENABLED, because
+ * the apply step turns itself off when WOVEN_ACCESS_APPLY_ACTIONS names anything it does not apply.
  */
 
 function row(over: {
@@ -55,30 +60,21 @@ function row(over: {
   } as unknown as PlannedRow;
 }
 
-const BOTH = { WOVEN_ACCESS_APPLY_ACTIONS: "LINK_EXISTING, DISABLE_TERMINATED" };
+const ON = { WOVEN_LINK_EXISTING_ENABLED: "true" };
 
 describe("the switch", () => {
-  it("off by default; names Ask Sunny's actions; anything else is ignored and reported", () => {
-    expect(readLifecycleConfig({})).toEqual({ actions: [], ignored: [] });
-    expect(readLifecycleConfig({ WOVEN_ACCESS_APPLY_ACTIONS: "disable_terminated,CREATE_USER,UPDATE_ROLE" })).toEqual({
-      actions: ["DISABLE_TERMINATED"],
-      ignored: ["CREATE_USER", "UPDATE_ROLE"],
-    });
+  it("off by default; only \"true\" turns it on; WOVEN_ACCESS_APPLY_ACTIONS is not read", () => {
+    expect(readLifecycleConfig({})).toEqual({ linkExisting: false });
+    expect(readLifecycleConfig({ WOVEN_LINK_EXISTING_ENABLED: "yes" })).toEqual({ linkExisting: false });
+    expect(readLifecycleConfig({ WOVEN_LINK_EXISTING_ENABLED: " TRUE " })).toEqual({ linkExisting: true });
+    expect(readLifecycleConfig({ WOVEN_ACCESS_APPLY_ACTIONS: "LINK_EXISTING,DISABLE_TERMINATED" })).toEqual({ linkExisting: false });
   });
 });
 
 describe("what the lifecycle applies", () => {
-  it("turns off the sign-in the planner proposes for a terminated, linked account; never protected or already disabled", () => {
-    const d = decideLifecycle(
-      [
-        row({ id: "T1", actions: ["DISABLE_TERMINATED"], via: "link", woven: "terminated" }),
-        row({ id: "T2", actions: ["DISABLE_TERMINATED"], via: "link", woven: "terminated", status: "disabled" }),
-        row({ id: "T3", actions: ["DISABLE_TERMINATED"], via: "link", woven: "terminated", isProtected: true }),
-      ],
-      readLifecycleConfig(BOTH),
-      "test",
-    );
-    expect(d.disables).toEqual([{ appUserId: "u-T1", externalEmployeeId: "T1" }]);
+  it("never turns off a sign-in: a terminated row is left to the access sync's apply step", () => {
+    const d = decideLifecycle([row({ id: "T1", actions: ["DISABLE_TERMINATED"], via: "link", woven: "terminated" })], readLifecycleConfig(ON), "test");
+    expect(d).toEqual({ links: [] });
   });
 
   it("links the one exact email match as email_discovery; status managed only for a GM/AGM in a GM/AGM position", () => {
@@ -87,7 +83,7 @@ describe("what the lifecycle applies", () => {
         row({ id: "L1", actions: ["FLAG_LINK_REVIEW"] }),
         row({ id: "L2", actions: ["FLAG_LINK_REVIEW"], role: "district_manager", scopeLevel: "global", proposedRole: "district_manager" }),
       ],
-      readLifecycleConfig(BOTH),
+      readLifecycleConfig(ON),
       "woven-lifecycle:admin@example.com",
     );
     expect(d.links).toEqual([
@@ -104,17 +100,12 @@ describe("what the lifecycle applies", () => {
         row({ id: "C", actions: ["FLAG_LINK_REVIEW"], status: "disabled" }),
         row({ id: "D", actions: ["FLAG_LINK_REVIEW", "FLAG_DUPLICATE_EMAIL"] }),
       ],
-      readLifecycleConfig(BOTH),
+      readLifecycleConfig(ON),
       "test",
     );
     expect(d.links).toEqual([]);
   });
 
-  it("only the actions named", () => {
-    const rows = [row({ id: "T1", actions: ["DISABLE_TERMINATED"], via: "link", woven: "terminated" }), row({ id: "L1", actions: ["FLAG_LINK_REVIEW"] })];
-    expect(decideLifecycle(rows, readLifecycleConfig({ WOVEN_ACCESS_APPLY_ACTIONS: "LINK_EXISTING" }), "t")).toMatchObject({ disables: [], links: [{ app_user_id: "u-L1" }] });
-    expect(decideLifecycle(rows, readLifecycleConfig({ WOVEN_ACCESS_APPLY_ACTIONS: "DISABLE_TERMINATED" }), "t")).toMatchObject({ disables: [{ appUserId: "u-T1" }], links: [] });
-  });
 });
 
 describe("runAccountLifecycle", () => {
@@ -125,7 +116,6 @@ describe("runAccountLifecycle", () => {
       done,
       actor: vi.fn(async () => ({ id: "admin-id", email: "admin@example.com", role: "admin" as Role })),
       loadPlan: vi.fn(async () => ({ rows, guard: { mutationsAllowed: true } }) as never),
-      disable: vi.fn(async (id: string) => void done.push(`disable:${id}`)),
       link: vi.fn(async (r) => void done.push(`link:${r.app_user_id}`)),
       ...over,
     };
@@ -136,20 +126,20 @@ describe("runAccountLifecycle", () => {
   it("off by default, and without an admin to act as", async () => {
     const d = deps(rows);
     expect(await runAccountLifecycle({ env: {} }, d)).toEqual({ status: "off" });
-    expect(await runAccountLifecycle({ env: BOTH }, d)).toEqual({ status: "off", code: "actor_missing" });
-    expect(await runAccountLifecycle({ env: { ...BOTH, ...ACTOR } }, { ...d, actor: async () => null })).toEqual({ status: "off", code: "actor_not_an_administrator" });
+    expect(await runAccountLifecycle({ env: ON }, d)).toEqual({ status: "off", code: "actor_missing" });
+    expect(await runAccountLifecycle({ env: { ...ON, ...ACTOR } }, { ...d, actor: async () => null })).toEqual({ status: "off", code: "actor_not_an_administrator" });
     expect(d.done).toEqual([]);
   });
 
-  it("applies the disables and links in the admin's name", async () => {
+  it("links in the admin's name, and turns nobody off", async () => {
     const d = deps(rows);
-    expect(await runAccountLifecycle({ env: { ...BOTH, ...ACTOR } }, d)).toEqual({ status: "completed", disabled: 1, linked: 1, failed: 0 });
-    expect(d.done).toEqual(["disable:u-T1", "link:u-L1"]);
+    expect(await runAccountLifecycle({ env: { ...ON, ...ACTOR } }, d)).toEqual({ status: "completed", linked: 1, failed: 0 });
+    expect(d.done).toEqual(["link:u-L1"]);
   });
 
   it("nothing while the guards stop changes", async () => {
     const d = deps(rows, { loadPlan: async () => ({ rows, guard: { mutationsAllowed: false } }) as never });
-    expect(await runAccountLifecycle({ env: { ...BOTH, ...ACTOR } }, d)).toEqual({ status: "blocked", code: "guards" });
+    expect(await runAccountLifecycle({ env: { ...ON, ...ACTOR } }, d)).toEqual({ status: "blocked", code: "guards" });
     expect(d.done).toEqual([]);
   });
 });
