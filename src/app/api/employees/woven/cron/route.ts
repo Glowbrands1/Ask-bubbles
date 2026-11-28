@@ -11,12 +11,15 @@ import { CRON_REQUESTER, outcomeHttpStatus, runWovenEmployeeSync } from "@/lib/e
 import { runAccessLifecycle } from "@/lib/employees/woven/access/apply-run";
 import { readWovenAccessConfig } from "@/lib/employees/woven/access/config";
 import { recordAccessShadowRun } from "@/lib/employees/woven/access/shadow";
+import { announceNewHires } from "@/lib/admin/new-hire-notices.server";
+import { runPositionSync } from "@/lib/admin/position-sync.server";
+import { runAccountLifecycle } from "@/lib/admin/woven-lifecycle.server";
 
 /**
  * GET /api/employees/woven/cron — the scheduled Woven employee sync.
  *
  * ============================================================================
- * SCHEDULED DAILY — 11:17 UTC (`vercel.json`)
+ * SCHEDULED TWICE A DAY — 11:17 and 23:17 UTC (`vercel.json`)
  * ============================================================================
  *
  * Enabled after the first manual dry run and the first manual stored run were
@@ -122,11 +125,21 @@ export async function GET(request: Request) {
   const succeeded = outcome.status === "succeeded";
   const mode = readWovenAccessConfig().mode;
   const shadow = succeeded && mode === "shadow" ? await recordAccessShadowRun(CRON_REQUESTER) : ({ status: "off" } as const);
+  /* WOVEN_ACCESS_MODE=apply: turn off the sign-in of someone Woven marks Terminated (access/apply.ts). First, so the termination notice below can say it is disabled. */
   const lifecycle = succeeded && mode === "apply" ? await runAccessLifecycle(CRON_REQUESTER) : ({ status: "off" } as const);
+  /* WOVEN_LINK_EXISTING_ENABLED: link an existing account by its one exact email match (src/lib/admin/woven-lifecycle.ts). */
+  const accountLinks = succeeded ? await runAccountLifecycle() : ({ status: "off" } as const);
+  /* WOVEN_POSITION_SYNC_ENABLED: access follows Woven's position and store within the manager tiers (src/lib/admin/position-sync.ts). */
+  const positionSync = succeeded ? await runPositionSync() : ({ status: "off" } as const);
+  /* NEW_HIRE_NOTICES_ENABLED: hires, terminations and the email webhook (src/lib/admin/new-hire-notices.ts). Counts only. */
+  const newHireNotices = succeeded ? await announceNewHires({}) : ({ status: "off" } as const);
   const body = {
     ...outcome,
     ...(shadow.status === "off" ? {} : { accessShadow: shadow }),
     ...(lifecycle.status === "off" ? {} : { accessLifecycle: lifecycle }),
+    ...(accountLinks.status === "off" && !("code" in accountLinks && accountLinks.code) ? {} : { accountLinks }),
+    ...(positionSync.status === "off" && !("code" in positionSync && positionSync.code) ? {} : { positionSync }),
+    ...(newHireNotices.status === "off" ? {} : { newHireNotices }),
   };
   return NextResponse.json(body, { status: outcomeHttpStatus(outcome) });
 }
