@@ -290,6 +290,13 @@ describe("7. no employee-sync UI, route or library code can reach app_users, aut
     "woven_location_map_review", "woven_position_map_review",
     /* Writes ONLY employee_access_runs / employee_access_actions, mode shadow (asserted below against the SQL). */
     "employee_access_record_shadow_run",
+    /*
+     * Added on purpose (owner, 28 Nov 2026): the apply step, DISABLE_TERMINATED
+     * only (`access/apply.ts`). Each re-checks its own facts; bounded in section
+     * 9 and in `access/disable-migration.test.ts`.
+     */
+    "employee_access_begin_apply_run", "employee_access_finish_apply_run", "employee_access_record_apply_actions",
+    "employee_access_disable_terminated", "employee_access_record_revocation",
   ]);
 
   it("covers the whole employee-sync surface", () => {
@@ -363,9 +370,14 @@ describe("8. the access planner (stage 1) applies nothing", () => {
     expect(backfill).toMatch(/not exists \(\s*select 1 from public\.employee_access_directory d/);
   });
 
+  /*
+   * Changed on purpose (owner, 28 Nov 2026): the apply step (apply.ts and its
+   * real wiring, apply-run.ts) revokes a Terminated account's auth access. They
+   * are bounded in section 9; every other planner module is held as before.
+   */
   it("no access-planner module calls the auth API or names app_users; only link-store.ts writes, and only a link", () => {
     const dir = join(repo, "src/lib/employees/woven/access");
-    for (const name of readdirSync(dir).filter((n) => /\.ts$/.test(n) && !/\.test\./.test(n))) {
+    for (const name of readdirSync(dir).filter((n) => /\.ts$/.test(n) && !/\.test\./.test(n) && n !== "apply.ts" && n !== "apply-run.ts")) {
       const code = readFileSync(join(dir, name), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
       expect(code, name).not.toMatch(/\.auth\s*\.|auth\.admin|from\(\s*["'`]app_users|revokeAuthAccess|restoreAuthAccess/);
       /* The one write: link-store.ts records a person's link review. */
@@ -391,8 +403,48 @@ describe("8. the access planner (stage 1) applies nothing", () => {
     expect(code).toMatch(/revoke all on function public\.employee_access_actions_guard\(\) from public, anon, authenticated, service_role;/);
   });
 
-  it("the access mode has no apply value", () => {
+  /*
+   * Changed on purpose (owner, 28 Nov 2026: "make this automatic for both sunny
+   * and bubble"): an apply value now exists, as in the sibling app, but its ONLY
+   * capability is DISABLE_TERMINATED. The test now pins that bound instead.
+   */
+  it("the access mode's only applying value is bounded to DISABLE_TERMINATED", () => {
     const config = readFileSync(join(repo, "src/lib/employees/woven/access/config.ts"), "utf8");
-    expect(config).toMatch(/export type WovenAccessMode = "off" \| "shadow";/);
+    expect(config).toMatch(/export type WovenAccessMode = "off" \| "shadow" \| "apply";/);
+    const types = readFileSync(join(repo, "src/lib/employees/woven/access/types.ts"), "utf8");
+    expect(types).toMatch(/export const APPLY_CAPABILITIES = \["DISABLE_TERMINATED"\] as const/);
+  });
+});
+
+describe("9. the apply step: DISABLE_TERMINATED, and nothing else", () => {
+  const repo = join(__dirname, "..", "..", "..", "..");
+  const strip = (c: string) => c.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+  const apply = strip(readFileSync(join(repo, "src/lib/employees/woven/access/apply.ts"), "utf8"));
+  const applyRun = strip(readFileSync(join(repo, "src/lib/employees/woven/access/apply-run.ts"), "utf8"));
+
+  it("no Auth Admin call at all: the only auth effect is revokeAuthAccess (ban + sessions); nothing creates, invites or restores", () => {
+    for (const c of [apply, applyRun]) {
+      expect(c).not.toMatch(/\.auth\s*\.|auth\.admin|password|createUser|inviteUserByEmail|generateLink|deleteUser|restoreAuthAccess/i);
+      expect(c).not.toMatch(/\.from\(/);
+    }
+    expect(applyRun).toMatch(/revokeAuthAccess: \(userId\) => revokeAuthAccess\(userId\)/);
+  });
+
+  it("the only rpcs are the run record and the disable", () => {
+    const rpcs = [...apply.matchAll(/deps\.rpc\(\s*"([a-z_]+)"/g)].map((m) => m[1]);
+    expect([...new Set(rpcs)].sort()).toEqual([
+      "employee_access_begin_apply_run",
+      "employee_access_disable_terminated",
+      "employee_access_finish_apply_run",
+      "employee_access_record_apply_actions",
+      "employee_access_record_revocation",
+    ]);
+  });
+
+  it("every other mutation is recorded as skipped; the cron applies only after a successful sync", () => {
+    expect(apply).toMatch(/if \(!isApplyCapability\(primary\)\) \{[\s\S]*?"not_applied_in_ask_bubbles"/);
+    const cron = strip(readFileSync(join(repo, "src/app/api/employees/woven/cron/route.ts"), "utf8"));
+    expect(cron).toMatch(/const succeeded = outcome\.status === "succeeded";/);
+    expect(cron).toMatch(/succeeded && mode === "apply" \? await runAccessLifecycle\(CRON_REQUESTER\)/);
   });
 });

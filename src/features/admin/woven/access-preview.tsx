@@ -172,7 +172,7 @@ export function AccessPreview({
   actionsDisabled,
 }: {
   planState: AccessPlanState;
-  accessMode: "off" | "shadow";
+  accessMode: "off" | "shadow" | "apply";
   actionFilter: string | null;
   loginEmailDomains: string[];
   sampleRows: AccessPreviewRow[] | null;
@@ -182,7 +182,14 @@ export function AccessPreview({
     <section aria-label="Access Preview" className="flex flex-col gap-6">
       <Notice tone="primary" icon={<ShieldCheck />} title="What the access sync would do — read-only">
         Nothing on this tab creates an account, sends an invite, disables anyone, or changes a role or location. Access mode:{" "}
-        <strong>{accessMode === "shadow" ? "shadow (plans are recorded, never applied)" : "off (preview only)"}</strong>.
+        <strong>
+          {accessMode === "apply"
+            ? "apply (after each successful sync, accounts Woven marks Terminated are disabled; nothing else is applied)"
+            : accessMode === "shadow"
+              ? "shadow (plans are recorded, never applied)"
+              : "off (preview only)"}
+        </strong>
+        .
       </Notice>
 
       {planState.state === "not_applied" ? (
