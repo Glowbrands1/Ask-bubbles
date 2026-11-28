@@ -93,7 +93,9 @@ export interface WhatsNewRelease {
 export const WHATS_NEW: readonly WhatsNewRelease[] = [
   {
     // HOLD (28 Nov 2026): merge only once the Woven hire and termination notices are merged (#1214) and switched on in
-    // production (NEW_HIRE_NOTICES_ENABLED); date this release on the day they go live.
+    // production (NEW_HIRE_NOTICES_ENABLED); date this release on the day they go live. New-hire sign-in links stay on
+    // hold for this app (Pau, 28 Nov), so the entry does not promise them: add that sentence back when
+    // NEW_HIRE_INVITES_ENABLED goes on.
     date: "2026-11-28",
     summary: "Hires and terminations from Woven in your Notifications, for administrators and HR.",
     entries: [
@@ -101,7 +103,7 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
         tag: "New",
         title: "New hires from Woven in your Notifications",
         before: "You found out about a new hire only when someone told you.",
-        now: "When Woven records a new hire, a notice says who they are, their Woven email, their position and store, and any other stores they work at. Administrators, HR, and the Location Manager and Assistant Manager of that store get it. Team Members are not announced. New Location Managers, Assistant Managers and District Managers are also emailed their Ask Bubbles sign-in link at the email address on their Woven record, one or two an hour, so they can sign in on their own.",
+        now: "When Woven records a new hire, a notice says who they are, their Woven email, their position and store, and any other stores they work at. Administrators, HR, and the Location Manager and Assistant Manager of that store get it. Team Members are not announced.",
         howToUse: "Open the Notifications bar under Home. Administrators can press the notice to open the Employee Directory.",
         audience: "Admin and HR only",
         visibleTo: "admins_and_hr",
