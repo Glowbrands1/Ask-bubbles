@@ -131,6 +131,11 @@ export interface PlannerInput {
   positions: readonly PlannerPosition[];
   locations: readonly PlannerLocation[];
   accounts: readonly PlannerAccount[];
+  /**
+   * WOVEN_POSITION_SYNC_ENABLED: District Managers get an account too (Pau, 28 Nov 2026: "we need to add District
+   * manager also, just not corporate"), at the scope their approved position mapping gives.
+   */
+  createDistrictManagers?: boolean;
 }
 
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
