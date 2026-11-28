@@ -54,6 +54,8 @@ export interface ApplyDeps {
   loadPlan(now: Date): Promise<AccessPlan>;
   rpc(fn: string, args: Record<string, unknown>): PromiseLike<RpcResult>;
   revokeAuthAccess(userId: string): Promise<{ ok: boolean; failed: string[] }>;
+  /** The administrators' bell items for the sign-ins turned off in this run (`disable-notices.ts`). Absent: none. */
+  notifyDisabled?(people: { name: string }[]): Promise<void>;
 }
 
 export interface ApplyRequest {
@@ -163,6 +165,8 @@ export async function applyAccessLifecycle(request: ApplyRequest, deps: ApplyDep
     /* 2. the plan, after the lock */
     const plan = await deps.loadPlan(now);
     const enabled = new Set<string>(config.applyActions);
+    /* Owner, 28 Nov 2026: the administrators hear about every sign-in turned off (`disable-notices.ts`). */
+    const disabledPeople: { name: string }[] = [];
     const inBatch = (row: PlannedRow) => config.employeeAllowlist === null || (row.externalEmployeeId !== null && config.employeeAllowlist.includes(row.externalEmployeeId));
     const rows = [...plan.rows].sort((a, b) => a.key.localeCompare(b.key));
     const counts = { actions: plan.counts, guard: plan.guard.details, guardCodes: plan.guard.codes, mappings: plan.mappings };
@@ -205,10 +209,13 @@ export async function applyAccessLifecycle(request: ApplyRequest, deps: ApplyDep
 
       const outcome = await disableTerminated(row, deps, setBy);
       bump(outcome.result, primary);
+      if (primary === "DISABLE_TERMINATED" && outcome.result === "applied") disabledPeople.push({ name: row.employeeName });
       recorded.push(...recordRow(row, { result: outcome.result, code: outcome.code }, outcome.appUserId ?? row.appUserId));
       /* Recorded at once, so a run that dies later still shows what it did. */
       await flush();
     }
+
+    if (disabledPeople.length > 0) await deps.notifyDisabled?.(disabledPeople).catch(() => undefined);
 
     /* 5. the record */
     await flush();

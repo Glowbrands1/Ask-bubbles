@@ -6,6 +6,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { applyAccessLifecycle, type ApplyDeps, type ApplyOutcome } from "./apply";
 import { readWovenAccessConfig } from "./config";
 import { loadAccessPlan } from "./load";
+import { notifyAdminsOfDisabled } from "./disable-notices";
 
 /**
  * The apply step with the real services: the plan from the database, the
@@ -20,6 +21,7 @@ export function realApplyDeps(): ApplyDeps {
     loadPlan: (now) => loadAccessPlan(now),
     rpc: (fn, args) => admin.rpc(fn, args) as unknown as PromiseLike<{ data: unknown; error: { message?: string; code?: string } | null }>,
     revokeAuthAccess: (userId) => revokeAuthAccess(userId),
+    notifyDisabled: (people) => notifyAdminsOfDisabled(people),
   };
 }
 
