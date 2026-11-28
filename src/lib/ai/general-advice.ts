@@ -258,3 +258,111 @@ export function settledGeneralAdvice(reply: string, verdict: GeneralAdviceVerdic
       return reply;
   }
 }
+
+/* ------------------------------------------- unlabelled general practice --- */
+
+/*
+ * THE OLDER CHAT'S UNLABELLED "AS A GENERAL APPROACH…" LINES (the owner, 28 Nov 2026: "ok good" to giving them the same
+ * rule as labelled general advice). The chat's statement taxonomy told the model "A phrase like 'as a general approach'
+ * is enough" to mark its own judgement, so a cited policy answer could end on a paragraph of general practice with no
+ * label, read by the manager as part of the policy. On (GENERAL_ADVICE_ENABLED), such a paragraph is general advice:
+ *   - in an answer that cites a policy or document, it goes (the cited text and the closing form offer stay);
+ *   - on a restricted topic, or a turn about a form, it goes;
+ *   - in an answer that cites nothing, on a general question, it gets the label.
+ * Conservative: a sentence that cites (a source marker, the policy manual, a returned document's title) is never
+ * dropped, and a drafting ask is never touched.
+ */
+
+/** A sentence that opens unlabelled general practice: "As a general approach, …", "In general, …", "Generally speaking, …". */
+const GENERAL_PRACTICE_OPENER =
+  /^(?:[-*•]\s+|\d{1,2}[.)]\s+)?(?:\*\*|__)?(?:as a general (?:approach|rule|practice|guideline|tip|matter)|as (?:a matter of )?general practice|as general guidance|in general\b|generally speaking|speaking generally|general best practice|as a (?:good )?rule of thumb|a good rule of thumb is)/i;
+
+export function opensGeneralPractice(sentence: string): boolean {
+  return GENERAL_PRACTICE_OPENER.test(sentence.trim());
+}
+
+/** The closing offer of a form ("ask me to create a coaching form for them"): kept wherever it sits. */
+function offersForm(sentence: string): boolean {
+  return /\b(?:forms?|write-?ups?|records?)\b/i.test(sentence) && /\b(?:ask me|I can|I'll|I will|want me|would you like|let me know)\b/i.test(sentence);
+}
+
+/** A line's sentences; a marker after a full stop ("… home. [p.15]") stays with its sentence. */
+function sentencesOf(line: string): string[] {
+  return line.split(/(?<=[.!?])\s+(?!\[)/).filter((part) => part.trim() !== "");
+}
+
+interface PracticeSplit {
+  /** What the paragraph has before its general practice (all of it, when it has none). */
+  readonly before: string;
+  /** The general practice taken out of it ("" when it had none). */
+  readonly practice: string;
+  /** What is kept after the practice starts (a marked sentence, the form offer). */
+  readonly after: string;
+}
+
+const keptOf = (split: PracticeSplit) => [split.before, split.after].filter((part) => part.trim() !== "").join("\n");
+
+/** A sentence that cites: a source marker, the policy manual, or a returned document's title (a path that took its markers out). */
+function citesHere(sentence: string, titles: readonly string[]): boolean {
+  if (MARKER.test(sentence) || /\bpolicy manual\b/i.test(sentence)) return true;
+  const lower = sentence.toLowerCase();
+  return titles.some((title) => title.trim().length > 3 && lower.includes(title.trim().toLowerCase()));
+}
+
+/** A paragraph's general practice, from its opening sentence to the paragraph's end, but for citing sentences and a form offer. */
+function splitPractice(paragraph: string, titles: readonly string[]): PracticeSplit {
+  if (carriesGeneralAdviceLabel(paragraph)) return { before: paragraph, practice: "", after: "" };
+  const before: string[] = [];
+  const practice: string[] = [];
+  const after: string[] = [];
+  let inPractice = false;
+  for (const line of paragraph.split("\n")) {
+    const lineParts: Record<"before" | "practice" | "after", string[]> = { before: [], practice: [], after: [] };
+    for (const sentence of sentencesOf(line)) {
+      const marked = citesHere(sentence, titles);
+      if (!inPractice && !marked && opensGeneralPractice(sentence)) inPractice = true;
+      lineParts[!inPractice ? "before" : !marked && !offersForm(sentence) ? "practice" : "after"].push(sentence);
+    }
+    if (lineParts.before.length > 0) before.push(lineParts.before.join(" "));
+    if (lineParts.practice.length > 0) practice.push(lineParts.practice.join(" "));
+    if (lineParts.after.length > 0) after.push(lineParts.after.join(" "));
+  }
+  return { before: before.join("\n"), practice: practice.join("\n"), after: after.join("\n") };
+}
+
+export interface GeneralPracticeTurn {
+  readonly reply: string;
+  /** The manager's words this turn, and the message before it. */
+  readonly words: string;
+  readonly brand: string;
+  readonly formTurn: boolean;
+  readonly sourceTitles: readonly string[];
+  readonly drafting?: boolean;
+  readonly cited?: boolean;
+}
+
+/** The reply with its unlabelled general practice settled: cut beside a citation, on a restricted topic or a form turn; labelled otherwise. */
+export function settledGeneralPractice(turn: GeneralPracticeTurn): string {
+  const reply = turn.reply;
+  if (reply.trim() === "" || turn.drafting) return reply;
+  const paragraphs = reply.trim().split(/\n{2,}/);
+  const splits = paragraphs.map((paragraph) => splitPractice(paragraph, turn.sourceTitles));
+  if (splits.every((split) => split.practice === "")) return reply;
+  const cited = turn.cited === true || cites(reply, turn.sourceTitles);
+  const topic = restrictedTopic(turn.words, turn.brand);
+  if (!cited && !topic && !turn.formTurn) {
+    // Nothing cited, a general question: the practice is general advice, so it carries the label.
+    if (carriesGeneralAdviceLabel(reply)) return reply;
+    const label = generalAdviceLabel(turn.brand);
+    return splits
+      .flatMap((split, index) => {
+        if (split.practice === "") return [paragraphs[index]!];
+        return [split.before.trim(), `${label}\n${split.practice}`, split.after.trim()].filter((part) => part !== "");
+      })
+      .join("\n\n");
+  }
+  // Beside a citation, on a restricted topic or a form turn: the practice goes, everything else stays.
+  const kept = splits.map((split, index) => (split.practice === "" ? paragraphs[index]! : keptOf(split)).trim()).filter((part) => part !== "").join("\n\n");
+  if (kept !== "") return kept;
+  return topic && !cited && !turn.formTurn ? restrictedReply(turn.brand, topic) : reply;
+}

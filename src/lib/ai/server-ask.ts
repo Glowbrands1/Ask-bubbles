@@ -158,7 +158,7 @@ import {
   withGeneralAdviceRule,
   type GroundingChunk,
 } from "./prompts";
-import { ASKS_FOR_WRITING, generalAdviceVerdict, restrictedTopic, settledGeneralAdvice } from "./general-advice";
+import { ASKS_FOR_WRITING, generalAdviceVerdict, restrictedTopic, settledGeneralAdvice, settledGeneralPractice } from "./general-advice";
 import { retrievalPlanFor } from "./retrieval-query";
 import { earlierAnsweredTurn, isReformatTurn, keepEarlierSources } from "./reformat-turn";
 import { slotOnlyRetrievalTopic } from "./slot-only-turn";
@@ -1554,6 +1554,20 @@ async function answerQuestionCore(
       drafting: ASKS_FOR_WRITING.test(request.question),
     });
     content = settledGeneralAdvice(content, verdict, ACTIVE_BRAND.brandName);
+    /*
+     * The owner, 28 Nov 2026 ("ok good" to the same rule for the older chat's unlabelled "as a general approach…"
+     * lines): unlabelled general practice is cut from an answer with source cards, a restricted topic or a form turn
+     * (the cited text and the closing form offer stay), and labelled in an answer that cites nothing (`general-advice.ts`).
+     */
+    content = settledGeneralPractice({
+      reply: content,
+      words: adviceWords,
+      brand: ACTIVE_BRAND.brandName,
+      formTurn: Boolean(request.openForm),
+      sourceTitles: citations.map((citation) => citation.documentTitle),
+      cited: citations.length > 0,
+      drafting: ASKS_FOR_WRITING.test(request.question),
+    });
   }
   // CA_SALES_POLICY_ENABLED: the Corrective Action offer is added at the turn's one exit (`answerQuestion`, `withCaOffer`).
   return {
