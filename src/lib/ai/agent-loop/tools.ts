@@ -8047,7 +8047,16 @@ export async function searchKnowledge(context: ToolContext, effects: ToolEffects
   if (scopeManual) rows = scopeToCurrentManual(rows, { limit, dedupeBySection: manualSectionDedupeEnabled() });
   rows = rows.slice(0, limit);
   const markers = rows.map((row) => addSource(effects, rowToCitation(row)));
-  if (rows.length === 0) return { results: [], note: "Nothing in the company knowledge base matches. Say so; never answer from memory." };
+  if (rows.length === 0) {
+    /* GENERAL_ADVICE (the owner, 28 Nov 2026): a general management question may get labelled general advice; a restricted topic points to HR. */
+    const { generalAdviceEnabled } = await import("@/lib/config/chat-quality-flags");
+    if (generalAdviceEnabled()) {
+      const { noMatchNote, restrictedTopic } = await import("@/lib/ai/general-advice");
+      const brand = appConfig().brandName;
+      return { results: [], note: noMatchNote(brand, restrictedTopic(context.question, brand)) };
+    }
+    return { results: [], note: "Nothing in the company knowledge base matches. Say so; never answer from memory." };
+  }
   return {
     results: rows.map((row, index) => ({
       source: markers[index],

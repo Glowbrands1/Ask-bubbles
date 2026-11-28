@@ -1,3 +1,4 @@
+import { generalAdviceRuleLine, type RestrictedTopic } from "@/lib/ai/general-advice";
 import { weekdayOf } from "@/lib/business-date";
 
 import { appConfig, type AppConfig } from "./app-config";
@@ -74,6 +75,8 @@ export function agentLoopSystem(input: {
   readonly createFormButton?: CreateFormButtonScreen | null;
   /** ANSWER_MODE_ON_LOOP: the answer mode the manager chose (Standard adds nothing). */
   readonly answerMode?: "quick" | "standard" | "detailed";
+  /** GENERAL_ADVICE (the owner, 28 Nov 2026): labelled general advice is allowed, and this question's restricted topic, if any. */
+  readonly generalAdvice?: { readonly topic: RestrictedTopic | null };
 }): string {
   const config = appConfig();
   const place = config.locationWord;
@@ -103,6 +106,7 @@ export function agentLoopSystem(input: {
       : "",
     input.createFormButton ? createFormButtonLine(input.createFormButton, config.formsPageName) : "",
     input.answerMode ? answerModeLine(input.answerMode) : "",
+    input.generalAdvice ? generalAdviceRuleLine(config.brandName, input.generalAdvice.topic) : "",
   ];
   return lines.filter(Boolean).join("\n\n");
 }

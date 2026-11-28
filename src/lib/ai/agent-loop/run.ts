@@ -15,7 +15,8 @@ import { cardTurns, personKey, readLoopRecords, shownTextKey, replyTurns, type C
 import { CLAUDE_EFFORT, CLAUDE_MAX_TOKENS, CLAUDE_MODEL } from "@/lib/config/models";
 import { MissingConfigurationError, requireEnv } from "@/lib/config/server-env";
 import { mainAnswerTimeoutMs, streamGapTimeoutMs } from "@/lib/config/ai-timeouts";
-import { chatTraceEnabled, editSeesSavedFormEnabled, statedPlanStepsEnabled } from "@/lib/config/chat-quality-flags";
+import { chatTraceEnabled, editSeesSavedFormEnabled, generalAdviceEnabled, statedPlanStepsEnabled } from "@/lib/config/chat-quality-flags";
+import { ASKS_FOR_WRITING, generalAdviceNote, generalAdviceVerdict, restrictedTopic, settledGeneralAdvice } from "@/lib/ai/general-advice";
 import { countModelCalls } from "../model-call-scope";
 import { authorizedSalonIds, rosterSalonName } from "./places";
 import type { ChatFormProposal, ChatMessage } from "@/types";
@@ -1025,6 +1026,12 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
   const [templates, manual] = await Promise.all([templateChoices(input.actor.role), turnManual(context)]);
   /* CREATE_FORM_BUTTON_PICKS_FORM (port from the sibling app; Pau, 25 Nov 2026): the rail's button, by the app's own sentence (`create-form-button.ts`). */
   const buttonPressed = isCreateFormButtonTurn(input.question);
+  /*
+   * GENERAL_ADVICE (port from the sibling app; the owner, 28 Nov 2026): the manager's words this turn and the message
+   * before (a follow-up keeps its topic), read for the topics general advice never touches.
+   */
+  const generalAdvice = generalAdviceEnabled();
+  const adviceWords = [[...input.history].reverse().find((turn) => turn.role === "user")?.content ?? "", input.question].map((part) => String(part)).join("\n");
   const dynamic = agentLoopSystem({
     cardOpen: cardOpenAtStart,
     cardOpenForm: cardOnScreen?.templateName ?? null,
@@ -1038,6 +1045,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
     answeringWhoQuestion: whoAsked ? (templates.find((row) => row.key === whoAsked.templateKey)?.name ?? "form") : null,
     createFormButton: buttonPressed ? (input.openFormId ? { kind: "draft_open" } : cardOnScreen ? { kind: "card_open", form: cardOnScreen.templateName ?? null } : { kind: "nothing" }) : null,
     ...(input.answerMode && input.answerMode !== "standard" ? { answerMode: input.answerMode } : {}),
+    ...(generalAdvice ? { generalAdvice: { topic: restrictedTopic(adviceWords, appConfig().brandName) } } : {}),
   });
 
   /*
@@ -1633,6 +1641,33 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
           const outside = formAskedOutsideLibrary(input.question, templates, quoteNamesForm);
           if (outside && (/\b(?:forms?|requests?)$/i.test(outside) || saysNoSuchForm(text))) {
             text = withLibraryForms(text, outside, templates.map((row) => row.name));
+          }
+        }
+        /*
+         * GENERAL_ADVICE (port from the sibling app; the owner, 28 Nov 2026: labelled general advice when the documents
+         * have nothing; "Never for policy, pay or legal."). The label on a restricted topic, beside a citation or on a form
+         * turn, or general advice from memory on a restricted topic, goes back once; if it comes back, the code settles it
+         * (`general-advice.ts`): the labelled part is cut, a restricted topic gets "not in the documents" and HR or their
+         * manager. General advice on a turn that only searched the documents and cites nothing gets the label, with no
+         * model call.
+         */
+        if (stoppedAt === "reply" && generalAdvice) {
+          const brand = appConfig().brandName;
+          const verdictOf = (reply: string) => generalAdviceVerdict({
+            reply,
+            words: adviceWords,
+            brand,
+            formTurn: Boolean(effects.proposal || effects.formUpdate || effects.formOpened || effects.reminderProposal),
+            sourceTitles: (effects.sources ?? []).map((source) => source.documentTitle),
+            searchedOnly: turnSteps.some((step) => step.tool === "search_knowledge" || step.tool === "read_policy") && turnSteps.every((step) => step.tool === "search_knowledge" || step.tool === "read_policy") && !(input.attachments?.length),
+            drafting: ASKS_FOR_WRITING.test(input.question),
+          });
+          const verdict = verdictOf(text);
+          if (verdict.kind === "label_missing") text = settledGeneralAdvice(text, verdict, brand);
+          else if (verdict.kind !== "ok") {
+            const again = await handBack(generalAdviceNote(verdict, brand));
+            const second = again ? verdictOf(again) : verdict;
+            text = settledGeneralAdvice(again || text, second, brand);
           }
         }
       }
