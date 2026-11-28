@@ -542,6 +542,24 @@ export function terminationEffectiveDate(rawText: string, today: string): string
   return terminated ? effectiveDate(text, dateTokens(text, today), terminated) : null;
 }
 
+/**
+ * A date the manager states as the termination's own date: "effective 11/20", "effective as of 11/20", "termination date
+ * 11/28", "we fired her on 11/12", "terminated as of 11/20" (the rules book's termination-date wordings). Read on the 24
+ * characters before the date, as `EFFECTIVE_BEFORE` is.
+ */
+const STATED_TERMINATION_DATE_BEFORE =
+  /\b(?:effective(?:\s+(?:date|on|as\s+of))?|termination\s+date(?:\s+(?:is|was|of))?|term\s+date|terminat(?:ed|ion)\s+(?:on|as\s+of|effective)|(?:fired|termed|let\s+go|separated)\s+(?:\w+\s+)?(?:on|as\s+of))\s*:?\s*$/;
+
+/**
+ * Pau's ruling (24 Nov 2026, via QA): "effective immediately for termination - should be dated today". Every date the
+ * manager's words state as the termination's own date (`STATED_TERMINATION_DATE_BEFORE`), in any sentence. A no-show
+ * date or the last day worked is never one; "effective immediately" states none, so the termination is dated today.
+ */
+export function statedTerminationDates(rawText: string, today: string): string[] {
+  const text = normalize(rawText);
+  return [...new Set(dateTokens(text, today).filter((token) => token.iso && STATED_TERMINATION_DATE_BEFORE.test(text.slice(Math.max(0, token.index - 24), token.index).toLowerCase())).map((token) => token.iso!))];
+}
+
 function completedInvoluntary(q: string): boolean {
   if (statedTermination(q)) return true;
   for (const pattern of COMPLETED_INVOLUNTARY) {
