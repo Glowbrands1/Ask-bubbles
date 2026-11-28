@@ -8,7 +8,7 @@ import { pagesToolLine, type PageReaderTool } from "@/config/ai-readable-pages";
 import { FORM_RECORDS_PERMISSION } from "@/lib/forms/chat-form-records";
 import { relativeBusinessDay } from "@/lib/forms/follow-up";
 import { WHATS_NEW, whatsNewFor, type WhatsNewRelease } from "@/config/whats-new";
-import { whatsNewVisibleFor } from "@/lib/whats-new/whats-new-access";
+import { whatsNewVisibleFor, wovenHrNotifyFor } from "@/lib/whats-new/whats-new-access";
 import type { TrainingCatalog } from "@/lib/ai-training/types";
 import type { AccessScope, DocumentStatus, KnowledgeDocument, Permission, Role } from "@/types";
 import type { CalendarView } from "@/lib/calendar/types";
@@ -758,7 +758,9 @@ export async function readWhatsNew(context: DataToolContext, input: { since?: un
   }
   const since = text(input.since);
   const from = since && /^\d{4}-\d{2}-\d{2}$/.test(since) ? since : null;
-  const visible = whatsNewFor(role, (r, permission) => hasPermission(matrix, r, permission), releases).filter((release) => !from || release.date >= from);
+  const visible = whatsNewFor(role, (r, permission) => hasPermission(matrix, r, permission), releases, {
+    hr: wovenHrNotifyFor({ email: context.actor.email, verified: context.actor.verified }),
+  }).filter((release) => !from || release.date >= from);
   const total = visible.reduce((count, release) => count + release.entries.length, 0);
   let left = WHATS_NEW_LISTED;
   const listed = visible

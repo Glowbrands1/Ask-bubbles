@@ -118,6 +118,18 @@ describe("What's New", () => {
     }
   });
 
+  it("an admins-and-HR entry is seen by the admin console roles and by HR's notice list, by nobody else", () => {
+    const entries = ENTRIES.filter((entry) => entry.visibleTo === "admins_and_hr");
+    expect(entries.length, "the Woven hire and termination entries are admins-and-HR").toBeGreaterThan(0);
+    for (const entry of entries) {
+      for (const role of ROLES) {
+        const told = whatsNewFor(role, can).some((release) => release.entries.includes(entry));
+        expect(told, `${role}: ${entry.title}`).toBe(canAccessAdminConsole(role));
+        expect(whatsNewFor(role, can, WHATS_NEW, { hr: true }).some((release) => release.entries.includes(entry)), `HR as ${role}: ${entry.title}`).toBe(true);
+      }
+    }
+  });
+
   it("a lead line replaces Before, plain words; Beta marks a feature still being tested (Pau, 28 Nov 2026)", () => {
     for (const entry of ENTRIES) {
       if (entry.lead === undefined) continue;
