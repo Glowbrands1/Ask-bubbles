@@ -3077,7 +3077,7 @@ function fullNameTakenAsTyped(context: ToolContext, roster: readonly RosterEmplo
 async function askWhoFor(context: ToolContext, template: { key: string; name: string }, effects: ToolEffects): Promise<ToolResult> {
   const ask = (await policyQuestion(context, template.name)) ?? `Who is this ${template.name} for?`;
   effects.personAsked = { templateKey: template.key };
-  return { reason_code: "missing_input", error: "Nobody is named for this form yet. End your reply with ask_exactly, exactly, once.", ask_exactly: ask };
+  return { reason_code: "missing_input", error: "Nobody is named for this form yet. End your reply with ask_exactly, exactly, once. When the manager names the person, look them up with find_staff and pass its employee_id.", ask_exactly: ask };
 }
 
 /** fix-name, live s10: the message being answered now confirms, in answer to a recorded name question, the roster person this typed name is. */
