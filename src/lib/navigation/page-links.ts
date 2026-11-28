@@ -3,7 +3,7 @@ import { REPORTS, REPORTS_DEFAULT_PATH } from "@/features/reports/reports-routes
 
 /**
  * ============================================================================
- * THE PAGES THE ASSISTANT'S ANSWERS LINK TO (Pau, 28 Nov 2026; port from Ask Sunny)
+ * THE PAGES THE ASSISTANT'S ANSWERS LINK TO (Pau, 28 Nov 2026; port from the sibling app)
  * ============================================================================
  *
  * "make sure if sunny or bubble direct them to a page, make sure its clickable". When an answer names a page of the

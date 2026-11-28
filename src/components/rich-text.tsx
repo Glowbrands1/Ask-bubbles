@@ -57,7 +57,7 @@ const LINK_CLASS =
 
 /**
  * ============================================================================
- * AND THE PAGES THE ANSWER SENDS THE PERSON TO (Pau, 28 Nov 2026; port from Ask Sunny)
+ * AND THE PAGES THE ANSWER SENDS THE PERSON TO (Pau, 28 Nov 2026; port from the sibling app)
  * ============================================================================
  *
  * "make sure if sunny or bubble direct them to a page, make sure its clickable". Given `pageLinks` (the pages this
