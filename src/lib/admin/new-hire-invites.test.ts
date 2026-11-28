@@ -123,6 +123,23 @@ describe("the hourly run", () => {
   });
 
   /*
+   * Pau, 28 Nov 2026: "our Supabase has a limit of 2 invites per hour … we reach the limit. Make sure that the apps
+   * check if it was sent or not … the code or the app or the automation will resend the link once the cooldown period
+   * is over." A refused invitation creates no account, so next hour the same person is still waiting, first in line,
+   * and is sent the link; no attempt is used up by the limit.
+   */
+  it("refused for the hourly limit this hour, the same person gets the link next hour", async () => {
+    const f = fakes([ready("E1"), ready("E2")], { E1: "2026-10-28", E2: "2026-10-29" });
+    f.deps.createAndInvite.mockImplementationOnce(async () => {
+      throw new DirectoryError("email_rate_limited", "limit", 429);
+    });
+    expect(await sendNewHireInvites({ config: config(), now: NOW }, f.deps)).toMatchObject({ sent: 0, stoppedBy: "email_rate_limited" });
+    expect(f.made).toEqual([]);
+    expect(await sendNewHireInvites({ config: config(), now: NOW }, f.deps)).toMatchObject({ sent: 1, stoppedBy: null });
+    expect(f.made).toEqual(["E1"]);
+  });
+
+  /*
    * QA, 28 Oct 2026: "If the oldest new hire cannot be created (e.g.
    * createLinkedAccount throws duplicate_email because an unlinked account
    * with that email already exists …) that person fills the slot every hour
