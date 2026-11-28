@@ -101,7 +101,7 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
         tag: "New",
         title: "New hires from Woven in your Notifications",
         before: "You found out about a new hire only when someone told you.",
-        now: "When Woven records a new hire, a notice says who they are, their Woven email, their position and store, and any other stores they work at. Administrators, HR, and the Location Manager and Assistant Manager of that store get it. Team Members are not announced.",
+        now: "When Woven records a new hire, a notice says who they are, their Woven email, their position and store, and any other stores they work at. Administrators, HR, and the Location Manager and Assistant Manager of that store get it. Team Members are not announced. New Location Managers, Assistant Managers and District Managers are also emailed their Ask Bubbles sign-in link at the email address on their Woven record, one or two an hour, so they can sign in on their own.",
         howToUse: "Open the Notifications bar under Home. Administrators can press the notice to open the Employee Directory.",
         audience: "Admin and HR only",
         visibleTo: "admins_and_hr",
