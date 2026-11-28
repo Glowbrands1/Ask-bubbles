@@ -37,6 +37,7 @@ export const ACCESS_ACTIONS = [
   "FLAG_PROTECTED_ACCOUNT",
   "FLAG_LINKED_EMPLOYEE_NOT_FOUND",
   "FLAG_STATUS_CONFLICT",
+  "FLAG_SAME_NAME_ACCOUNT",
 ] as const;
 
 export type AccessAction = (typeof ACCESS_ACTIONS)[number];

@@ -124,11 +124,19 @@ export function planAccess(input: PlannerInput): PlannedRow[] {
     if (key) emailHolders.set(key, (emailHolders.get(key) ?? 0) + 1);
   }
 
+  /* Unlinked, not disabled accounts by name: the person may already be here under another email (Pau, 28 Nov 2026). */
+  const sameName = new Map<string, number>();
+  for (const account of input.accounts) {
+    if (linkedIdOf(account) || account.status === "disabled") continue;
+    const key = personName(account.displayName);
+    if (key) sameName.set(key, (sameName.get(key) ?? 0) + 1);
+  }
+
   const covered = new Set<string>();
   const rows: PlannedRow[] = [];
 
   for (const employee of [...input.employees].sort((a, b) => a.externalEmployeeId.localeCompare(b.externalEmployeeId))) {
-    const row = planEmployee(employee, { positions, locations, byLinkedEmployee, byEmail, emailHolders, createDistrictManagers: input.createDistrictManagers === true });
+    const row = planEmployee(employee, { positions, locations, byLinkedEmployee, byEmail, emailHolders, sameName, createDistrictManagers: input.createDistrictManagers === true });
     if (row.account) covered.add(row.account.appUserId);
     rows.push(row);
   }
@@ -168,12 +176,24 @@ export function planAccess(input: PlannerInput): PlannedRow[] {
   return rows;
 }
 
+/** A person's name for comparing: case, accents, punctuation and extra spaces ignored. */
+export function personName(value: string | null | undefined): string {
+  return (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z]+/g, " ")
+    .trim();
+}
+
 interface Context {
   positions: Map<string, PlannerPosition>;
   locations: Map<string, PlannerLocation>;
   byLinkedEmployee: Map<string, PlannerAccount>;
   byEmail: Map<string, PlannerAccount[]>;
   emailHolders: Map<string, number>;
+  /** Unlinked, not disabled accounts by `personName` of their display name. Absent: not checked. */
+  sameName?: Map<string, number>;
   /** WOVEN_POSITION_SYNC_ENABLED: District Managers are created too, at their mapped scope. */
   createDistrictManagers?: boolean;
 }
@@ -478,6 +498,16 @@ function planWithoutAccount(
   if (location.problem && !everyStore) {
     actions.push("FLAG_UNMAPPED_LOCATION");
     reasons.push(location.problem);
+    return row();
+  }
+  /*
+   * Pau, 28 Nov 2026 ("Ok duplicate check"): someone with an account under a personal email would be given a second
+   * one at their Woven email. An unlinked account with the same name holds the create for an admin, who links it (or
+   * creates the account) from the Woven page. A name is never linked automatically.
+   */
+  if ((ctx.sameName?.get(personName(employee.name)) ?? 0) > 0) {
+    actions.push("FLAG_SAME_NAME_ACCOUNT");
+    reasons.push("account_with_same_name_exists");
     return row();
   }
   actions.push("CREATE_USER");
