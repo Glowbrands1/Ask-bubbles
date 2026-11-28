@@ -1439,6 +1439,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_UNDATED_TOGETHER_ENABLED",
   // coding 4: MADE_ABOUT_READER_ACCOUNT (QA's live round-9 test, 9 Nov 2026; default off).
   "MADE_ABOUT_READER_ACCOUNT_ENABLED",
+  // MAKE_THAT_UPDATE_ACCOUNT (QA's audit, 10 Nov 2026; default off): in the list, as every chat flag.
+  "MAKE_THAT_UPDATE_ACCOUNT_ENABLED",
   // coding 5: POLICY_TOPIC_INTO_FIELD (QA, a manager's 1★ rating, 10 Nov 2026; default off).
   "POLICY_TOPIC_INTO_FIELD_ENABLED",
   // coding 4: MADE_ABOUT_REWRITE_FINISHES (the sibling app's live round-13 test, 9 Nov 2026; default off).
@@ -4856,6 +4858,18 @@ export function madeAboutReaderAccountEnabled(): boolean {
 }
 
 /**
+ * MAKE_THAT_UPDATE_ACCOUNT_ENABLED (coding 6, 10 Nov 2026; default off; a manager's production wording relayed 5 Nov
+ * 2026, no fix flag until QA's audit of 10 Nov): on the open coaching draft, after her account, "i don't see the
+ * details updated in the draft card. Do i need to copy and paste it? or should it be automatically updating?" and
+ * then "make that update" wrote nothing: the reply before it printed nothing to add. On, that "make that update" is
+ * read by every reader of the open draft (Step B's patch reading included) as "make that update: <her latest account
+ * of the employee>" (`forms/form-content-turn.ts`). Off, as before.
+ */
+export function makeThatUpdateAccountEnabled(): boolean {
+  return envFlag("MAKE_THAT_UPDATE_ACCOUNT_ENABLED");
+}
+
+/**
  * MADE_ABOUT_REWRITE_FINISHES_ENABLED (ported from the sibling app: QA's live round-13 test there, 9 Nov 2026; default
  * off; same flag in both apps). On a saved Coaching draft, "make it about leaving the front desk unattended on 11/6/26"
  * ran the made-about revision (Details rewritten), then the reader's own edits were refused, the turn left the patch
@@ -6194,7 +6208,6 @@ export function createFormButtonPicksFormEnabled(): boolean {
 export function answerModeOnLoopEnabled(): boolean {
   return envFlag("ANSWER_MODE_ON_LOOP_ENABLED");
 }
-
 
 /**
  * GENERAL_ADVICE (port from the sibling app; the owner, 28 Nov 2026, asked "Should the AI give clearly labelled general
