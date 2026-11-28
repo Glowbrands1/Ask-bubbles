@@ -4,10 +4,10 @@ import type { Role } from "@/types";
 
 /**
  * ============================================================================
- * THE ACCOUNT LIFECYCLE — what Ask Sunny's Woven access sync applies, here too
+ * THE ACCOUNT LIFECYCLE — what the sibling app's Woven access sync applies, here too
  * ============================================================================
  *
- * Pau, 28 Nov 2026: "need lifecycle in bubble too". Ask Sunny applies three
+ * Pau, 28 Nov 2026: "need lifecycle in bubble too". The sibling app applies three
  * outcomes of the access plan after each Woven sync: create the account of an
  * eligible manager, link an existing account by its one exact email match, and
  * turn off the sign-in of someone Woven marks Terminated. In this app accounts
@@ -17,7 +17,7 @@ import type { Role } from "@/types";
  *
  *   WOVEN_ACCESS_APPLY_ACTIONS  the outcomes to apply, any of
  *                               LINK_EXISTING, DISABLE_TERMINATED
- *                               (Ask Sunny's switch name). Empty or unset: none,
+ *                               (the sibling app's switch name). Empty or unset: none,
  *                               the default. Anything else named: ignored, and
  *                               the run says so.
  *   WOVEN_POSITION_SYNC_ACTOR   the active global admin the changes are made by

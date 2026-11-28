@@ -110,7 +110,7 @@ export async function GET(request: Request) {
    */
   const shadow = outcome.status === "succeeded" ? await recordAccessShadowRun(CRON_REQUESTER) : ({ status: "off" } as const);
   /*
-   * WOVEN_ACCESS_APPLY_ACTIONS (LINK_EXISTING, DISABLE_TERMINATED): the account lifecycle, as in Ask Sunny
+   * WOVEN_ACCESS_APPLY_ACTIONS (LINK_EXISTING, DISABLE_TERMINATED): the account lifecycle, as in the sibling app
    * (src/lib/admin/woven-lifecycle.ts). First, so the termination notice below can say the sign-in is disabled.
    */
   const lifecycle = outcome.status === "succeeded" ? await runAccountLifecycle() : ({ status: "off" } as const);
