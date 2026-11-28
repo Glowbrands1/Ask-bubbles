@@ -3754,6 +3754,18 @@ export function titleOfTheEmployeeEnabled(): boolean {
 }
 
 /**
+ * APPROVER_TITLE_NOT_EMPLOYEE_ENABLED (ported from the sibling app; QA's r37 live check there, 12 Nov 2026; same flag in
+ * both apps; default off). "CA for <A>, probably termination once the DM approves" put District Manager on the card as
+ * the title the manager gave: "DM" there names who approves. On: a title the manager wrote only in a clause about who
+ * approves, signs off or is waited on is not the employee's; the card takes the roster's own position or none, and the
+ * reply's line about the title the manager gave goes (`forms/approver-title.ts`, `ai/title-of-the-employee.ts`). Off,
+ * as before.
+ */
+export function approverTitleNotEmployeeEnabled(): boolean {
+  return envFlag("APPROVER_TITLE_NOT_EMPLOYEE_ENABLED");
+}
+
+/**
  * ROSTER_NAME_IN_CANDIDATE_ENABLED (QA, 5 Nov 2026, R2; found in the sibling
  * app, same flag in both; default off). One employee's story that names their
  * district manager in passing ("When <employee> spoke with District manager
@@ -6208,16 +6220,4 @@ export function answerModeOnLoopEnabled(): boolean {
  */
 export function generalAdviceEnabled(): boolean {
   return envFlag("GENERAL_ADVICE_ENABLED");
-}
-
-/**
- * APPROVER_TITLE_NOT_EMPLOYEE_ENABLED (ported from the sibling app; QA's r37 live check there, 12 Nov 2026; same flag in
- * both apps; default off). "CA for <A>, probably termination once the DM approves" put District Manager on the card as
- * the title the manager gave: "DM" there names who approves. On: a title the manager wrote only in a clause about who
- * approves, signs off or is waited on is not the employee's; the card takes the roster's own position or none, and the
- * reply's line about the title the manager gave goes (`forms/approver-title.ts`, `ai/title-of-the-employee.ts`). Off,
- * as before.
- */
-export function approverTitleNotEmployeeEnabled(): boolean {
-  return envFlag("APPROVER_TITLE_NOT_EMPLOYEE_ENABLED");
 }
