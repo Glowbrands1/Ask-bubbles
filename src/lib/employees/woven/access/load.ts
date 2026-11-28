@@ -1,5 +1,6 @@
 import "server-only";
 
+import { readPositionSyncConfig } from "@/lib/admin/position-sync";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 import { loadDirectoryRows } from "../directory";
@@ -83,6 +84,8 @@ export async function loadAccessPlan(now: Date = new Date()): Promise<AccessPlan
       positions: positions.map(plannerPosition),
       locations: locations.map(plannerLocation),
       accounts,
+      // WOVEN_POSITION_SYNC_ENABLED: District Managers get an account too. Off: as before.
+      createDistrictManagers: readPositionSyncConfig(process.env).enabled,
     },
     { runs: runFacts.runs, mappingBaseline, directoryRunId: runFacts.latestSuccessId, now },
   );

@@ -130,7 +130,7 @@ default (`src/lib/admin/new-hire-invites.ts`):
 |---|---|---|
 | `NEW_HIRE_INVITES_ENABLED` | off | Master switch. Off: the hourly route answers `disabled` and reads nothing. |
 | `NEW_HIRE_INVITE_SINCE` | unset | `YYYY-MM-DD`. Only people whose Woven hire date is on or after it (and not after today) are new hires. |
-| `NEW_HIRE_INVITE_ROLES` | empty | Which approved provisioning roles get the automatic link (`location_manager`, `assistant_manager`, `employee`). Empty: nobody. |
+| `NEW_HIRE_INVITE_ROLES` | empty | Which roles get the automatic link (`location_manager`, `assistant_manager`, `district_manager`). Never `employee`. Empty: nobody. |
 | `NEW_HIRE_INVITES_PER_HOUR` | 1 | `1` or `2`; anything else is 1. |
 | `NEW_HIRE_INVITE_ACTOR` | unset | Email of an active administrator with all-locations access; accounts are made in their name. |
 
@@ -142,6 +142,122 @@ invitation (`createLinkedAccount` with `invite`: active, `invited`, Supabase
 emails the link) and linked to Woven. The mailer's limit stops the hour and
 creates nothing for that person. Everybody hired before the date is left to
 an administrator (User Management, or the bulk provisioning).
+
+**The link is checked first** (Pau, 28 Nov 2026: "can u check first if the
+link is live?"): before any account is created or email sent, the run opens
+the invitation's landing page (`/auth/accept`) once. It must answer 2xx and
+still be that page after any redirect, within 8 seconds
+(`src/lib/admin/invite-link-check.ts`). Otherwise the run stops with
+`stoppedBy: "invite_link_not_live"` and creates nothing. Checked 28 Nov 2026:
+`https://askbubbles.vercel.app/auth/accept` answers 200.
+
+### Who hears about hires, terminations and sent links (built 28 Nov 2026; OFF)
+
+Pau, 28 Nov 2026: "create a notification when a new person is onboarded like a
+manager, assistant etc. for admins only for now backfill it …", then "admin,
+owner and developer, also can you add if that person is in any salon the
+manager there will get notified too, also add coleen for this notification coz
+she is HR all hires and all terminated", "backfill only 2 weeks pls", and "can
+you also send me a notification in my personal email … when someone join and
+get terminated and if they get the link".
+
+After each successful, stored Woven directory sync (the daily cron and an
+admin's manual sync), `src/lib/admin/new-hire-notices.ts` (outside the Woven
+sync, which still never reads `app_users`):
+
+| Event | When | Bell | Webhook (email) |
+|---|---|---|---|
+| Hired | Active, Woven hire date in the window | Every active admin (admin, owner, developer); every active Store Manager / Assistant Manager of any store the person is in, primary or additional; `WOVEN_HR_NOTIFY_EMAILS` | yes |
+| Terminated | The sync recorded a `terminated` change in the window | `WOVEN_HR_NOTIFY_EMAILS` | yes |
+| Sign-in link sent | The hourly new-hire run created the account and its invitation went out | — | yes |
+
+> **New hire: Robin Quillfeather — Store Manager**
+> New employee Robin Quillfeather, robin.quillfeather@example.com in Woven, has
+> been hired as Store Manager at Maple Grove on Nov 24, 2026. Additional
+> stores: Birch Hollow (temporary, until Dec 15, 2026), Cedar Point.
+
+An admin's notice opens the Woven directory; a manager's or HR's has no link.
+The new hire never gets a notice about themselves. **Backfill:** the window is
+the last `NEW_HIRE_NOTICE_BACKFILL_DAYS` days (14, today included). Each event
+is announced **once, ever** (`woven_employee_notices`, migration
+`20261128001000`); a failed webhook call is retried by the next sync.
+
+**Email.** The app sends no email of its own, so each event is POSTed as JSON
+to `WOVEN_EVENTS_WEBHOOK_URL` (Pau's n8n, which emails her) with
+`WOVEN_EVENTS_WEBHOOK_SECRET` in the `x-ask-webhook-secret` header:
+`{ app: "Ask Bubbles", event, title, body, employee: { wovenEmployeeId, name,
+email, position, location, additionalLocations, hireDate, terminationDate } }`.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `NEW_HIRE_NOTICES_ENABLED` | off | The switch. Off: nothing is read or sent. |
+| `NEW_HIRE_NOTICE_BACKFILL_DAYS` | 14 | 1–365. Anything else is 14. |
+| `WOVEN_HR_NOTIFY_EMAILS` | empty | HR: every hire and every termination. |
+| `WOVEN_EVENTS_WEBHOOK_URL` | unset | https only. Unset: no webhook. |
+| `WOVEN_EVENTS_WEBHOOK_SECRET` | unset | Sent with every webhook call. |
+
+To turn it on: apply `20261128001000_woven_employee_notices.sql`, set the
+variables, redeploy.
+
+### Access follows Woven's position and store (built 28 Nov 2026; OFF)
+
+Pau, 28 Nov 2026: "we need to add District manager also, just not corporate,
+also add a sync where there is a position change it should detect it and give
+the correct link to the person with correct position and location. sometimes
+they make new hire DM as tanning employee but change it within the dayy to DM
+so we need to catch that too, for new positions existing, make sure their
+access refreshes too depends on the access we have in the intergration both
+app". Chosen: **all changes within the manager tiers**, and **sync twice a day
++ hold the link**.
+
+With `WOVEN_POSITION_SYNC_ENABLED` on (`src/lib/admin/position-sync.ts`, outside
+the Woven sync):
+
+- **District Managers can get the automatic link**: the plan proposes them at
+  the scope the approved mapping gives (every store today), and
+  `NEW_HIRE_INVITE_ROLES` may now name `district_manager`. Corporate, Owner and
+  Operator never — and **never Team Members** (Pau, 28 Nov 2026: "we dont add
+  tanning consultants and employee in both apps"): `employee` may no longer be
+  named.
+- **After each sync, every Woven-linked account is compared with the position
+  mapping and the Woven primary store.** Within the tier — AGM, GM, DM — a
+  promotion, a demotion or a move is applied: role and scope as the
+  mapping says. Extra stores an admin granted are kept. Protected, admin,
+  regional and corporate accounts are never changed. Only the accounts linked to
+  Woven are followed (3 today; link the rest in Access Preview › Link review).
+- Each change is made by `patchUser` in the name of
+  `WOVEN_POSITION_SYNC_ACTOR` (an active global admin), audited, and every
+  admin's bell says "Access updated from Woven". Only while the access guards
+  allow changes; more than 10 in one run changes nothing.
+- **The Woven sync runs twice a day** (11:17 and 23:17 UTC), and **a new hire's
+  link waits** while the latest sync saw them arrive or change position or
+  store, so "Team Member, then DM the same day" (no account as a Team Member;
+  created once Woven says DM) gets the link as a DM.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `WOVEN_POSITION_SYNC_ENABLED` | off | The switch. Off: nothing changes, and District Managers are not proposed. |
+| `WOVEN_POSITION_SYNC_ACTOR` | unset | Email of an active global admin the changes are made by. |
+
+### The account lifecycle (built 28 Nov 2026; OFF)
+
+Pau, 28 Nov 2026: "need lifecycle in bubble too". As in Ask Sunny, after each
+successful Woven sync:
+
+| Outcome | Where | What applying it does |
+|---|---|---|
+| Create + invite | The hourly new-hire run (above) | A new hire in an approved manager role gets an account and the link |
+| Turn off sign-in on Terminated | The access sync's apply step (`access/apply.ts`): `WOVEN_ACCESS_MODE=apply` with `WOVEN_ACCESS_APPLY_ACTIONS=DISABLE_TERMINATED` | Disabled under row locks, Auth ban and sessions ended, recorded per run, admins told |
+| Link by one exact email | `src/lib/admin/woven-lifecycle.ts`, outside the sync | Exactly one Woven employee and one unclassified account share an email; Active; nothing in doubt. Stores the link (`email_discovery`, migration `20261128002000`). Status managed only for a GM/AGM account in a GM/AGM position at one store; never role or store. Changes nobody's access |
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `WOVEN_LINK_EXISTING_ENABLED` | off | `true` turns on the link. Its own switch: the apply step turns itself off when `WOVEN_ACCESS_APPLY_ACTIONS` names anything but `DISABLE_TERMINATED`. |
+| `WOVEN_POSITION_SYNC_ACTOR` | unset | The active global admin the links are set by. |
+
+Only while the access guards allow changes; at most 25 links a run. The cron
+runs the apply step first, then the link, the position sync and the notices,
+so a termination notice says the sign-in is disabled.
 
 ### The exit form's Permanent Address (built 25 Nov 2026; OFF)
 
