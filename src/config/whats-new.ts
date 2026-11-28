@@ -107,7 +107,7 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
         howToUse: "Open the Notifications bar under Home. Administrators can press the notice to open the Employee Directory.",
         audience: "Admin and HR only",
         visibleTo: "admins_and_hr",
-        image: { src: "/whats-new/2026-11-28/woven-notices.webp", alt: "The Notifications bar opened on a new-hire notice and a termination notice for sample employees, each with their position and store." },
+        image: { src: "/whats-new/2026-11-28/woven-notices.webp", alt: "The Notifications panel open on its Unread tab, with a new-hire notice and a termination notice for sample employees, each with their position and store." },
       },
       {
         tag: "New",
@@ -117,7 +117,7 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
         howToUse: "Open the Notifications bar under Home and check the sign-in line on each termination.",
         audience: "Admin and HR only",
         visibleTo: "admins_and_hr",
-        image: { src: "/whats-new/2026-11-28/woven-notices.webp", alt: "The Notifications bar opened on a new-hire notice and a termination notice for sample employees, each with their position and store." },
+        image: { src: "/whats-new/2026-11-28/woven-notices.webp", alt: "The Notifications panel open on its Unread tab, with a new-hire notice and a termination notice for sample employees, each with their position and store." },
       },
     ],
   },
