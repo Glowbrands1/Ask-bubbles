@@ -236,21 +236,6 @@ export function normalizeScope(value: unknown): AccessScope {
 }
 
 /**
- * OWNER AND DEVELOPER ARE GIVEN ONLY BY AN OWNER OR DEVELOPER (audit, 28 Nov 2026). `assertCanGrant` held this rule
- * on the Woven account paths only, so a plain admin could invite someone as Developer, or promote an existing account
- * to Owner, from the Users screen. The same rule now holds on invite and on edit. Only a CHANGE to such a role is
- * checked, so an admin can still edit an existing owner's other details.
- */
-const ABOVE_ADMIN_ROLES: readonly Role[] = ["owner", "developer"];
-
-export function assertMayGrantRole(actor: DirectoryActor, role: Role, previous?: Role): void {
-  if (previous === role) return;
-  if (ABOVE_ADMIN_ROLES.includes(role) && !ABOVE_ADMIN_ROLES.includes(actor.role)) {
-    throw new DirectoryError("forbidden_grant", "Only an owner or developer can give that role.", 403);
-  }
-}
-
-/**
  * AN ADMINISTRATOR CAN ONLY GRANT ACCESS WITHIN THEIR OWN REACH.
  *
  * Applied to what a write would ADD — the PRIMARY area and the additional
@@ -434,7 +419,6 @@ export async function inviteUser(
     throw new DirectoryError("invalid_input", "Choose a role for this person.");
   }
   const role = input.role;
-  assertMayGrantRole(actor, role);
 
   const admin = getSupabaseAdmin();
 
@@ -567,7 +551,6 @@ export async function patchUser(
 
   if (input.role !== undefined) {
     if (!isRole(input.role)) throw new DirectoryError("invalid_input", "That is not a role.");
-    assertMayGrantRole(actor, input.role, before.role);
     if (input.role !== before.role) roleChange = { from: before.role, to: input.role };
     patch.role = input.role;
   }

@@ -128,34 +128,3 @@ describe("editing an existing user with a forged scope", () => {
     expect(calls).toContain("app_users.update");
   });
 });
-
-/*
- * OWNER AND DEVELOPER, GIVEN ONLY BY AN OWNER OR DEVELOPER (audit, 28 Nov 2026). The rule held on the Woven account
- * paths only (`assertCanGrant`); the Users screen's invite and edit let a plain admin give either role.
- */
-describe("only an owner or developer gives Owner or Developer", () => {
-  const globalScope: AccessScope = { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] };
-  const admin = () => ({ id: "admin-1", email: "a@x.test", role: "admin" as const, scope: globalScope });
-  const owner = () => ({ id: "owner-1", email: "o@x.test", role: "owner" as const, scope: globalScope });
-
-  it.each(["owner", "developer"])("an admin cannot invite someone as %s, and nothing is written", async (role) => {
-    await expect(
-      inviteUser({ email: "new@example.test", displayName: "New", role, scope: globalScope, redirectTo: "https://x.test/auth" }, admin()),
-    ).rejects.toMatchObject({ code: "forbidden_grant" });
-    expect(calls).toEqual([]);
-  });
-
-  it.each(["owner", "developer"])("an admin cannot promote an account to %s, and nothing is written", async (role) => {
-    await expect(patchUser("user-1", { role }, admin())).rejects.toMatchObject({ code: "forbidden_grant" });
-    expect(calls).toEqual([]);
-  });
-
-  it("an owner can, and an admin can still edit an existing owner's other details", async () => {
-    await patchUser("user-1", { role: "developer" }, owner()).catch(() => undefined);
-    expect(calls).toContain("app_users.update");
-    calls.length = 0;
-    before = { ...before!, role: "owner" };
-    await patchUser("user-1", { role: "owner", displayName: "Renamed" }, admin()).catch(() => undefined);
-    expect(calls).toContain("app_users.update");
-  });
-});
